@@ -25,9 +25,12 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityTicker;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.level.redstone.Orientation;
 import net.minecraft.world.phys.BlockHitResult;
@@ -80,6 +83,16 @@ public class ExtensionPluginBlock extends MachineAddonBlock {
 
     public static final EnumProperty<Placement> PLACEMENT = EnumProperty.create("placement", Placement.class);
 
+    /**
+     * True while a control unit (redstone) plugin is stored inside.
+     * <p>
+     * This is a block state on purpose: Oritech decides whether a machine shows its redstone panel on the
+     * <b>client</b>, by looking at the blocks in the machine's addon slots
+     * ({@code UpgradableOritechScreenHandler#showRedstoneAddon}). A block entity inventory is not synced
+     * to the client, but block states are, so the flag has to live here.
+     */
+    public static final BooleanProperty HAS_CONTROL_UNIT = BooleanProperty.create("control_unit");
+
     private final ExtensionPluginType type;
 
     public ExtensionPluginBlock(Properties properties, AddonSettings addonSettings, ExtensionPluginType type) {
@@ -97,6 +110,7 @@ public class ExtensionPluginBlock extends MachineAddonBlock {
         super.createBlockStateDefinition(builder);
         builder.add(PLACEMENT);
         builder.add(HORIZONTAL_FACING);
+        builder.add(HAS_CONTROL_UNIT);
     }
 
     @Nullable
@@ -156,6 +170,25 @@ public class ExtensionPluginBlock extends MachineAddonBlock {
     @Override
     public Class<? extends BlockEntity> getBlockEntityType() {
         return ExtensionPluginBlockEntity.class;
+    }
+
+    /**
+     * Server ticker that keeps re-reading the redstone state.
+     * <p>
+     * {@link #neighborChanged} alone is not enough: this block is a slab, so a lever is easily placed on
+     * the machine next to it instead of on the block itself, and then this block never receives a
+     * neighbour update. Polling covers every placement (lever on this block, on the machine, or dust).
+     */
+    @Nullable
+    @Override
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state,
+            BlockEntityType<T> type) {
+        if (level.isClientSide()) return null;
+        return (tickLevel, pos, tickState, blockEntity) -> {
+            if (blockEntity instanceof ExtensionPluginBlockEntity pluginEntity) {
+                pluginEntity.serverTickRedstone();
+            }
+        };
     }
 
     /**

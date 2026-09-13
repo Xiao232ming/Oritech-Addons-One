@@ -15,6 +15,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
@@ -73,6 +74,11 @@ public class ExtensionPluginBlockEntity extends AddonBlockEntity implements Cont
     /** Feeds the connected machine while an acceptor plugin is inserted. */
     private final EnergyHandler delegatedStorage = new DelegatingEnergyStorage(this::getMainStorage, this::isEnergyInputActive);
 
+    /** Last redstone state we forwarded to the machine. */
+    private boolean lastRedstonePowered;
+    /** True while we forwarded "a control unit is controlling this machine", so it can be released. */
+    private boolean redstoneApplied;
+
     public ExtensionPluginBlockEntity(BlockPos pos, BlockState state) {
         super(OritechAddonsOne.EXTENSION_PLUGIN_ENTITY.get(), pos, state);
         this.type = state.getBlock() instanceof ExtensionPluginBlock block ? block.getType() : ExtensionPluginType.TYPE_1;
@@ -123,6 +129,29 @@ public class ExtensionPluginBlockEntity extends AddonBlockEntity implements Cont
     // ------------------------------------------------------------------ redstone input (control unit plugin)
 
     /**
+     * Polled every server tick by {@link ExtensionPluginBlock#getTicker}. Cheap while nothing is to do:
+     * without a stored control unit (and without a state we set earlier) it returns immediately.
+     */
+    public void serverTickRedstone() {
+        if (level == null || level.isClientSide()) return;
+
+        var hasPlugin = hasRedstonePlugin();
+        if (!hasPlugin && !redstoneApplied) return;
+
+        var powered = isPoweredByRedstone();
+        if (powered == lastRedstonePowered && hasPlugin == redstoneApplied) return;
+
+        lastRedstonePowered = powered;
+        applyRedstoneSignal(powered);
+    }
+
+    /** Redstone signal that has to be honoured: at this block, or at the machine it is attached to. */
+    private boolean isPoweredByRedstone() {
+        if (level == null) return false;
+        return level.hasNeighborSignal(worldPosition) || level.hasNeighborSignal(getControllerPos());
+    }
+
+    /**
      * Forwards the redstone signal at this block to the connected machine, exactly like Oritech's own
      * control unit plugin does from its {@code neighborChanged} hook: the machine implements
      * {@link RedstoneControllable} and turns itself off while it is powered.
@@ -132,11 +161,12 @@ public class ExtensionPluginBlockEntity extends AddonBlockEntity implements Cont
      * block, so a stored control unit always behaves like the default mode {@code INPUT_CONTROL}.
      */
     public void applyRedstoneSignal(boolean powered) {
-        if (level == null) return;
+        if (level == null || level.isClientSide()) return;
         if (!(level.getBlockEntity(getControllerPos()) instanceof MachineAddonController controller)) return;
         if (!(controller instanceof RedstoneControllable controllable)) return;
 
         if (hasRedstonePlugin()) {
+            redstoneApplied = true;
             controllable.onRedstoneEvent(powered);
             return;
         }
@@ -144,7 +174,11 @@ public class ExtensionPluginBlockEntity extends AddonBlockEntity implements Cont
         // No control unit inside: release the machine, so taking the plugin out does not leave it
         // disabled forever. A control unit that is attached to the machine directly owns the state, so
         // it is left untouched in that case.
-        if (hasAttachedRedstoneAddon(controller)) return;
+        if (hasAttachedRedstoneAddon(controller)) {
+            redstoneApplied = false;
+            return;
+        }
+        redstoneApplied = false;
         controllable.onRedstoneEvent(false);
     }
 
@@ -245,9 +279,11 @@ public class ExtensionPluginBlockEntity extends AddonBlockEntity implements Cont
         if (!(level.getBlockState(worldPosition).getBlock() instanceof ExtensionPluginBlock)) return;
         if (!(serverLevel.getBlockEntity(getControllerPos()) instanceof MachineAddonController controller)) return;
 
-        // Keep the machine's redstone state in sync with the signal at this block. Doing it here covers
+        // Keep the synced block state and the machine's redstone state in sync. Doing it here covers
         // placement, world loads and plugin changes, because every addon scan ends up in this method.
-        applyRedstoneSignal(serverLevel.hasNeighborSignal(worldPosition));
+        updateControlUnitState();
+        lastRedstonePowered = isPoweredByRedstone();
+        applyRedstoneSignal(lastRedstonePowered);
 
         // Plugins whose behaviour Oritech keys on the block type (quarry, silk touch, fluid, crop
         // filter, steam boiler, hunter, ...) are replayed through the machine's own addon hook, so
@@ -328,7 +364,28 @@ public class ExtensionPluginBlockEntity extends AddonBlockEntity implements Cont
 
     private void contentsChanged() {
         setChanged();
+        // keep the synced "has a control unit" state (and the machine) up to date right away
+        updateControlUnitState();
+        serverTickRedstone();
         refreshController();
+    }
+
+    /**
+     * Mirrors {@link #hasRedstonePlugin()} into the block state. Oritech decides whether a machine shows
+     * its redstone panel on the client by looking at the blocks in the machine's addon slots, and a block
+     * entity inventory is not synced to the client, so the flag is kept in the (synced) block state.
+     */
+    private void updateControlUnitState() {
+        if (level == null || level.isClientSide()) return;
+
+        var state = getBlockState();
+        if (!state.hasProperty(ExtensionPluginBlock.HAS_CONTROL_UNIT)) return;
+
+        var hasControlUnit = hasRedstonePlugin();
+        if (state.getValue(ExtensionPluginBlock.HAS_CONTROL_UNIT) != hasControlUnit) {
+            level.setBlock(worldPosition, state.setValue(ExtensionPluginBlock.HAS_CONTROL_UNIT, hasControlUnit),
+                    Block.UPDATE_ALL);
+        }
     }
 
     // ------------------------------------------------------------------ inventory

@@ -5,6 +5,9 @@
   "mixins": [
     "AddonSplicerBlockEntityMixin"
   ],
+  "client": [
+    "UpgradableOritechScreenHandlerMixin"
+  ],
   "injectors": {
     "defaultRequire": 1
   }
