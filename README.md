@@ -111,6 +111,7 @@ cd "D:\Games\MC\MOD\1.21.1-NeoForge\Oritech Addons One"
 | 方块交互 | `useItemOn` 返回 `InteractionResult` | 返回 `ItemInteractionResult`；`useWithoutItem` 返回 `InteractionResult` |
 | 物品提示 | 方块实现 `TooltipProvider#addToTooltip` | `Item#appendHoverText(ItemStack, TooltipContext, List, TooltipFlag)`；Ctrl 检测用 `Screen.hasControlDown()` |
 | 界面渲染 | 渲染状态化 `GuiGraphicsExtractor#extractBackground` | `AbstractContainerScreen#renderBg(GuiGraphics, float, int, int)` + `GuiGraphics#renderItem` |
+| 界面绘制顺序 | 渲染状态 API 保留调用顺序，`fill` 可覆盖已画的物品图标 | `GuiGraphics` **按渲染类型分批**提交，`fill` 与 `renderItem` 分属不同批次、按类型刷新，所以「先画图标再填阴影」的阴影会落在图标**下面**；Ⅲ型提示需要先画图标 → `graphics.flush()` → 再填阴影 |
 | 存储读写 | `ValueInput` / `ValueOutput` | `CompoundTag` + `HolderLookup.Provider`（`ContainerHelper` + 平行 int 数组保数量） |
 | 能量 API | `neoforge.transfer.energy.EnergyHandler` + `rearth.oritech.api.transfer.energy.*` | `rearth.oritech.api.energy.EnergyApi`（长整型 `EnergyStorage`）+ Oritech 的 NeoForge 桥 |
 | 创造标签注入 | `oritech:machine_group` | 同名 `oritech:machine_group`（`ItemGroups.MACHINE_GROUP`） |

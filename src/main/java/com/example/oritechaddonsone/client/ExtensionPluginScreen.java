@@ -41,8 +41,17 @@ public class ExtensionPluginScreen extends AbstractContainerScreen<ExtensionPlug
     }
 
     /**
-     * Draws the panel and all slot frames. This runs before the slots themselves are rendered, so the
-     * dim plugin hints of type III end up behind any plugin that is actually inserted.
+     * Draws the panel, all slot frames and the type III plugin hints.
+     * <p>
+     * This runs before the slots themselves are rendered, so the dim plugin hints of type III end up
+     * behind any plugin that is actually inserted.
+     * <p>
+     * Note on the draw order: on 1.21.1 {@link GuiGraphics} collects its geometry per render type and
+     * flushes those batches by render type instead of by call order, so a plain {@code fill} directly
+     * after {@code renderItem} still ends up *below* the icon. The hint icons are therefore drawn
+     * first and the batch is flushed ({@link GuiGraphics#flush()}) before the dark veils are added:
+     * the veils then land in a later batch and cover the icons, while the real plugins rendered
+     * afterwards still cover the veils.
      */
     @Override
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
@@ -67,9 +76,7 @@ public class ExtensionPluginScreen extends AbstractContainerScreen<ExtensionPlug
             drawSlot(graphics, slotX - 1, slotY - 1);
 
             if (slot < fixedSlots.size()) {
-                // drawn in the background layer, so a real plugin inserted later covers the hint
                 graphics.renderItem(new ItemStack(fixedSlots.get(slot)), slotX, slotY);
-                graphics.fill(slotX, slotY, slotX + 16, slotY + 16, HINT_VEIL);
             }
         }
 
@@ -82,6 +89,16 @@ public class ExtensionPluginScreen extends AbstractContainerScreen<ExtensionPlug
         }
         for (int column = 0; column < 9; column++) {
             drawSlot(graphics, xo + 7 + column * 18, yo + layout.hotbarY() - 1);
+        }
+
+        if (fixedSlots.isEmpty()) return;
+
+        // see the note above: flush the icons first, then dim them with the veil
+        graphics.flush();
+        for (int slot = 0; slot < layout.slots() && slot < fixedSlots.size(); slot++) {
+            int slotX = xo + layout.slotX(slot);
+            int slotY = yo + layout.slotY(slot);
+            graphics.fill(slotX, slotY, slotX + 16, slotY + 16, HINT_VEIL);
         }
     }
 
