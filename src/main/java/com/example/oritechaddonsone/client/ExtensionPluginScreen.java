@@ -72,21 +72,23 @@ public class ExtensionPluginScreen extends AbstractContainerScreen<ExtensionPlug
         graphics.fill(xo, yo + this.imageHeight - 2, xo + this.imageWidth, yo + this.imageHeight, PANEL_DARK);
         graphics.fill(xo + this.imageWidth - 2, yo, xo + this.imageWidth, yo + this.imageHeight, PANEL_DARK);
 
-        // plugin slots, and for type III the icon of the plugin that belongs into that slot
-        var fixedSlots = menu.pluginType() == ExtensionPluginType.TYPE_3
-                ? ExtensionPluginType.fixedSlotOrder()
-                : java.util.List.<Block>of();
+        // plugin slots, and for type III the icon of the plugin that belongs into that slot (the grid has
+        // one column per category and one row per tier, so every slot may have its own icon)
+        var hints = menu.pluginType() == ExtensionPluginType.TYPE_3
+                ? ExtensionPluginType.type3Slots()
+                : java.util.List.<ExtensionPluginType.Type3Slot>of();
 
         for (int slot = 0; slot < layout.slots(); slot++) {
             int slotX = xo + layout.slotX(slot);
             int slotY = yo + layout.slotY(slot);
             drawSlot(graphics, slotX - 1, slotY - 1);
 
-            if (slot < fixedSlots.size()) {
+            var hint = slot < hints.size() ? hints.get(slot).reference() : null;
+            if (hint != null) {
                 // 150 (the z items normally use) minus 100 -> the hint sits behind the veil below
                 graphics.pose().pushPose();
                 graphics.pose().translate(0.0F, 0.0F, HINT_ICON_Z - ITEM_Z);
-                graphics.renderItem(new ItemStack(fixedSlots.get(slot)), slotX, slotY);
+                graphics.renderItem(new ItemStack(hint), slotX, slotY);
                 graphics.pose().popPose();
             }
         }
@@ -102,7 +104,7 @@ public class ExtensionPluginScreen extends AbstractContainerScreen<ExtensionPlug
             drawSlot(graphics, xo + 7 + column * 18, yo + layout.hotbarY() - 1);
         }
 
-        if (fixedSlots.isEmpty()) return;
+        if (hints.isEmpty()) return;
 
         // Draw the veils over the hint icons and flush right away.
         // GuiGraphics#flush() only ends the batch of the *last* render type used, and renderItem flushes
@@ -110,7 +112,8 @@ public class ExtensionPluginScreen extends AbstractContainerScreen<ExtensionPlug
         // batch and end up somewhere else in the frame. The overlay render type has NO_DEPTH_TEST and
         // COLOR_WRITE, so it covers the icons (which are pushed back to z=50) and still lets the real
         // plugins rendered afterwards (z=150) draw over it.
-        for (int slot = 0; slot < layout.slots() && slot < fixedSlots.size(); slot++) {
+        for (int slot = 0; slot < layout.slots() && slot < hints.size(); slot++) {
+            if (hints.get(slot).reference() == null) continue;
             int slotX = xo + layout.slotX(slot);
             int slotY = yo + layout.slotY(slot);
             graphics.fill(RenderType.guiOverlay(), slotX, slotY, slotX + 16, slotY + 16, HINT_VEIL_Z, HINT_VEIL);

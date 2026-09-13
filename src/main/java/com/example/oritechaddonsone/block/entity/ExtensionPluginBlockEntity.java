@@ -102,12 +102,18 @@ public class ExtensionPluginBlockEntity extends AddonBlockEntity
         return ((MachineAddonBlock) ((BlockItem) stack.getItem()).getBlock()).getAddonSettings();
     }
 
-    /** True while a machine acceptor plugin is stored, which turns this block into an energy input. */
+    /**
+     * True while an acceptor plugin is stored, which turns this block into an energy input. Any acceptor
+     * of any tier counts (Oritech's own one and e.g. the tiered ones from Oritech Things), so they all
+     * have the same effect as inserting Oritech's machine acceptor.
+     */
     public boolean hasAcceptorPlugin() {
         for (int slot = 0; slot < getContainerSize(); slot++) {
             var stack = items.get(slot);
             if (stack.isEmpty() || !(stack.getItem() instanceof BlockItem blockItem)) continue;
-            if (blockItem.getBlock() == BlockContent.MACHINE_ACCEPTOR_ADDON) return true;
+            if (ExtensionPluginType.categoryOf(blockItem.getBlock()) == ExtensionPluginType.StatCategory.ACCEPTOR) {
+                return true;
+            }
         }
         return false;
     }

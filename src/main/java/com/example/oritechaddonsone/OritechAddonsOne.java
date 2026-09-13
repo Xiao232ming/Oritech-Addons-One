@@ -182,17 +182,20 @@ public class OritechAddonsOne {
             }
             LOGGER.debug("Extension Plugin stat categories ({} blocks): {}", categorized.size(), categorized);
 
-            var type3Order = ExtensionPluginType.fixedSlotOrder().stream()
-                    .map(block -> BuiltInRegistries.BLOCK.getKey(block).toString())
-                    .toList();
-            LOGGER.debug("Extension Plugin type III: {} fixed slots, capacity {} each: {}",
-                    type3Order.size(), Config.slotCapacity(ExtensionPluginType.TYPE_3), type3Order);
+            var type3Slots = ExtensionPluginType.type3Slots();
+            LOGGER.debug("Extension Plugin type III: {} slots = {} categories x {} tiers, capacity {} each: {}",
+                    type3Slots.size(), ExtensionPluginType.StatCategory.values().length,
+                    ExtensionPluginType.Type3Slot.rowCount(), Config.slotCapacity(ExtensionPluginType.TYPE_3),
+                    type3Slots.stream()
+                            .map(slot -> slot.category() + "/tier" + slot.tier() + "="
+                                    + (slot.reference() == null ? "-" : BuiltInRegistries.BLOCK.getKey(slot.reference()).toString()))
+                            .toList());
 
             for (var pluginType : ExtensionPluginType.values()) {
-                var layout = ExtensionPluginLayout.of(Config.slots(pluginType));
-                LOGGER.debug("Extension Plugin {}: {} slots ({}x{}, panel {}x{})",
+                var layout = ExtensionPluginLayout.forType(pluginType, Config.slots(pluginType));
+                LOGGER.debug("Extension Plugin {}: {} slots ({}x{}, panel {}x{}, columnMajor={})",
                         pluginType.id(), layout.slots(), layout.columns(), layout.rows(),
-                        layout.imageWidth(), layout.imageHeight());
+                        layout.imageWidth(), layout.imageHeight(), layout.columnMajor());
             }
         });
     }

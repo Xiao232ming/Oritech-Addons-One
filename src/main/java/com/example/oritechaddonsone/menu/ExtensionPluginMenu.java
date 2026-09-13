@@ -35,7 +35,7 @@ public class ExtensionPluginMenu extends AbstractContainerMenu {
         super(OritechAddonsOne.EXTENSION_PLUGIN_MENU.get(), containerId);
         this.container = container;
         this.type = type;
-        this.layout = ExtensionPluginLayout.of(slots);
+        this.layout = ExtensionPluginLayout.forType(type, slots);
 
         for (int slot = 0; slot < layout.slots(); slot++) {
             final int slotIndex = slot;

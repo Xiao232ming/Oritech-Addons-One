@@ -36,7 +36,8 @@ public final class Config {
 
     /** Configured amount of slots of the given type, clamped to the supported range. */
     public static int slots(ExtensionPluginType type) {
-        if (type == ExtensionPluginType.TYPE_3) return type.defaultSlots();
+        // Type III derives its slot count from the installed plugins: one slot per category and tier.
+        if (type == ExtensionPluginType.TYPE_3) return ExtensionPluginType.type3Slots().size();
 
         var value = type == ExtensionPluginType.TYPE_1 ? TYPE_1_SLOTS : TYPE_2_SLOTS;
         try {
