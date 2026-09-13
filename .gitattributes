@@ -1,0 +1,21 @@
+# Disable autocrlf on generated files, they always generate with LF
+# Add any extra files or paths here to make git stop saying they
+# are changed when only line endings change.
+src/generated/**/.cache/* text eol=lf
+src/generated/**/*.json text eol=lf
+
+# 行尾固定为 LF：保证任何机器上检出的文件内容与仓库一致，构建产物哈希可复现。
+# 批处理文件必须保留 CRLF，否则 cmd.exe 解析标签可能出错。
+* text=auto eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.jar binary
+*.png binary
+
+# 行尾固定为 LF：保证任何机器上检出的文件内容与仓库一致，构建产物哈希可复现。
+# 批处理文件必须保留 CRLF，否则 cmd.exe 解析标签可能出错。
+* text=auto eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.jar binary
+*.png binary

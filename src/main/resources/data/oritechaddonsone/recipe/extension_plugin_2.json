@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "E": { "item": "oritech:advanced_computing_engine" },
+    "I": { "item": "minecraft:iron_ingot" },
+    "M": { "item": "oritech:machine_extender" },
+    "P": { "item": "oritech:processing_unit" }
+  },
+  "pattern": [
+    "IPI",
+    "EME"
+  ],
+  "result": {
+    "count": 1,
+    "item": "oritechaddonsone:extension_plugin_2"
+  }
+}
