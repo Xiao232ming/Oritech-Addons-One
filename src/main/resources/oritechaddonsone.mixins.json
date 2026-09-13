@@ -6,6 +6,9 @@
   "mixins": [
     "ShrinkerBlockEntityMixin"
   ],
+  "client": [
+    "UpgradableOritechScreenHandlerMixin"
+  ],
   "injectors": {
     "defaultRequire": 1
   }
