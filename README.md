@@ -4,7 +4,7 @@
 **Oritech 1.2.12** 添加三个插件方块：**扩展插件Ⅰ型**、**扩展插件Ⅱ型**与**扩展插件Ⅲ型**。它们本身就是
 Oritech 机器插件，内部带多个插件槽，放入其中的插件效果会叠加并作用于该方块所连接的机器。
 
-> 与名字相关的一切都叫 **Oritech Addons One**：构建产物（`Oritech Addons One-1.0.0.jar`）、
+> 与名字相关的一切都叫 **Oritech Addons One**：构建产物（`Oritech Addons One-1.0.0+mc1.21.1.jar`）、
 > 模组显示名与创造模式标签页。只有**模组 ID / 资源命名空间 / Java 包名**是全小写无空格的 `oritechaddonsone`。
 >
 > 本仓库是 1.21.1 版本；26.1.2 版本在 `..\..\26.1.2-NeoForge\Oritech Addons One\`，两者是**互相独立**的仓库，
@@ -149,7 +149,7 @@ type3SlotCapacity = 256
 
 ```powershell
 cd "D:\Games\MC\MOD\1.21.1-NeoForge\Oritech Addons One"
-.\gradlew build        # 产物 build\libs\Oritech Addons One-1.0.0.jar
+.\gradlew build        # 产物 build\libs\Oritech Addons One-1.0.0+mc1.21.1.jar
 .\gradlew runClient    # 开发客户端（自动加载 libs\ 里的 oritech/architectury/athena/geckolib）
 ```
 
