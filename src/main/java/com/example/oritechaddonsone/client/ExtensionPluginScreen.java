@@ -2,6 +2,7 @@ package com.example.oritechaddonsone.client;
 
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
@@ -103,11 +104,14 @@ public class ExtensionPluginScreen extends AbstractContainerScreen<ExtensionPlug
 
         if (fixedSlots.isEmpty()) return;
 
-        // see the note above: just above the pushed back hint icons, still below real plugins
+        // The veil uses the depth test free overlay render type, so it is guaranteed to land on top of
+        // the pushed back hint icons; it writes no depth, so the real plugins rendered afterwards
+        // (z=150) are still drawn over it. Both mechanisms are kept on purpose: the icon is pushed
+        // back to z=50 and the veil uses NO_DEPTH_TEST + COLOR_WRITE.
         for (int slot = 0; slot < layout.slots() && slot < fixedSlots.size(); slot++) {
             int slotX = xo + layout.slotX(slot);
             int slotY = yo + layout.slotY(slot);
-            graphics.fill(slotX, slotY, slotX + 16, slotY + 16, HINT_VEIL_Z, HINT_VEIL);
+            graphics.fill(RenderType.guiOverlay(), slotX, slotY, slotX + 16, slotY + 16, HINT_VEIL_Z, HINT_VEIL);
         }
     }
 
