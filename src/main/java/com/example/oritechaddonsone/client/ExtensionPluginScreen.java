@@ -29,6 +29,12 @@ public class ExtensionPluginScreen extends AbstractContainerScreen<ExtensionPlug
     private static final int SLOT_DARK = 0xFF373737;
     /** Dark veil drawn over the type III slot hints so they read as a dim background icon. */
     private static final int HINT_VEIL = 0x99000000;
+    /** z the GUI stores items at (see {@code GuiGraphics#renderItem}). */
+    private static final float ITEM_Z = 150.0F;
+    /** z of the pushed back type III hint icons: behind the veil, still behind real items. */
+    private static final float HINT_ICON_Z = 50.0F;
+    /** z of the veil: in front of the hint icons, behind real items and item decorations. */
+    private static final int HINT_VEIL_Z = 60;
 
     private final ExtensionPluginLayout layout;
 
@@ -46,12 +52,12 @@ public class ExtensionPluginScreen extends AbstractContainerScreen<ExtensionPlug
      * This runs before the slots themselves are rendered, so the dim plugin hints of type III end up
      * behind any plugin that is actually inserted.
      * <p>
-     * Note on the draw order: on 1.21.1 {@link GuiGraphics} collects its geometry per render type and
-     * flushes those batches by render type instead of by call order, so a plain {@code fill} directly
-     * after {@code renderItem} still ends up *below* the icon. The hint icons are therefore drawn
-     * first and the batch is flushed ({@link GuiGraphics#flush()}) before the dark veils are added:
-     * the veils then land in a later batch and cover the icons, while the real plugins rendered
-     * afterwards still cover the veils.
+     * Note on the layering: on 1.21.1 the GUI depth buffer decides what covers what. The background is
+     * drawn at {@code z=0}, items at {@code z=150} (see {@code GuiGraphics#renderItem}), item count
+     * decorations at {@code z=200} and tooltips at {@code z=400} - larger {@code z} is closer to the
+     * viewer. A veil drawn at {@code z=0} therefore stays *behind* the hint icon and never dims it.
+     * The hint icon is thus pushed back to {@code z=50} and the veil drawn at {@code z=60}: the veil
+     * covers the icon, while a real plugin inserted later (z=150) still covers the veil.
      */
     @Override
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
@@ -65,7 +71,7 @@ public class ExtensionPluginScreen extends AbstractContainerScreen<ExtensionPlug
         graphics.fill(xo, yo + this.imageHeight - 2, xo + this.imageWidth, yo + this.imageHeight, PANEL_DARK);
         graphics.fill(xo + this.imageWidth - 2, yo, xo + this.imageWidth, yo + this.imageHeight, PANEL_DARK);
 
-        // plugin slots, and for type III a dim icon of the plugin that belongs into that slot
+        // plugin slots, and for type III the icon of the plugin that belongs into that slot
         var fixedSlots = menu.pluginType() == ExtensionPluginType.TYPE_3
                 ? ExtensionPluginType.fixedSlotOrder()
                 : java.util.List.<Block>of();
@@ -76,7 +82,11 @@ public class ExtensionPluginScreen extends AbstractContainerScreen<ExtensionPlug
             drawSlot(graphics, slotX - 1, slotY - 1);
 
             if (slot < fixedSlots.size()) {
+                // 150 (the z items normally use) minus 100 -> the hint sits behind the veil below
+                graphics.pose().pushPose();
+                graphics.pose().translate(0.0F, 0.0F, HINT_ICON_Z - ITEM_Z);
                 graphics.renderItem(new ItemStack(fixedSlots.get(slot)), slotX, slotY);
+                graphics.pose().popPose();
             }
         }
 
@@ -93,12 +103,11 @@ public class ExtensionPluginScreen extends AbstractContainerScreen<ExtensionPlug
 
         if (fixedSlots.isEmpty()) return;
 
-        // see the note above: flush the icons first, then dim them with the veil
-        graphics.flush();
+        // see the note above: just above the pushed back hint icons, still below real plugins
         for (int slot = 0; slot < layout.slots() && slot < fixedSlots.size(); slot++) {
             int slotX = xo + layout.slotX(slot);
             int slotY = yo + layout.slotY(slot);
-            graphics.fill(slotX, slotY, slotX + 16, slotY + 16, HINT_VEIL);
+            graphics.fill(slotX, slotY, slotX + 16, slotY + 16, HINT_VEIL_Z, HINT_VEIL);
         }
     }
 
