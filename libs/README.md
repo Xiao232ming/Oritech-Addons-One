@@ -16,9 +16,10 @@
 
 ```powershell
 $mods = 'D:\Games\MC\HMCL\.minecraft\versions\26.1.2-NeoForge\mods'
-Copy-Item "$mods\oritech-2.0.0-exp6.jar"                       'D:\Games\MC\MOD\Oritech Addons One\libs\'
-Copy-Item "$mods\athena-4.7.3.jar"                             'D:\Games\MC\MOD\Oritech Addons One\libs\'
-Copy-Item "$mods\geckolib-neoforge-26.1.2-5.5.2.jar"           'D:\Games\MC\MOD\Oritech Addons One\libs\'
+$libs = 'D:\Games\MC\MOD\26.1.2-NeoForge\Oritech Addons One\libs'
+Copy-Item "$mods\oritech-2.0.0-exp6.jar"             $libs
+Copy-Item "$mods\athena-4.7.3.jar"                   $libs
+Copy-Item "$mods\geckolib-neoforge-26.1.2-5.5.2.jar" $libs
 ```
 
 说明 / Notes：

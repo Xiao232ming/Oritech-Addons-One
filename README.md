@@ -9,7 +9,7 @@ Oritech 机器插件，内部带多个插件槽，放入其中的插件效果会
 plugins that hold several other plugins and apply their combined effects to the machine they are
 attached to.
 
-> 与名字相关的一切都叫 **Oritech Addons One**：工程文件夹（`D:\Games\MC\MOD\Oritech Addons One`）、
+> 与名字相关的一切都叫 **Oritech Addons One**：工程文件夹（`D:\Games\MC\MOD\26.1.2-NeoForge\Oritech Addons One`）、
 > 构建产物（`Oritech Addons One-1.0.0.jar`）、模组显示名与创造模式标签页。
 > 只有**模组 ID / 资源命名空间 / Java 包名**必须是全小写无空格的 `oritechaddonsone`。
 >
@@ -112,11 +112,15 @@ type3SlotCapacity = 256
 ## 开发 / Development
 
 ```powershell
-cd "D:\Games\MC\MOD\Oritech Addons One"
+cd "D:\Games\MC\MOD\26.1.2-NeoForge\Oritech Addons One"
 .\gradlew build        # 产物 build\libs\Oritech Addons One-1.0.0.jar
 .\gradlew runClient    # 开发客户端（会自动加载 libs\ 里的 oritech / athena / geckolib）
 .\gradlew runData      # 数据生成
 ```
+
+> 本仓库位于 MC 26.1.2 开发工作区 `D:\Games\MC\MOD\26.1.2-NeoForge\` 下，与王冠模组
+> `..\Crown Mod\` 并列，两者是**互相独立的 git 仓库**；工作区总览见 `D:\Games\MC\MOD\README.md`。
+> 首次克隆本仓库后必须先按 `libs\README.md` 放好三个第三方 jar 才能构建。
 
 - `libs/` 中放的是从整合包复制来的 **Oritech / Athena / GeckoLib** jar：
   `oritech-2.0.0-exp6.jar` 用于编译（`compileOnly`），三个 jar 都作为 `localRuntime` 供开发运行时加载，
