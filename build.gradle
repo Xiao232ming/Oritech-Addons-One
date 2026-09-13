@@ -125,6 +125,8 @@ dependencies {
     localRuntime files('libs/architectury-13.0.11-neoforge.jar')
     localRuntime files('libs/athena-neoforge-1.21.1-4.0.6.jar')
     localRuntime files('libs/geckolib-neoforge-1.21.1-4.9.2.jar')
+    // 开发期可选：用于验证其它附属模组的分级插件能否被Ⅰ/Ⅲ型识别（不入产物）
+    localRuntime files('libs/oritechthings-0.0.46.jar')
 
     // Example optional mod dependency with JEI
     // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime

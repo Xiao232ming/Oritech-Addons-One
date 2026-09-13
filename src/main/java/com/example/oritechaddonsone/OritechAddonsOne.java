@@ -167,8 +167,20 @@ public class OritechAddonsOne {
                     .sorted()
                     .toList();
 
-            LOGGER.debug("Extension Plugin type I accepts {} plugins: {}", type1.size(), type1);
+            LOGGER.debug("Extension Plugin type I / III accept every plugin of the stat categories; Oritech's reference plugins ({}): {}", type1.size(), type1);
             LOGGER.debug("Extension Plugin type II accepts {} plugins: {}", type2.size(), type2);
+
+            // Types I and III accept plugins by category, so log the category of every registered addon
+            // block. This makes it easy to check that tiered plugins from other addon mods (e.g. Oritech
+            // Things) are classified as expected.
+            var categorized = new java.util.TreeMap<String, String>();
+            for (var block : BuiltInRegistries.BLOCK) {
+                var category = ExtensionPluginType.categoryOf(block);
+                if (category != null) {
+                    categorized.put(BuiltInRegistries.BLOCK.getKey(block).toString(), category.name());
+                }
+            }
+            LOGGER.debug("Extension Plugin stat categories ({} blocks): {}", categorized.size(), categorized);
 
             var type3Order = ExtensionPluginType.fixedSlotOrder().stream()
                     .map(block -> BuiltInRegistries.BLOCK.getKey(block).toString())

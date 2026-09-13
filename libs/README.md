@@ -11,6 +11,7 @@
 | `architectury-13.0.11-neoforge.jar` | `localRuntime`：Oritech 的前置（其注册系统基于 Architectury） | 同上 |
 | `athena-neoforge-1.21.1-4.0.6.jar` | `localRuntime`：Oritech 的前置（贴图/模型） | 同上 |
 | `geckolib-neoforge-1.21.1-4.9.2.jar` | `localRuntime`：Oritech 的前置（动画） | 同上 |
+| oritechthings-0.0.46.jar | 可选 localRuntime：用于验证其它附属模组的分级插件能被Ⅰ/Ⅲ型识别（构建不需要它） | CurseForge/Modrinth |
 
 本机是从 HMCL 的 1.21.1 实例复制的：
 
