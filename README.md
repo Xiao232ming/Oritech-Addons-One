@@ -10,7 +10,7 @@ plugins that hold several other plugins and apply their combined effects to the 
 attached to.
 
 > 与名字相关的一切都叫 **Oritech Addons One**：工程文件夹（`D:\Games\MC\MOD\26.1.2-NeoForge\Oritech Addons One`）、
-> 构建产物（`Oritech Addons One-1.0.0.jar`）、模组显示名与创造模式标签页。
+> 构建产物（`Oritech Addons One-1.0.0+mc26.1.2.jar`）、模组显示名与创造模式标签页。
 > 只有**模组 ID / 资源命名空间 / Java 包名**必须是全小写无空格的 `oritechaddonsone`。
 >
 > ⚠️ 方块 ID 变更史：`oritechaddons:extension_addon` → `oritechaddonsone:extension_plugin_1`
@@ -130,7 +130,7 @@ type3SlotCapacity = 256
 
 ```powershell
 cd "D:\Games\MC\MOD\26.1.2-NeoForge\Oritech Addons One"
-.\gradlew build        # 产物 build\libs\Oritech Addons One-1.0.0.jar
+.\gradlew build        # 产物 build\libs\Oritech Addons One-1.0.0+mc26.1.2.jar
 .\gradlew runClient    # 开发客户端（会自动加载 libs\ 里的 oritech / athena / geckolib）
 .\gradlew runData      # 数据生成
 ```

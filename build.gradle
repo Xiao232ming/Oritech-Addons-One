@@ -14,7 +14,9 @@ tasks.named('wrapper', Wrapper).configure {
     distributionType = Wrapper.DistributionType.BIN
 }
 
-version = mod_version
+// The artifact name carries the targeted game version, e.g. "Oritech Addons One-1.0.0+mc26.1.2.jar".
+// The mod metadata keeps the plain mod_version, because it is expanded from the property below.
+version = "${mod_version}+mc${minecraft_version}"
 group = mod_group_id
 
 sourceSets.main.resources {
@@ -31,7 +33,7 @@ repositories {
 }
 
 base {
-    // The built jar is named after the mod: "Oritech Addons One-1.0.0.jar"
+    // The built jar is named after the mod: "Oritech Addons One-1.0.0+mc26.1.2.jar"
     archivesName = 'Oritech Addons One'
 }
 
