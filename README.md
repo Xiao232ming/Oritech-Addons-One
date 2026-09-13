@@ -177,7 +177,7 @@ cd "D:\Games\MC\MOD\1.21.1-NeoForge\Oritech Addons One"
 | 创造标签注入 | `oritech:machine_group` | 同名 `oritech:machine_group`（`ItemGroups.MACHINE_GROUP`） |
 | 绞接器类 | `AddonSplicerBlockEntity#gatherAddonStats` | `ShrinkerBlockEntity#gatherAddonStats`（中文名仍是“插件绞接器”） |
 | 数值型插件命名 | 协同矩阵 / 辅助加工室 | **终极插件（`MACHINE_ULTIMATE_ADDON`）/ 机器加工插件（`MACHINE_PROCESSING_ADDON`）** |
-| 配方语法 | `key: "minecraft:iron_ingot"`、`result.id` | `key: {"item": "..."}`、`result.item` |
+| 配方语法 | 材料可写裸字符串 `key: "minecraft:iron_ingot"` | 材料需对象形式 `key: {"item": "..."}`；**两版的 `result` 都用物品栈键名 `id`**（`{"id": …, "count": n}`——写成 `item` 会让 `RecipeManager` 报 `No key id in MapLike[...]` 并导致整条配方加载失败） |
 
 ## 目录 / Layout
 
