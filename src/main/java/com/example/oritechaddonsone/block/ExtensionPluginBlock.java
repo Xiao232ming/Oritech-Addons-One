@@ -29,6 +29,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
+import net.minecraft.world.level.redstone.Orientation;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
@@ -155,6 +156,20 @@ public class ExtensionPluginBlock extends MachineAddonBlock {
     @Override
     public Class<? extends BlockEntity> getBlockEntityType() {
         return ExtensionPluginBlockEntity.class;
+    }
+
+    /**
+     * Picks up redstone changes at this block, like Oritech's own control unit plugin does: while a
+     * control unit plugin is stored inside, the signal at this block controls the connected machine
+     * (it is turned off while powered).
+     */
+    @Override
+    protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, Orientation orientation,
+            boolean movedByPiston) {
+        super.neighborChanged(state, level, pos, block, orientation, movedByPiston);
+        if (!level.isClientSide() && level.getBlockEntity(pos) instanceof ExtensionPluginBlockEntity blockEntity) {
+            blockEntity.applyRedstoneSignal(level.hasNeighborSignal(pos));
+        }
     }
 
     @Override
