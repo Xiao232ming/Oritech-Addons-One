@@ -1,0 +1,11 @@
+{
+  "required": true,
+  "package": "com.example.oritechaddonsone.mixin",
+  "compatibilityLevel": "JAVA_25",
+  "mixins": [
+    "AddonSplicerBlockEntityMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
