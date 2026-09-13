@@ -158,6 +158,20 @@ public class ExtensionPluginBlock extends MachineAddonBlock {
         return ExtensionPluginBlockEntity.class;
     }
 
+    /**
+     * Picks up redstone changes at this block, like Oritech's own control unit plugin does: while a
+     * control unit plugin is stored inside, the signal at this block controls the connected machine
+     * (it is turned off while powered).
+     */
+    @Override
+    protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos fromPos,
+            boolean isMoving) {
+        super.neighborChanged(state, level, pos, block, fromPos, isMoving);
+        if (!level.isClientSide() && level.getBlockEntity(pos) instanceof ExtensionPluginBlockEntity blockEntity) {
+            blockEntity.applyRedstoneSignal(level.hasNeighborSignal(pos));
+        }
+    }
+
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player,
             BlockHitResult hit) {

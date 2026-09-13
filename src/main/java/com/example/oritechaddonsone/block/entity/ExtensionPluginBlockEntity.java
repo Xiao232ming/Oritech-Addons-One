@@ -23,6 +23,8 @@ import rearth.oritech.api.energy.EnergyApi;
 import rearth.oritech.api.energy.containers.DelegatingEnergyStorage;
 import rearth.oritech.block.blocks.addons.MachineAddonBlock;
 import rearth.oritech.block.entity.addons.AddonBlockEntity;
+import rearth.oritech.block.entity.addons.RedstoneAddonBlockEntity;
+import rearth.oritech.block.entity.addons.RedstoneAddonBlockEntity.RedstoneControllable;
 import rearth.oritech.init.BlockContent;
 import rearth.oritech.init.OritechConfig;
 import rearth.oritech.util.MachineAddonController;
@@ -100,6 +102,52 @@ public class ExtensionPluginBlockEntity extends AddonBlockEntity
             var stack = items.get(slot);
             if (stack.isEmpty() || !(stack.getItem() instanceof BlockItem blockItem)) continue;
             if (blockItem.getBlock() == BlockContent.MACHINE_ACCEPTOR_ADDON) return true;
+        }
+        return false;
+    }
+
+    /** True while a control unit (redstone) plugin is stored, which lets redstone control the machine. */
+    public boolean hasRedstonePlugin() {
+        for (int slot = 0; slot < getContainerSize(); slot++) {
+            var stack = items.get(slot);
+            if (stack.isEmpty() || !(stack.getItem() instanceof BlockItem blockItem)) continue;
+            if (blockItem.getBlock() == BlockContent.MACHINE_REDSTONE_ADDON) return true;
+        }
+        return false;
+    }
+
+    // ------------------------------------------------------------------ redstone input (control unit plugin)
+
+    /**
+     * Forwards the redstone signal at this block to the connected machine, exactly like Oritech's own
+     * control unit plugin does from its {@code neighborChanged} hook: the machine implements
+     * {@link RedstoneControllable} and turns itself off while it is powered.
+     * <p>
+     * Only input control is forwarded. The control unit's mode (input control / comparator output) is
+     * stored in its own block entity, which does not exist while it is kept as an item inside this
+     * block, so a stored control unit always behaves like the default mode {@code INPUT_CONTROL}.
+     */
+    public void applyRedstoneSignal(boolean powered) {
+        if (level == null) return;
+        if (!(level.getBlockEntity(getControllerPos()) instanceof MachineAddonController controller)) return;
+        if (!(controller instanceof RedstoneControllable controllable)) return;
+
+        if (hasRedstonePlugin()) {
+            controllable.onRedstoneEvent(powered);
+            return;
+        }
+
+        // No control unit inside: release the machine, so taking the plugin out does not leave it
+        // disabled forever. A control unit that is attached to the machine directly owns the state, so
+        // it is left untouched in that case.
+        if (hasAttachedRedstoneAddon(controller)) return;
+        controllable.onRedstoneEvent(false);
+    }
+
+    /** True while a vanilla control unit plugin block is attached to the machine directly. */
+    private boolean hasAttachedRedstoneAddon(MachineAddonController controller) {
+        for (var pos : controller.getConnectedAddons()) {
+            if (level.getBlockEntity(pos) instanceof RedstoneAddonBlockEntity) return true;
         }
         return false;
     }
@@ -194,6 +242,10 @@ public class ExtensionPluginBlockEntity extends AddonBlockEntity
         if (!(level instanceof ServerLevel serverLevel)) return;
         if (!(level.getBlockState(worldPosition).getBlock() instanceof ExtensionPluginBlock)) return;
         if (!(serverLevel.getBlockEntity(getControllerPos()) instanceof MachineAddonController controller)) return;
+
+        // Keep the machine's redstone state in sync with the signal at this block. Doing it here covers
+        // placement, world loads and plugin changes, because every addon scan ends up in this method.
+        applyRedstoneSignal(serverLevel.hasNeighborSignal(worldPosition));
 
         // Plugins whose behaviour Oritech keys on the block type (quarry, silk touch, fluid, crop
         // filter, steam boiler, hunter, ...) are replayed through the machine's own addon hook, so
