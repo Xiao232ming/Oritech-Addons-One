@@ -104,15 +104,18 @@ public class ExtensionPluginScreen extends AbstractContainerScreen<ExtensionPlug
 
         if (fixedSlots.isEmpty()) return;
 
-        // The veil uses the depth test free overlay render type, so it is guaranteed to land on top of
-        // the pushed back hint icons; it writes no depth, so the real plugins rendered afterwards
-        // (z=150) are still drawn over it. Both mechanisms are kept on purpose: the icon is pushed
-        // back to z=50 and the veil uses NO_DEPTH_TEST + COLOR_WRITE.
+        // Draw the veils over the hint icons and flush right away.
+        // GuiGraphics#flush() only ends the batch of the *last* render type used, and renderItem flushes
+        // its own item batch while drawing, so without this flush the veils would stay in a pending
+        // batch and end up somewhere else in the frame. The overlay render type has NO_DEPTH_TEST and
+        // COLOR_WRITE, so it covers the icons (which are pushed back to z=50) and still lets the real
+        // plugins rendered afterwards (z=150) draw over it.
         for (int slot = 0; slot < layout.slots() && slot < fixedSlots.size(); slot++) {
             int slotX = xo + layout.slotX(slot);
             int slotY = yo + layout.slotY(slot);
             graphics.fill(RenderType.guiOverlay(), slotX, slotY, slotX + 16, slotY + 16, HINT_VEIL_Z, HINT_VEIL);
         }
+        graphics.flush();
     }
 
     /** Recessed 18x18 slot frame, drawn like vanilla container backgrounds do. */
