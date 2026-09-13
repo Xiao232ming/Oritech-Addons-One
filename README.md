@@ -9,9 +9,11 @@ Oritech 机器插件，内部带多个插件槽，放入其中的插件效果会
 plugins that hold several other plugins and apply their combined effects to the machine they are
 attached to.
 
-> 与名字相关的一切都叫 **Oritech Addons One**：工程文件夹（`D:\Games\MC\MOD\26.1.2-NeoForge\Oritech Addons One`）、
-> 构建产物（`Oritech Addons One-1.0.0+mc26.1.2.jar`）、模组显示名与创造模式标签页。
-> 只有**模组 ID / 资源命名空间 / Java 包名**必须是全小写无空格的 `oritechaddonsone`。
+> 工程文件夹叫 **Oritech Addons One**（`D:\Games\MC\MOD\26.1.2-NeoForge\Oritech Addons One`），
+> **模组显示名**与创造模式标签页也是 **Oritech Addons One**（游戏里看到的名字）；
+> **产物文件名**用全小写无空格的模组 ID：`oritechaddonsone-1.0.0+mc26.1.2.jar`
+> （`版本+mc游戏版本`）——与**模组 ID / 资源命名空间 / Java 包名** `oritechaddonsone` 一致，
+> 方便命令行、脚本与自动分发处理。
 >
 > ⚠️ 方块 ID 变更史：`oritechaddons:extension_addon` → `oritechaddonsone:extension_plugin_1`
 > → 现在为 `oritechaddonsone:extension_plugin_1`（Ⅰ型）、`oritechaddonsone:extension_plugin_2`（Ⅱ型）
@@ -130,7 +132,7 @@ type3SlotCapacity = 256
 
 ```powershell
 cd "D:\Games\MC\MOD\26.1.2-NeoForge\Oritech Addons One"
-.\gradlew build        # 产物 build\libs\Oritech Addons One-1.0.0+mc26.1.2.jar
+.\gradlew build        # 产物 build\libs\oritechaddonsone-1.0.0+mc26.1.2.jar
 .\gradlew runClient    # 开发客户端（会自动加载 libs\ 里的 oritech / athena / geckolib）
 .\gradlew runData      # 数据生成
 ```

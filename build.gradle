@@ -14,7 +14,7 @@ tasks.named('wrapper', Wrapper).configure {
     distributionType = Wrapper.DistributionType.BIN
 }
 
-// The artifact name carries the targeted game version, e.g. "Oritech Addons One-1.0.0+mc26.1.2.jar".
+// The artifact name carries the targeted game version, e.g. "oritechaddonsone-1.0.0+mc26.1.2.jar".
 // The mod metadata keeps the plain mod_version, because it is expanded from the property below.
 version = "${mod_version}+mc${minecraft_version}"
 group = mod_group_id
@@ -33,8 +33,9 @@ repositories {
 }
 
 base {
-    // The built jar is named after the mod: "Oritech Addons One-1.0.0+mc26.1.2.jar"
-    archivesName = 'Oritech Addons One'
+    // Artifact file names stay plain ASCII: the lowercase mod id (no spaces, no capitals). The
+    // human readable name is still used as the in-game display name.
+    archivesName = mod_id
 }
 
 // Mojang ships Java 25 to end users in 26.1.2, so mods should target Java 25.
