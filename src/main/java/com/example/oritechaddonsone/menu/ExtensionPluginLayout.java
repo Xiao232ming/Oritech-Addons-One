@@ -11,7 +11,8 @@ public record ExtensionPluginLayout(int slots, int columns, int rows, int firstS
                                     int playerRowsY, int hotbarY, int imageWidth, int imageHeight) {
 
     public static final int MIN_SLOTS = 1;
-    public static final int MAX_SLOTS = 36;
+    /** Internal storage size: 8 rows of 9 slots, also the upper bound of the type I / II slot config. */
+    public static final int MAX_SLOTS = 72;
     public static final int SLOT_SIZE = 18;
     public static final int WIDTH = 176;
     /** Y of the player inventory label, matching vanilla container screens. */

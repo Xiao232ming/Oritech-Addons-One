@@ -26,7 +26,7 @@ attached to.
 |---|---|---|---|
 | 方块 ID / Block id | `oritechaddonsone:extension_plugin_1` | `oritechaddonsone:extension_plugin_2` | `oritechaddonsone:extension_plugin_3` |
 | 中文名 / 英文名 | 扩展插件Ⅰ型 / Extension Plugin Type I | 扩展插件Ⅱ型 / Extension Plugin Type II | 扩展插件Ⅲ型 / Extension Plugin Type III |
-| 插件槽 / Slots | 5（可在配置文件里改，1–36） | 5（可在配置文件里改，1–36） | **固定 6 格：每种插件各占一格**（速度、效率、协同矩阵、辅助加工室、机器容量、机器适配器），格位顺序固定 |
+| 插件槽 / Slots | 5（可在配置文件里改，1–72） | 5（可在配置文件里改，1–72） | **固定 6 格：每种插件各占一格**（速度、效率、协同矩阵、辅助加工室、机器容量、机器适配器），格位顺序固定 |
 | 单格上限 / Stack limit | 64 | 64 | **可配置，默认 256**（`type3SlotCapacity`，1 ~ 2147483647） |
 | 可放入 / Accepts | 速度升级、效率升级、协同矩阵、辅助加工室、机器容量、机器适配器 | **除上述 6 种、机器之心、物品栏代理以外的所有 Oritech 插件**（实测 11 种：控制单元、作物过滤器、脉冲超频、机器扩展坞、流体处理、生物校位、精准采集、产量升级、储能扩展坞、矿场、蒸汽锅炉） | 与Ⅰ型相同（上述 6 种数值型插件），且**每种只能放进属于自己的那一格** |
 | 格位提示 / Slot hint | — | — | 每个空格里显示该格对应插件的**暗色贴图**作为提示 |
@@ -88,12 +88,12 @@ attached to.
 #Number of plugin slots of the Extension Plugin Type I.
 #扩展插件Ⅰ型的物品栏格数。
 # Default: 5
-# Range: 1 ~ 36
+# Range: 1 ~ 72
 type1Slots = 5
 #Number of plugin slots of the Extension Plugin Type II.
 #扩展插件Ⅱ型的物品栏格数。
 # Default: 5
-# Range: 1 ~ 36
+# Range: 1 ~ 72
 type2Slots = 5
 #Stack limit of every single plugin slot of the Extension Plugin Type III.
 #扩展插件Ⅲ型每一格插件槽的堆叠上限。
@@ -102,7 +102,7 @@ type2Slots = 5
 type3SlotCapacity = 256
 ```
 
-- Ⅰ/Ⅱ型分别配置格数，范围 **1–36**；超出范围会自动夹取到边界。
+- Ⅰ/Ⅱ型分别配置格数，范围 **1–72**；超出范围会自动夹取到边界。
 - Ⅲ型**格数固定为 6**（每种数值型插件一格，格位顺序固定为：速度、效率、协同矩阵、辅助加工室、机器容量、机器适配器），
   它配置的是**每一格的堆叠上限** `type3SlotCapacity`：默认 **256**，范围 **1 ~ 2147483647**。
   这个上限只作用于Ⅲ型方块自己的 6 个格子（通过重写 `Slot#getMaxStackSize` 实现），
@@ -111,8 +111,8 @@ type3SlotCapacity = 256
   已通过 `IConfigScreenFactory` + `ConfigurationScreen` 注册），改完点保存即可，
   下一次打开插件界面就用新格数/新上限（不需要重启，界面上的名称也有中英翻译）。
   手动改文件当然也行，改完保存重启游戏生效。
-- 每个方块内部**始终保留 36 格存储**，配置只决定"可见可用"的格数，所以把格数调小**不会销毁**里面的插件——
-  调大后原来的插件会重新出现在对应格子里；挖掉方块时也会把全部 36 格里的东西都掉出来。
+- 每个方块内部**始终保留 72 格存储**，配置只决定"可见可用"的格数，所以把格数调小**不会销毁**里面的插件——
+  调大后原来的插件会重新出现在对应格子里；挖掉方块时也会把全部 72 格里的东西都掉出来。
   （Ⅲ型只用到前 6 格；由于插件是按数量保存的，256 个一组的插件也能正常存读档与掉落。）
 
 ## 已知限制 / Limitations
@@ -151,7 +151,7 @@ cd "D:\Games\MC\MOD\26.1.2-NeoForge\Oritech Addons One"
   Ⅲ型由 `tools/generate-plugin3-textures.ps1` 在同一套贴图上做**创造紫**重着色：机壳/面板的每种颜色
   按亮度排进紫阶 `#2B0B38`→`#B53FF0`，**插件口的像素不做映射**，所以「已连接＝蓝色 / 未连接＝红色」
   的状态提示和原版扩展坞完全一致。对比图输出到 `build\ref-textures\plugin3_port_states.png`（不随包分发）。
-- 配置：`Config.java`（`type1Slots` / `type2Slots`，1–36；`type3SlotCapacity`，1–2147483647，`ModConfig.Type.COMMON`）。
+- 配置：`Config.java`（`type1Slots` / `type2Slots`，1–72；`type3SlotCapacity`，1–2147483647，`ModConfig.Type.COMMON`）。
 - 方块模型：`assets/oritechaddonsone/models/block/extension_plugin_<n>*.json`。
 - mixin 配置：`oritechaddonsone.mixins.json`（`compatibilityLevel: JAVA_25`，与 Oritech 自身一致）。
 
@@ -160,11 +160,11 @@ cd "D:\Games\MC\MOD\26.1.2-NeoForge\Oritech Addons One"
 ```
 src/main/java/com/example/oritechaddonsone/
 ├── OritechAddonsOne.java                        # 注册三个方块 / 方块实体 / 菜单 / 标签页 / 能量能力 / 配置
-├── Config.java                                  # 配置文件：type1Slots / type2Slots（1–36）、type3SlotCapacity（1–2147483647）
+├── Config.java                                  # 配置文件：type1Slots / type2Slots（1–72）、type3SlotCapacity（1–2147483647）
 ├── ModEvents.java                               # 注入 Oritech 机械标签页
 ├── block/ExtensionPluginType.java               # 型号定义：ID、可接受插件集合、Ⅲ型固定格位顺序（格数由配置决定）
 ├── block/ExtensionPluginBlock.java              # 竖/横半砖外形、右键开界面、破坏时掉出插件、Ctrl 提示文本
-├── block/entity/ExtensionPluginBlockEntity.java # 容器（内部固定 36 格）+ 白名单 + 数值合并 + 特殊功能转发 + 适配器供能
+├── block/entity/ExtensionPluginBlockEntity.java # 容器（内部固定 72 格）+ 白名单 + 数值合并 + 特殊功能转发 + 适配器供能
 ├── item/ExtensionPluginItem.java                # BlockItem：把方块的提示桥接到物品提示（Oritech 同款做法）
 ├── menu/ExtensionPluginMenu.java                # 容器菜单（按配置的格数生成槽位，Ⅲ型每格限一种插件且上限可配）
 ├── menu/ExtensionPluginLayout.java              # 由格数计算界面几何（9 格一行、面板高度等）
