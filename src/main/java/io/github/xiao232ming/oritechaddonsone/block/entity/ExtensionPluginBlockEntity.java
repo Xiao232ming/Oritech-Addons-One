@@ -1,4 +1,4 @@
-package com.example.oritechaddonsone.block.entity;
+package io.github.xiao232ming.oritechaddonsone.block.entity;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -31,12 +31,12 @@ import rearth.oritech.init.OritechConfig;
 import rearth.oritech.util.MachineAddonController;
 import rearth.oritech.util.MachineAddonController.BaseAddonData;
 
-import com.example.oritechaddonsone.Config;
-import com.example.oritechaddonsone.OritechAddonsOne;
-import com.example.oritechaddonsone.block.ExtensionPluginBlock;
-import com.example.oritechaddonsone.block.ExtensionPluginType;
-import com.example.oritechaddonsone.menu.ExtensionPluginLayout;
-import com.example.oritechaddonsone.menu.ExtensionPluginMenu;
+import io.github.xiao232ming.oritechaddonsone.Config;
+import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
+import io.github.xiao232ming.oritechaddonsone.block.ExtensionPluginBlock;
+import io.github.xiao232ming.oritechaddonsone.block.ExtensionPluginType;
+import io.github.xiao232ming.oritechaddonsone.menu.ExtensionPluginLayout;
+import io.github.xiao232ming.oritechaddonsone.menu.ExtensionPluginMenu;
 
 /**
  * Block entity of the Extension Plugins (shared by type I, type II and type III).

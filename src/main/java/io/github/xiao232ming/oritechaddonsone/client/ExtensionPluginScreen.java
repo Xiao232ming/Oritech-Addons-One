@@ -1,4 +1,4 @@
-package com.example.oritechaddonsone.client;
+package io.github.xiao232ming.oritechaddonsone.client;
 
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -8,9 +8,9 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.entity.player.Inventory;
 
-import com.example.oritechaddonsone.block.ExtensionPluginType;
-import com.example.oritechaddonsone.menu.ExtensionPluginLayout;
-import com.example.oritechaddonsone.menu.ExtensionPluginMenu;
+import io.github.xiao232ming.oritechaddonsone.block.ExtensionPluginType;
+import io.github.xiao232ming.oritechaddonsone.menu.ExtensionPluginLayout;
+import io.github.xiao232ming.oritechaddonsone.menu.ExtensionPluginMenu;
 
 /**
  * Screen of the Extension Plugins.

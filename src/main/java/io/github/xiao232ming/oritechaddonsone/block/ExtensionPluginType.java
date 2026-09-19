@@ -1,4 +1,4 @@
-package com.example.oritechaddonsone.block;
+package io.github.xiao232ming.oritechaddonsone.block;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -20,7 +20,7 @@ import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import rearth.oritech.block.blocks.addons.MachineAddonBlock;
 import rearth.oritech.init.BlockContent;
 
-import com.example.oritechaddonsone.menu.ExtensionPluginLayout;
+import io.github.xiao232ming.oritechaddonsone.menu.ExtensionPluginLayout;
 
 /**
  * The three known Extension Plugin types.

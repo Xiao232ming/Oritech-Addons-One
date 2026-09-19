@@ -24,7 +24,7 @@ Oritech 机器插件，内部带多个插件槽，放入其中的插件效果会
 >
 > **模组显示名**与创造模式标签页叫 **Oritech Addons One**（游戏里看到的名字）；
 > **产物文件名**则用全小写无空格的模组 ID：`oritechaddonsone-1.0.0+mc1.21.1.jar`
-> （`版本+mc游戏版本`，与**模组 ID / 资源命名空间 / Java 包名**一样都是 `oritechaddonsone`，
+> （`版本+mc游戏版本`，与**模组 ID / 资源命名空间**一样都是 `oritechaddonsone`；Java 包名是 `io.github.xiao232ming.oritechaddonsone`），
 > 方便命令行、脚本与自动分发处理）。许可证 **MIT**（见 `LICENSE`）。
 
 ## 三种型号 / The three types
@@ -201,7 +201,7 @@ git switch 1.21.1          # 本分支（26.1.2 版源码在 26.1.2 分支）
 ## 目录 / Layout
 
 ```
-src/main/java/com/example/oritechaddonsone/
+src/main/java/io/github/xiao232ming/oritechaddonsone/
 ├── OritechAddonsOne.java                        # 注册方块/方块实体/菜单/标签页/配置 + Oritech 能量注册
 ├── Config.java                                  # type1Slots / type2Slots / type3SlotCapacity
 ├── ModEvents.java                               # 注入 Oritech 机械标签页

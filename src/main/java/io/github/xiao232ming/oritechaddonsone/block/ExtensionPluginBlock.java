@@ -1,4 +1,4 @@
-package com.example.oritechaddonsone.block;
+package io.github.xiao232ming.oritechaddonsone.block;
 
 import java.util.function.Consumer;
 
@@ -35,9 +35,9 @@ import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import rearth.oritech.block.blocks.addons.MachineAddonBlock;
 
-import com.example.oritechaddonsone.Config;
-import com.example.oritechaddonsone.block.entity.ExtensionPluginBlockEntity;
-import com.example.oritechaddonsone.menu.ExtensionPluginLayout;
+import io.github.xiao232ming.oritechaddonsone.Config;
+import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionPluginBlockEntity;
+import io.github.xiao232ming.oritechaddonsone.menu.ExtensionPluginLayout;
 
 /**
  * The Extension Plugin block: an Oritech machine plugin that looks like a slab (half block)
@@ -52,7 +52,7 @@ import com.example.oritechaddonsone.menu.ExtensionPluginLayout;
  * </ul>
  * <p>
  * In 1.21.1 the tooltip of a block is not picked up by its block item automatically, so the Ctrl
- * gated description lives in {@link com.example.oritechaddonsone.item.ExtensionPluginItem} and only
+ * gated description lives in {@link io.github.xiao232ming.oritechaddonsone.item.ExtensionPluginItem} and only
  * the detail lines ({@link #appendDetails}) are provided here.
  */
 public class ExtensionPluginBlock extends MachineAddonBlock {

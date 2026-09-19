@@ -1,4 +1,4 @@
-package com.example.oritechaddonsone.item;
+package io.github.xiao232ming.oritechaddonsone.item;
 
 import java.util.List;
 
@@ -11,7 +11,7 @@ import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.block.Block;
 import net.neoforged.fml.loading.FMLEnvironment;
 
-import com.example.oritechaddonsone.block.ExtensionPluginBlock;
+import io.github.xiao232ming.oritechaddonsone.block.ExtensionPluginBlock;
 
 /**
  * Block item of the Extension Plugins.

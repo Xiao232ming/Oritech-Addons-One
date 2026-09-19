@@ -1,6 +1,6 @@
-package com.example.oritechaddonsone.menu;
+package io.github.xiao232ming.oritechaddonsone.menu;
 
-import com.example.oritechaddonsone.block.ExtensionPluginType;
+import io.github.xiao232ming.oritechaddonsone.block.ExtensionPluginType;
 
 /**
  * Geometry of the Extension Plugin GUI, derived from the (configurable) slot count.

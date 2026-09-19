@@ -1,4 +1,4 @@
-package com.example.oritechaddonsone.mixin;
+package io.github.xiao232ming.oritechaddonsone.mixin;
 
 import java.util.List;
 
@@ -7,7 +7,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import com.example.oritechaddonsone.block.ExtensionPluginBlock;
+import io.github.xiao232ming.oritechaddonsone.block.ExtensionPluginBlock;
 import rearth.oritech.block.entity.interaction.ShrinkerBlockEntity;
 import rearth.oritech.util.MachineAddonController;
 

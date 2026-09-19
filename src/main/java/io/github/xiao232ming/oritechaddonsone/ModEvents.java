@@ -1,4 +1,4 @@
-package com.example.oritechaddonsone;
+package io.github.xiao232ming.oritechaddonsone;
 
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
