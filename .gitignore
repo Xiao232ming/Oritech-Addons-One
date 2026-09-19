@@ -42,7 +42,7 @@ repo/
 ### 本地补充 / Local additions ###
 # 分发包（gradlew build 后手动拷贝进来）
 dist/
-# 编译期依赖的第三方 mod jar（见 libs/README.md，不入库）
+# 第三方 mod jar：构建已改用 Modrinth Maven，这里只作离线备用（不入库）
 libs/*.jar
 # 运行/构建日志
 *.log
