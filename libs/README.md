@@ -1,32 +1,52 @@
-# libs/ — 本地编译期依赖 / Local compile-time dependencies
+# libs/ — 可选的本地依赖 / Optional local dependencies
 
-这个目录里的 jar **不入版本库**（`.gitignore` 里忽略了 `libs/*.jar`）：它们是第三方模组，
-体积大（Oritech 一个就 10 MB），而且有新版本时直接换文件即可。
+**构建不再需要手动放 jar。** `oritech`（编译期 + 开发运行）、`athena`（Athena CTM）与 `geckolib`
+现在都从 **Modrinth Maven** 解析，坐标（Modrinth 版本 ID）写在 `gradle.properties` 里，
+仓库地址见 `build.gradle` 的 `repositories`：
 
-**从零开始构建本项目前，必须先把下面三个 jar 放到这里**，否则 `gradlew build` 会报找不到
-`rearth.oritech.*` 之类的符号：
-
-| 文件 / File | 用途 / Purpose | 来源 / Where to get it |
-|---|---|---|
-| `oritech-2.0.0-exp6.jar` | `compileOnly` + `localRuntime`：本模组是它的附属，编译与开发运行都要 | 整合包实例的 `mods\` 目录，或 CurseForge/Modrinth |
-| `athena-4.7.3.jar` | `localRuntime`：Oritech 的前置（贴图/模型） | 同上 |
-| `geckolib-neoforge-26.1.2-5.5.2.jar` | `localRuntime`：Oritech 的前置（动画） | 同上 |
-
-本机这三个文件是从 HMCL 实例复制的：
-
-```powershell
-$mods = 'D:\Games\MC\HMCL\.minecraft\versions\26.1.2-NeoForge\mods'
-$libs = 'D:\Games\MC\MOD\26.1.2-NeoForge\Oritech Addons One\libs'
-Copy-Item "$mods\oritech-2.0.0-exp6.jar"             $libs
-Copy-Item "$mods\athena-4.7.3.jar"                   $libs
-Copy-Item "$mods\geckolib-neoforge-26.1.2-5.5.2.jar" $libs
+```groovy
+maven {
+    name = 'Modrinth'
+    url = 'https://api.modrinth.com/maven'
+    content { includeGroup 'maven.modrinth' }
+}
 ```
 
-说明 / Notes：
+所以 `libs/` 现在只是**离线备用**目录：里面的 jar 不入版本库（`.gitignore` 忽略 `libs/*.jar`）。
 
-- 这三个 jar **不会**被打进本模组的产物 jar，只在编译和开发运行时使用
-  （见 `build.gradle` 里的 `compileOnly files(...)` 与 `localRuntime files(...)`）。
-- 换 Oritech 版本时：替换 `libs\oritech-*.jar`，同时同步修改 `build.gradle` 里的文件名，
-  并核对本模组用到的 Oritech 内部 API（`MachineAddonController`、
-  `AddonSplicerBlockEntity#gatherAddonStats` 等）是否仍然存在。
-- 如果你更希望仓库自包含（一个新克隆就能直接构建），把 `.gitignore` 里的 `libs/*.jar` 删掉再提交即可。
+| 依赖 / Dependency | 本分支使用的 Modrinth 版本 ID | 用途 / Purpose |
+|---|---|---|
+| `oritech` 2.0.0-exp6 | `2xLWeZUn` | `compileOnly` + `localRuntime`：本模组是它的附属 |
+| `athena` (Athena CTM) 4.7.3 | `8KRMFzZ7` | `localRuntime`：Oritech 的运行时前置 |
+| `geckolib` 5.5.2 | `xfVfPcoC` | `localRuntime`：Oritech 的运行时前置 |
+
+**换依赖版本**：打开 `https://modrinth.com/mod/<slug>/versions`，挑对应 **NeoForge + 26.1.2** 的那个文件，
+在页面上的文件列表里复制它的 **Version ID**，替换 `gradle.properties` 里对应的 `*_version`，
+并同步更新上表。注意选对加载器：同一个版本号可能有 fabric / neoforge 两个 ID
+（例如 Oritech 1.2.12 的 fabric 是 `lYkwnT9Q`、neoforge 是 `lxLMO7bV`）。
+
+**想用本地 jar 构建（例如完全离线）**：把 `build.gradle` 里的
+
+```groovy
+compileOnly "maven.modrinth:oritech:${oritech_version}"
+localRuntime "maven.modrinth:oritech:${oritech_version}"
+localRuntime "maven.modrinth:athena-ctm:${athena_version}"
+localRuntime "maven.modrinth:geckolib:${geckolib_version}"
+```
+
+换成文件依赖即可（本目录里已经放着这几份本机副本，来自 HMCL 实例
+`D:\Games\MC\HMCL\.minecraft\versions\26.1.2-NeoForge\mods`）：
+
+```groovy
+compileOnly files('libs/oritech-2.0.0-exp6.jar')
+localRuntime files('libs/oritech-2.0.0-exp6.jar')
+localRuntime files('libs/athena-4.7.3.jar')
+localRuntime files('libs/geckolib-neoforge-26.1.2-5.5.2.jar')
+```
+
+为什么默认不入库：第三方模组 jar 体积大（Oritech 一个就 10 MB）且各自有自己的许可，
+随仓库分发既不必要也不合适；从 Modrinth Maven 拉取还能让 GitHub Actions 直接构建。
+
+升级 Oritech 时记得核对本模组用到的内部 API 是否还在：
+`MachineAddonController`、`AddonSplicerBlockEntity#gatherAddonStats`
+（1.21.1 分支是 `ShrinkerBlockEntity#gatherAddonStats`）。

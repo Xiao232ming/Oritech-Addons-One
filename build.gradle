@@ -30,6 +30,14 @@ sourceSets.main.resources {
 
 repositories {
     // Add here additional repositories if required by some of the dependencies below.
+    // Oritech and its dependencies are published on Modrinth. Resolving them from the Modrinth
+    // Maven keeps third-party jars out of the repository, so a fresh clone (and GitHub Actions)
+    // can build with no manual setup. The coordinates live in gradle.properties.
+    maven {
+        name = 'Modrinth'
+        url = 'https://api.modrinth.com/maven'
+        content { includeGroup 'maven.modrinth' }
+    }
 }
 
 base {
@@ -117,13 +125,13 @@ configurations {
 dependencies {
     // Oritech (the target mod) provides the machine addon / plugin API this addon builds upon.
     // Only needed at compile time - the real mod supplies these classes at runtime.
-    compileOnly files('libs/oritech-2.0.0-exp6.jar')
+    compileOnly "maven.modrinth:oritech:${oritech_version}"
 
     // Loaded in dev runs (gradlew runClient / runData) so the addon can actually be tested in game.
-    // These jars are copies of the ones from the modpack and are NOT bundled into the built jar.
-    localRuntime files('libs/oritech-2.0.0-exp6.jar')
-    localRuntime files('libs/athena-4.7.3.jar')
-    localRuntime files('libs/geckolib-neoforge-26.1.2-5.5.2.jar')
+    // These mods are NOT bundled into the built jar.
+    localRuntime "maven.modrinth:oritech:${oritech_version}"
+    localRuntime "maven.modrinth:athena-ctm:${athena_version}"
+    localRuntime "maven.modrinth:geckolib:${geckolib_version}"
 
     // Example optional mod dependency with JEI
     // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime
