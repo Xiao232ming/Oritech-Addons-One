@@ -1,0 +1,62 @@
+name: Bug report / 问题反馈
+description: 反馈 Oritech Addons One 在游戏中的问题
+title: "[Bug] "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈！请尽量把信息填全，尤其是**问题出在哪个版本分支**与**日志片段**，
+        这两项能让问题定位快很多。
+  - type: dropdown
+    id: branch
+    attributes:
+      label: 版本分支 / Branch
+      description: 用的是哪个版本的模组？（下载页 / 文件名里的 mc 版本号）
+      options:
+        - 1.21.1（MC 1.21.1 + NeoForge 21.1.250）
+        - 26.1.2（MC 26.1.2 + NeoForge 26.1.2.107，默认分支）
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: 版本号 / Versions
+      description: 模组 jar 文件名 + Oritech 版本（例：oritechaddonsone-1.0.0+mc1.21.1.jar，Oritech 1.2.12）
+      placeholder: oritechaddonsone-1.0.0+mc1.21.1.jar / Oritech 1.2.12
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: 现象 / What happened
+      description: 期望发生什么、实际发生了什么；界面或贴图问题请说明在哪个型号、哪一格。
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤 / Steps to reproduce
+      placeholder: |
+        1. 放置扩展插件Ⅲ型并放入等级 5 的速度插件
+        2. 观察格位提示
+        3. 提示图标没有被压暗（期望压暗）
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: 日志 / Log
+      description: 贴出 `logs/latest.log` 里的相关片段（或整个文件）；崩溃请附 `crash-reports/` 里的文件。
+      render: text
+    validations:
+      required: false
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 自检 / Checklist
+      options:
+        - label: 已删除其它旧版本的同名模组 jar（避免同一模组 ID 出现两份）
+          required: true
+        - label: 已确认 Oritech 本体与其前置（Architectury / Athena / GeckoLib 等）都已安装
+          required: true
