@@ -29,7 +29,7 @@ attached to.
 >
 > **模组显示名**与创造模式标签页是 **Oritech Addons One**（游戏里看到的名字）；
 > **产物文件名**用全小写无空格的模组 ID：`oritechaddonsone-1.0.0+mc26.1.2.jar`
-> （`版本+mc游戏版本`）——与**模组 ID / 资源命名空间 / Java 包名** `oritechaddonsone` 一致，
+> （`版本+mc游戏版本`）——与**模组 ID / 资源命名空间** `oritechaddonsone` 一致（Java 包名是 `io.github.xiao232ming.oritechaddonsone`），
 > 方便命令行、脚本与自动分发处理。许可证 **MIT**（见 `LICENSE`）。
 >
 > ⚠️ 方块 ID 变更史：`oritechaddons:extension_addon` → `oritechaddonsone:extension_plugin_1`
@@ -175,7 +175,7 @@ git switch 26.1.2          # 本分支（1.21.1 版源码在 1.21.1 分支）
 ## 目录 / Layout
 
 ```
-src/main/java/com/example/oritechaddonsone/
+src/main/java/io/github/xiao232ming/oritechaddonsone/
 ├── OritechAddonsOne.java                        # 注册三个方块 / 方块实体 / 菜单 / 标签页 / 能量能力 / 配置
 ├── Config.java                                  # 配置文件：type1Slots / type2Slots（1–72）、type3SlotCapacity（1–2147483647）
 ├── ModEvents.java                               # 注入 Oritech 机械标签页

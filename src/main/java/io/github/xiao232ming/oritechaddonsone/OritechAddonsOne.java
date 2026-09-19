@@ -1,4 +1,4 @@
-package com.example.oritechaddonsone;
+package io.github.xiao232ming.oritechaddonsone;
 
 
 import org.slf4j.Logger;
@@ -29,14 +29,14 @@ import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
-import com.example.oritechaddonsone.item.ExtensionPluginItem;
+import io.github.xiao232ming.oritechaddonsone.item.ExtensionPluginItem;
 import rearth.oritech.block.blocks.addons.MachineAddonBlock;
 
-import com.example.oritechaddonsone.block.ExtensionPluginBlock;
-import com.example.oritechaddonsone.block.ExtensionPluginType;
-import com.example.oritechaddonsone.block.entity.ExtensionPluginBlockEntity;
-import com.example.oritechaddonsone.menu.ExtensionPluginLayout;
-import com.example.oritechaddonsone.menu.ExtensionPluginMenu;
+import io.github.xiao232ming.oritechaddonsone.block.ExtensionPluginBlock;
+import io.github.xiao232ming.oritechaddonsone.block.ExtensionPluginType;
+import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionPluginBlockEntity;
+import io.github.xiao232ming.oritechaddonsone.menu.ExtensionPluginLayout;
+import io.github.xiao232ming.oritechaddonsone.menu.ExtensionPluginMenu;
 
 /**
  * An addon for Oritech (26.1.2) that adds the "Extension Plugin" block.

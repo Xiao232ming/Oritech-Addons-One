@@ -1,4 +1,4 @@
-package com.example.oritechaddonsone.menu;
+package io.github.xiao232ming.oritechaddonsone.menu;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -10,10 +10,10 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
-import com.example.oritechaddonsone.Config;
-import com.example.oritechaddonsone.OritechAddonsOne;
-import com.example.oritechaddonsone.block.ExtensionPluginType;
-import com.example.oritechaddonsone.block.entity.ExtensionPluginBlockEntity;
+import io.github.xiao232ming.oritechaddonsone.Config;
+import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
+import io.github.xiao232ming.oritechaddonsone.block.ExtensionPluginType;
+import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionPluginBlockEntity;
 
 /**
  * Menu of the Extension Plugins: the plugin slots of this {@link ExtensionPluginType} (their amount is

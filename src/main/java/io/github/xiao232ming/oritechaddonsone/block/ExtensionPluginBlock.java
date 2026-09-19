@@ -1,4 +1,4 @@
-package com.example.oritechaddonsone.block;
+package io.github.xiao232ming.oritechaddonsone.block;
 
 import java.util.function.Consumer;
 
@@ -39,9 +39,9 @@ import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import rearth.oritech.block.blocks.addons.MachineAddonBlock;
 
-import com.example.oritechaddonsone.Config;
-import com.example.oritechaddonsone.block.entity.ExtensionPluginBlockEntity;
-import com.example.oritechaddonsone.menu.ExtensionPluginLayout;
+import io.github.xiao232ming.oritechaddonsone.Config;
+import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionPluginBlockEntity;
+import io.github.xiao232ming.oritechaddonsone.menu.ExtensionPluginLayout;
 
 /**
  * The Extension Plugin block: an Oritech machine plugin that looks like a slab (half block)

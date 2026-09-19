@@ -1,4 +1,4 @@
-package com.example.oritechaddonsone.client;
+package io.github.xiao232ming.oritechaddonsone.client;
 
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -9,7 +9,7 @@ import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.client.gui.ConfigurationScreen;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 
-import com.example.oritechaddonsone.OritechAddonsOne;
+import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 
 /**
  * Client only setup: registers the screen for the Extension Plugin menu and the in-game config screen

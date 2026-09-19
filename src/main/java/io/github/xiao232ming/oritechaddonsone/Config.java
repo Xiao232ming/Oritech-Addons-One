@@ -1,9 +1,9 @@
-package com.example.oritechaddonsone;
+package io.github.xiao232ming.oritechaddonsone;
 
 import net.neoforged.neoforge.common.ModConfigSpec;
 
-import com.example.oritechaddonsone.block.ExtensionPluginType;
-import com.example.oritechaddonsone.menu.ExtensionPluginLayout;
+import io.github.xiao232ming.oritechaddonsone.block.ExtensionPluginType;
+import io.github.xiao232ming.oritechaddonsone.menu.ExtensionPluginLayout;
 
 /**
  * Common config of the mod. The inventory of the three plugin types can be adjusted here:

@@ -1,4 +1,4 @@
-package com.example.oritechaddonsone.item;
+package io.github.xiao232ming.oritechaddonsone.item;
 
 import java.util.function.Consumer;
 
@@ -16,7 +16,7 @@ import net.minecraft.world.level.block.Block;
  * A block that implements {@link TooltipProvider} does not automatically contribute to the tooltip of
  * its block item - vanilla's {@code BlockItem} has no such bridge. Oritech solves this with the same
  * custom item for its own blocks, and this class does the same, so
- * {@link com.example.oritechaddonsone.block.ExtensionPluginBlock#addToTooltip} actually runs when the
+ * {@link io.github.xiao232ming.oritechaddonsone.block.ExtensionPluginBlock#addToTooltip} actually runs when the
  * item is hovered.
  */
 public class ExtensionPluginItem extends BlockItem {

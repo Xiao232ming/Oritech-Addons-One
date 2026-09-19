@@ -1,4 +1,4 @@
-package com.example.oritechaddonsone.mixin;
+package io.github.xiao232ming.oritechaddonsone.mixin;
 
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -9,7 +9,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import net.minecraft.world.level.Level;
 
-import com.example.oritechaddonsone.block.ExtensionPluginBlock;
+import io.github.xiao232ming.oritechaddonsone.block.ExtensionPluginBlock;
 
 import rearth.oritech.client.ui.UpgradableOritechScreenHandler;
 import rearth.oritech.util.MachineAddonController;

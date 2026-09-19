@@ -1,4 +1,4 @@
-package com.example.oritechaddonsone.block;
+package io.github.xiao232ming.oritechaddonsone.block;
 
 import java.util.HashSet;
 import java.util.List;

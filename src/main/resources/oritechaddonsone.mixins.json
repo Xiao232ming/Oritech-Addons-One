@@ -1,6 +1,6 @@
 {
   "required": true,
-  "package": "com.example.oritechaddonsone.mixin",
+  "package": "io.github.xiao232ming.oritechaddonsone.mixin",
   "compatibilityLevel": "JAVA_25",
   "mixins": [
     "AddonSplicerBlockEntityMixin"
