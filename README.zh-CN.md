@@ -57,7 +57,7 @@
 
 ## 🙏 致谢
 
-- **Rearth** — 创造了 [Oritech](https://github.com/Rearth/Oritech) 这个 excellent 的模组。
+- **Rearth** — 创造了 [Oritech](https://github.com/Rearth/Oritech) 这个优秀的模组。
 - **DeepSeek-V41-Flash** — 为项目开发提供代码帮助。
 
 ---
