@@ -30,6 +30,20 @@ sourceSets.main.resources {
 
 repositories {
     // Add here additional repositories if required by some of the dependencies below.
+    // Oritech and its dependencies are published on Modrinth. Resolving them from the Modrinth
+    // Maven keeps third-party jars out of the repository, so a fresh clone (and GitHub Actions)
+    // can build with no manual setup. The coordinates live in gradle.properties.
+    maven {
+        name = 'Modrinth'
+        url = 'https://api.modrinth.com/maven'
+        content { includeGroup 'maven.modrinth' }
+    }
+    // Architectury (an Oritech runtime dependency) is not published on the Modrinth Maven.
+    maven {
+        name = 'Architectury'
+        url = 'https://maven.architectury.dev/'
+        content { includeGroup 'dev.architectury' }
+    }
 }
 
 base {
@@ -120,17 +134,18 @@ configurations {
 }
 
 dependencies {
-    // Oritech 1.21.1 作为编译期依赖（libs/ 里的第三方 jar 不入版本库，见 libs/README.md）
-    compileOnly files('libs/oritech-neoforge-1.21.1-1.2.12.jar')
+    // Oritech 1.21.1 作为编译期依赖（从 Modrinth Maven 拉取，坐标见 gradle.properties）
+    compileOnly "maven.modrinth:oritech:${oritech_version}"
 
-    // 开发运行时加载：Oritech 本体与其前置（athena / geckolib）。
-    // 这些 jar 不会被打进本模组的产物 jar。
-    localRuntime files('libs/oritech-neoforge-1.21.1-1.2.12.jar')
-    localRuntime files('libs/architectury-13.0.11-neoforge.jar')
-    localRuntime files('libs/athena-neoforge-1.21.1-4.0.6.jar')
-    localRuntime files('libs/geckolib-neoforge-1.21.1-4.9.2.jar')
-    // 开发期可选：用于验证其它附属模组的分级插件能否被Ⅰ/Ⅲ型识别（不入产物）
-    localRuntime files('libs/oritechthings-0.0.46.jar')
+    // 开发运行时加载：Oritech 本体与其前置（architectury / athena / geckolib）。
+    // 这些模组不会被打进本模组的产物 jar。
+    localRuntime "maven.modrinth:oritech:${oritech_version}"
+    localRuntime "dev.architectury:architectury-neoforge:${architectury_version}"
+    localRuntime "maven.modrinth:athena-ctm:${athena_version}"
+    localRuntime "maven.modrinth:geckolib:${geckolib_version}"
+    // 开发期可选：用于验证其它附属模组（Oritech Things）的分级插件能否被Ⅰ/Ⅲ型识别。
+    // 不影响构建与产物，不需要时把这一行注释掉即可。
+    localRuntime "maven.modrinth:oritech-things:${oritechthings_version}"
 
     // Example optional mod dependency with JEI
     // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime
