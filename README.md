@@ -1,16 +1,31 @@
 # Oritech Addons One（MC 1.21.1 版）
 
+[![Build](https://github.com/Xiao232ming/oritech-addons-one/actions/workflows/build.yml/badge.svg?branch=1.21.1)](https://github.com/Xiao232ming/oritech-addons-one/actions/workflows/build.yml?query=branch%3A1.21.1)
+![Minecraft](https://img.shields.io/badge/Minecraft-1.21.1-blue)
+![NeoForge](https://img.shields.io/badge/NeoForge-21.1.250-orange)
+![Oritech](https://img.shields.io/badge/Oritech-1.2.12-9cf)
+![License](https://img.shields.io/badge/license-MIT-green)
+
 **Oritech Addons One** 是一个 Minecraft **1.21.1** + NeoForge **21.1.250** 的附属模组，为
 **Oritech 1.2.12** 添加三个插件方块：**扩展插件Ⅰ型**、**扩展插件Ⅱ型**与**扩展插件Ⅲ型**。它们本身就是
 Oritech 机器插件，内部带多个插件槽，放入其中的插件效果会叠加并作用于该方块所连接的机器。
 
+> **仓库 / Repository**：<https://github.com/Xiao232ming/oritech-addons-one>。**一个仓库、每个 MC 版本一条分支**：
+> 本文件在 **`1.21.1`** 分支（MC 1.21.1 + NeoForge 21.1.250 + Oritech 1.2.12，JDK 21），
+> 默认分支是 **`26.1.2`**（MC 26.1.2 + NeoForge 26.1.2.107 + Oritech 2.0.0-exp6，JDK 25）：
+>
+> ```powershell
+> git clone https://github.com/Xiao232ming/oritech-addons-one.git
+> git switch 1.21.1        # 默认停在 26.1.2，切过来才是本版本
+> ```
+>
+> 两个版本的注册 API / 渲染管线 / 数据格式差异很大，**源码各自维护、不共用**；
+> 分支模型、跨版本移植与发布流程见 `CONTRIBUTING.md`。
+>
 > **模组显示名**与创造模式标签页叫 **Oritech Addons One**（游戏里看到的名字）；
 > **产物文件名**则用全小写无空格的模组 ID：`oritechaddonsone-1.0.0+mc1.21.1.jar`
 > （`版本+mc游戏版本`，与**模组 ID / 资源命名空间 / Java 包名**一样都是 `oritechaddonsone`，
-> 方便命令行、脚本与自动分发处理）。
->
-> 本仓库是 1.21.1 版本；26.1.2 版本在 `..\..\26.1.2-NeoForge\Oritech Addons One\`，两者是**互相独立**的仓库，
-> 源码各自维护（两个版本的 Forge/Oritech API 差异很大，无法共用）。
+> 方便命令行、脚本与自动分发处理）。许可证 **MIT**（见 `LICENSE`）。
 
 ## 三种型号 / The three types
 
@@ -150,15 +165,19 @@ type3SlotCapacity = 256
 ## 开发 / Development
 
 ```powershell
-cd "D:\Games\MC\MOD\1.21.1-NeoForge\Oritech Addons One"
-.\gradlew build        # 产物 build\libs\oritechaddonsone-1.0.0+mc1.21.1.jar
-.\gradlew runClient    # 开发客户端（自动加载 libs\ 里的 oritech/architectury/athena/geckolib）
+git switch 1.21.1          # 本分支（26.1.2 版源码在 26.1.2 分支）
+.\gradlew build            # 产物 build\libs\oritechaddonsone-1.0.0+mc1.21.1.jar
+.\gradlew runClient        # 开发客户端（自动带上 Oritech / Architectury / Athena / GeckoLib）
 ```
 
-- **JDK 21**（26.1.2 版用 JDK 25）。已在 `~\.gradle\gradle.properties` 登记，无需额外配置。
-- `libs\` 需要四个第三方 jar（**不入库**，见 `libs\README.md`）：
-  `oritech-neoforge-1.21.1-1.2.12.jar`（`compileOnly` + `localRuntime`）、
-  `architectury-13.0.11-neoforge.jar`、`athena-neoforge-1.21.1-4.0.6.jar`、`geckolib-neoforge-1.21.1-4.9.2.jar`（都是 `localRuntime`）。
+- **依赖不用手动准备**：`oritech`、`athena`（Athena CTM）、`geckolib` 与可选的 `oritech-things`
+  从 **Modrinth Maven** 解析，`architectury` 从**官方 Architectury Maven** 解析
+  （它没有发布到 Modrinth）；版本号与版本 ID 都在 `gradle.properties`，
+  换版本与完全离线的做法见 `libs/README.md`；它们**不会**被打进本模组的 jar。
+- **JDK 21**（26.1.2 分支用 JDK 25），由 `build.gradle` 的 toolchain 指定。
+- 本机两个版本同时放在磁盘上用 **git worktree**（共享同一个 `.git`）：
+  `D:\Games\MC\MOD\26.1.2-NeoForge\Oritech Addons One`（26.1.2 分支）与
+  `D:\Games\MC\MOD\1.21.1-NeoForge\Oritech Addons One`（1.21.1 分支）；工作区总览见 `D:\Games\MC\MOD\README.md`。
 - 1.21.1 的 `neoforge.mods.toml` **仍需要** `modLoader="javafml"` 与 `loaderVersion`（更新的版本已移除这两个字段）。
 - 物品模型放在 `assets\oritechaddonsone\models\item\*.json`（1.21.1 没有 `assets\<ns>\items\` 那套物品模型定义）。
 - 侧边贴图脚本：`tools\generate-side-texture.ps1`、`tools\generate-plugin3-textures.ps1`（从 Oritech jar 读取贴图重着色）。
