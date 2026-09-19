@@ -234,6 +234,10 @@ public class ExtensionAddonBlock extends MachineAddonBlock {
         // Drop everything stored inside (including slots that are currently disabled by the config),
         // so nothing is lost when the block is mined.
         if (!level.isClientSide() && level.getBlockEntity(pos) instanceof ExtensionAddonBlockEntity blockEntity) {
+            // If this addon disabled the machine through a stored control unit, hand the machine back
+            // first - the block entity is gone afterwards and nothing else would release it.
+            blockEntity.releaseRedstoneOnRemoval();
+
             for (int slot = 0; slot < ExtensionAddonLayout.MAX_SLOTS; slot++) {
                 var stack = blockEntity.getItem(slot);
                 // Type III slots can hold far more than one stack, drop it in valid chunks.
