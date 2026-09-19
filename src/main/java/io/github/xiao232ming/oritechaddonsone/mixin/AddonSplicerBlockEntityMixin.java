@@ -7,17 +7,17 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import io.github.xiao232ming.oritechaddonsone.block.ExtensionPluginBlock;
+import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonBlock;
 
 import rearth.oritech.block.entity.interaction.AddonSplicerBlockEntity;
 import rearth.oritech.util.MachineAddonController.AddonBlock;
 
 /**
- * Keeps the Extension Plugin out of Oritech's addon splicer.
+ * Keeps the Extension Addon out of Oritech's addon splicer.
  * <p>
  * The splicer collects every addon connected to it, shrinks it into a Heart of the Machine and deletes
  * the addon blocks in the process. Removing our block from the addon list before the splicer evaluates
- * it means the Extension Plugin neither contributes stats to the splicer nor gets consumed by it,
+ * it means the Extension Addon neither contributes stats to the splicer nor gets consumed by it,
  * while other plugins connected to the same splicer keep working normally.
  * <p>
  * This targets Oritech 2.0.0 internals ({@code AddonSplicerBlockEntity#gatherAddonStats}); it only
@@ -27,7 +27,7 @@ import rearth.oritech.util.MachineAddonController.AddonBlock;
 public class AddonSplicerBlockEntityMixin {
 
     @Inject(method = "gatherAddonStats", at = @At("HEAD"))
-    private void oritechaddonsone$excludeExtensionPlugins(List<AddonBlock> addons, CallbackInfo callback) {
-        addons.removeIf(addon -> addon.addonBlock() instanceof ExtensionPluginBlock);
+    private void oritechaddonsone$excludeExtensionAddons(List<AddonBlock> addons, CallbackInfo callback) {
+        addons.removeIf(addon -> addon.addonBlock() instanceof ExtensionAddonBlock);
     }
 }

@@ -9,24 +9,24 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import net.minecraft.world.level.Level;
 
-import io.github.xiao232ming.oritechaddonsone.block.ExtensionPluginBlock;
+import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonBlock;
 
 import rearth.oritech.client.ui.UpgradableOritechScreenHandler;
 import rearth.oritech.util.MachineAddonController;
 
 /**
- * Shows the machine's redstone panel while a control unit plugin is stored inside an Extension Plugin
+ * Shows the machine's redstone panel while a control unit plugin is stored inside an Extension Addon
  * that is attached to that machine.
  * <p>
  * Oritech decides this in {@code UpgradableOritechScreenHandler#showRedstoneAddon} by looking for a
  * block of type {@code BlockContent.CONTROL_UNIT_ADDON} in the machine's addon slots. This block is an
- * Extension Plugin instead, so the check has to be extended. The stored control unit is visible through
- * the synced {@link ExtensionPluginBlock#HAS_CONTROL_UNIT} block state (a block entity inventory is not
+ * Extension Addon instead, so the check has to be extended. The stored control unit is visible through
+ * the synced {@link ExtensionAddonBlock#HAS_CONTROL_UNIT} block state (a block entity inventory is not
  * synced to the client, and this check runs on the client).
  * <p>
  * The panel itself only displays the state (torch on/off, signal strength, effect text); the machine's
  * {@code receivedRedstoneSignal()} / {@code currentRedstoneEffect()} already report the state that is
- * forwarded by {@code ExtensionPluginBlockEntity#applyRedstoneSignal}.
+ * forwarded by {@code ExtensionAddonBlockEntity#applyRedstoneSignal}.
  */
 @Mixin(UpgradableOritechScreenHandler.class)
 public abstract class UpgradableOritechScreenHandlerMixin {
@@ -46,9 +46,9 @@ public abstract class UpgradableOritechScreenHandlerMixin {
 
         for (var addonPos : this.addonController.getConnectedAddons()) {
             var state = this.worldAccess.getBlockState(addonPos);
-            if (state.getBlock() instanceof ExtensionPluginBlock
-                    && state.hasProperty(ExtensionPluginBlock.HAS_CONTROL_UNIT)
-                    && state.getValue(ExtensionPluginBlock.HAS_CONTROL_UNIT)) {
+            if (state.getBlock() instanceof ExtensionAddonBlock
+                    && state.hasProperty(ExtensionAddonBlock.HAS_CONTROL_UNIT)
+                    && state.getValue(ExtensionAddonBlock.HAS_CONTROL_UNIT)) {
                 cir.setReturnValue(true);
                 return;
             }

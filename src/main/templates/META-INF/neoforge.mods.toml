@@ -40,7 +40,7 @@ authors="Xiao232ming"
 
 # The description text for the mod (multi line!) (#mandatory)
 description='''
-Oritech Addons One adds the Extension Plugins (Type I / II / III) for Oritech: machine addon
+Oritech Addons One adds the Extension Addons (Type I / II / III) for Oritech: machine addon
 blocks that hold other plugins in configurable slots and apply their combined effects to the
 machine they are attached to. Type I takes stat plugins, Type II forwards functional plugins
 and supports redstone control, Type III gives every stat category its own column of slots.
@@ -78,7 +78,7 @@ config="${mod_id}.mixins.json"
 [[dependencies.${mod_id}]]
     modId="oritech"
     type="required"
-    reason="The Extension Plugin is an Oritech machine addon and uses the Oritech addon API."
+    reason="The Extension Addon is an Oritech machine addon and uses the Oritech addon API."
     versionRange="[2.0.0,)"
     ordering="AFTER"
     side="BOTH"

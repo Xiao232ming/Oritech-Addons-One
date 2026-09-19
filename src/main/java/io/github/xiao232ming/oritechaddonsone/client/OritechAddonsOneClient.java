@@ -12,7 +12,7 @@ import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 
 /**
- * Client only setup: registers the screen for the Extension Plugin menu and the in-game config screen
+ * Client only setup: registers the screen for the Extension Addon menu and the in-game config screen
  * (Mods list -> Oritech Addons One -> Config), so the slot counts can be changed without editing files.
  */
 @Mod(value = OritechAddonsOne.MODID, dist = Dist.CLIENT)
@@ -27,6 +27,6 @@ public class OritechAddonsOneClient {
 
     @SubscribeEvent
     static void registerScreens(RegisterMenuScreensEvent event) {
-        event.register(OritechAddonsOne.EXTENSION_PLUGIN_MENU.get(), ExtensionPluginScreen::new);
+        event.register(OritechAddonsOne.EXTENSION_ADDON_MENU.get(), ExtensionAddonScreen::new);
     }
 }
