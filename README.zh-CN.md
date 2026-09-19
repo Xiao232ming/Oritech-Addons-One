@@ -1,5 +1,7 @@
 # Oritech Addons One（Oritech：插件合一）
 
+**🌐 语言：** [English](README.md) | [简体中文](README.zh-CN.md)
+
 > 一个提供了三种型号扩展插件的 Oritech 附属，帮助你节省插件占据的空间。
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
