@@ -1,4 +1,4 @@
-# Generates the "creative purple" textures of Extension Plugin Type III.
+# Generates the "creative purple" textures of Extension Addon Type III.
 #
 # Sources are the Oritech "machine extender" textures (CC0-1.0, by rearth_neosample). The frame/plate
 # is recoloured along a purple ramp that is built from the colours of Oritech's creative fluid tank /
@@ -10,9 +10,9 @@
 # the same "blue = active, red = inactive" port state as type I / the vanilla machine extender.
 #
 # Produces:
-#   extension_plugin_3_port.png      (big faces with the connector port)
-#   extension_plugin_3_port_off.png  (same, disconnected)
-#   extension_plugin_3_side.png      (narrow faces, connector port removed)
+#   extension_addon_3_port.png      (big faces with the connector port)
+#   extension_addon_3_port_off.png  (same, disconnected)
+#   extension_addon_3_side.png      (narrow faces, connector port removed)
 #
 # Run with: pwsh -File tools/generate-plugin3-textures.ps1
 param(
@@ -132,9 +132,9 @@ for ($i = 0; $i -lt $ordered.Count; $i++) { $map[$ordered[$i].Key] = $ramp[$i] }
 foreach ($key in $portMap.Keys) { $map[$key] = $portMap[$key] }
 
 $outputs = @(
-    @{ Name = 'extension_plugin_3_port.png'; Src = $portOn },
-    @{ Name = 'extension_plugin_3_port_off.png'; Src = $portOff },
-    @{ Name = 'extension_plugin_3_side.png'; Src = $side }
+    @{ Name = 'extension_addon_3_port.png'; Src = $portOn },
+    @{ Name = 'extension_addon_3_port_off.png'; Src = $portOff },
+    @{ Name = 'extension_addon_3_side.png'; Src = $side }
 )
 
 foreach ($job in $outputs) {
@@ -154,9 +154,9 @@ if (-not (Test-Path $previewDir)) { New-Item -ItemType Directory -Force -Path $p
 $cellSize = 160
 $pad = 10
 $rows = @(
-    @($portOn, (Join-Path $OutDir 'extension_plugin_3_port.png')),
-    @($portOff, (Join-Path $OutDir 'extension_plugin_3_port_off.png')),
-    @((Join-Path $OutDir 'extension_plugin_1_side.png'), (Join-Path $OutDir 'extension_plugin_3_side.png'))
+    @($portOn, (Join-Path $OutDir 'extension_addon_3_port.png')),
+    @($portOff, (Join-Path $OutDir 'extension_addon_3_port_off.png')),
+    @((Join-Path $OutDir 'extension_addon_1_side.png'), (Join-Path $OutDir 'extension_addon_3_side.png'))
 )
 $previewWidth = ($cellSize + $pad) * 2 + $pad
 $previewHeight = ($cellSize + $pad) * $rows.Count + $pad

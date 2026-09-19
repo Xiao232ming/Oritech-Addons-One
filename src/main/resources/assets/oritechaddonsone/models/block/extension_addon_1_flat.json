@@ -1,0 +1,22 @@
+{
+  "textures": {
+    "all": "oritech:block/machine_extender",
+    "side": "oritechaddonsone:block/extension_addon_1_side",
+    "particle": "oritech:block/machine_extender"
+  },
+  "elements": [
+    {
+      "name": "slab",
+      "from": [0, 0, 0],
+      "to": [16, 8, 16],
+      "faces": {
+        "north": { "uv": [0, 8, 16, 16], "texture": "#side" },
+        "east": { "uv": [0, 8, 16, 16], "texture": "#side" },
+        "south": { "uv": [0, 8, 16, 16], "texture": "#side" },
+        "west": { "uv": [0, 8, 16, 16], "texture": "#side" },
+        "up": { "uv": [0, 0, 16, 16], "texture": "#all" },
+        "down": { "uv": [0, 0, 16, 16], "texture": "#side" }
+      }
+    }
+  ]
+}

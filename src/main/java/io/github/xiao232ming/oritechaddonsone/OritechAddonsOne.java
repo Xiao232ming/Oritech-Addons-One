@@ -25,18 +25,18 @@ import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
-import io.github.xiao232ming.oritechaddonsone.item.ExtensionPluginItem;
+import io.github.xiao232ming.oritechaddonsone.item.ExtensionAddonItem;
 import rearth.oritech.api.energy.EnergyApi;
 import rearth.oritech.block.blocks.addons.MachineAddonBlock;
 
-import io.github.xiao232ming.oritechaddonsone.block.ExtensionPluginBlock;
-import io.github.xiao232ming.oritechaddonsone.block.ExtensionPluginType;
-import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionPluginBlockEntity;
-import io.github.xiao232ming.oritechaddonsone.menu.ExtensionPluginLayout;
-import io.github.xiao232ming.oritechaddonsone.menu.ExtensionPluginMenu;
+import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonBlock;
+import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonType;
+import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEntity;
+import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonLayout;
+import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonMenu;
 
 /**
- * An addon for Oritech (1.21.1) that adds the "Extension Plugin" block.
+ * An addon for Oritech (1.21.1) that adds the "Extension Addon" block.
  * <p>
  * The block is an Oritech machine addon (plugin) that itself holds up to five Oritech plugin items.
  * The stats of all inserted plugins are combined and applied to the machine the block is attached to.
@@ -62,21 +62,21 @@ public class OritechAddonsOne {
      * It is registered as a regular Oritech {@link MachineAddonBlock} with neutral stats (speed/efficiency x1,
      * no bonus capacity) and without support requirement, so it can be placed in any machine addon slot.
      */
-    public static final DeferredBlock<ExtensionPluginBlock> EXTENSION_PLUGIN_1 = BLOCKS.registerBlock(
-            ExtensionPluginType.TYPE_1.id(),
-            properties -> new ExtensionPluginBlock(properties, addonSettings(), ExtensionPluginType.TYPE_1),
+    public static final DeferredBlock<ExtensionAddonBlock> EXTENSION_ADDON_1 = BLOCKS.registerBlock(
+            ExtensionAddonType.TYPE_1.id(),
+            properties -> new ExtensionAddonBlock(properties, addonSettings(), ExtensionAddonType.TYPE_1),
             blockProperties());
 
     /** 扩展插件Ⅱ型 - slots for every other plugin (except the inventory proxy). */
-    public static final DeferredBlock<ExtensionPluginBlock> EXTENSION_PLUGIN_2 = BLOCKS.registerBlock(
-            ExtensionPluginType.TYPE_2.id(),
-            properties -> new ExtensionPluginBlock(properties, addonSettings(), ExtensionPluginType.TYPE_2),
+    public static final DeferredBlock<ExtensionAddonBlock> EXTENSION_ADDON_2 = BLOCKS.registerBlock(
+            ExtensionAddonType.TYPE_2.id(),
+            properties -> new ExtensionAddonBlock(properties, addonSettings(), ExtensionAddonType.TYPE_2),
             blockProperties());
 
     /** 扩展插件Ⅲ型 - one dedicated slot per stat plugin, configurable capacity per slot. */
-    public static final DeferredBlock<ExtensionPluginBlock> EXTENSION_PLUGIN_3 = BLOCKS.registerBlock(
-            ExtensionPluginType.TYPE_3.id(),
-            properties -> new ExtensionPluginBlock(properties, addonSettings(), ExtensionPluginType.TYPE_3),
+    public static final DeferredBlock<ExtensionAddonBlock> EXTENSION_ADDON_3 = BLOCKS.registerBlock(
+            ExtensionAddonType.TYPE_3.id(),
+            properties -> new ExtensionAddonBlock(properties, addonSettings(), ExtensionAddonType.TYPE_3),
             blockProperties());
 
     /**
@@ -86,39 +86,39 @@ public class OritechAddonsOne {
      * In 1.21.1 a plain {@link Item.Properties} is enough for the block description prefix: vanilla's
      * {@code BlockItem} already derives its description id from the block.
      */
-    public static final DeferredItem<ExtensionPluginItem> EXTENSION_PLUGIN_1_ITEM = ITEMS.registerItem(
-            ExtensionPluginType.TYPE_1.id(),
-            properties -> new ExtensionPluginItem(EXTENSION_PLUGIN_1.get(), properties),
+    public static final DeferredItem<ExtensionAddonItem> EXTENSION_ADDON_1_ITEM = ITEMS.registerItem(
+            ExtensionAddonType.TYPE_1.id(),
+            properties -> new ExtensionAddonItem(EXTENSION_ADDON_1.get(), properties),
             new Item.Properties());
 
-    public static final DeferredItem<ExtensionPluginItem> EXTENSION_PLUGIN_2_ITEM = ITEMS.registerItem(
-            ExtensionPluginType.TYPE_2.id(),
-            properties -> new ExtensionPluginItem(EXTENSION_PLUGIN_2.get(), properties),
+    public static final DeferredItem<ExtensionAddonItem> EXTENSION_ADDON_2_ITEM = ITEMS.registerItem(
+            ExtensionAddonType.TYPE_2.id(),
+            properties -> new ExtensionAddonItem(EXTENSION_ADDON_2.get(), properties),
             new Item.Properties());
 
-    public static final DeferredItem<ExtensionPluginItem> EXTENSION_PLUGIN_3_ITEM = ITEMS.registerItem(
-            ExtensionPluginType.TYPE_3.id(),
-            properties -> new ExtensionPluginItem(EXTENSION_PLUGIN_3.get(), properties),
+    public static final DeferredItem<ExtensionAddonItem> EXTENSION_ADDON_3_ITEM = ITEMS.registerItem(
+            ExtensionAddonType.TYPE_3.id(),
+            properties -> new ExtensionAddonItem(EXTENSION_ADDON_3.get(), properties),
             new Item.Properties());
 
     /** All plugin types share one block entity type, the type is read from the owning block. */
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<ExtensionPluginBlockEntity>> EXTENSION_PLUGIN_ENTITY =
-            BLOCK_ENTITIES.register("extension_plugin",
-                    () -> BlockEntityType.Builder.of(ExtensionPluginBlockEntity::new,
-                            EXTENSION_PLUGIN_1.get(), EXTENSION_PLUGIN_2.get(), EXTENSION_PLUGIN_3.get()).build(null));
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<ExtensionAddonBlockEntity>> EXTENSION_ADDON_ENTITY =
+            BLOCK_ENTITIES.register("extension_addon",
+                    () -> BlockEntityType.Builder.of(ExtensionAddonBlockEntity::new,
+                            EXTENSION_ADDON_1.get(), EXTENSION_ADDON_2.get(), EXTENSION_ADDON_3.get()).build(null));
 
-    public static final DeferredHolder<MenuType<?>, MenuType<ExtensionPluginMenu>> EXTENSION_PLUGIN_MENU =
-            MENUS.register("extension_plugin", () -> IMenuTypeExtension.create(ExtensionPluginMenu::new));
+    public static final DeferredHolder<MenuType<?>, MenuType<ExtensionAddonMenu>> EXTENSION_ADDON_MENU =
+            MENUS.register("extension_addon", () -> IMenuTypeExtension.create(ExtensionAddonMenu::new));
 
     /** Own creative tab, so the blocks are always reachable even if Oritech changes its own tabs. */
-    public static final DeferredHolder<CreativeModeTab, CreativeModeTab> TAB = TABS.register("extension_plugins",
+    public static final DeferredHolder<CreativeModeTab, CreativeModeTab> TAB = TABS.register("extension_addons",
             () -> CreativeModeTab.builder()
                     .title(Component.translatable("itemGroup.oritechaddonsone"))
-                    .icon(() -> new ItemStack(EXTENSION_PLUGIN_1_ITEM.get()))
+                    .icon(() -> new ItemStack(EXTENSION_ADDON_1_ITEM.get()))
                     .displayItems((parameters, output) -> {
-                        output.accept(EXTENSION_PLUGIN_1_ITEM.get());
-                        output.accept(EXTENSION_PLUGIN_2_ITEM.get());
-                        output.accept(EXTENSION_PLUGIN_3_ITEM.get());
+                        output.accept(EXTENSION_ADDON_1_ITEM.get());
+                        output.accept(EXTENSION_ADDON_2_ITEM.get());
+                        output.accept(EXTENSION_ADDON_3_ITEM.get());
                     })
                     .build());
 
@@ -140,14 +140,14 @@ public class OritechAddonsOne {
         modEventBus.addListener(this::onCommonSetup);
 
         // Tells Oritech to expose this block entity's energy storage (see
-        // ExtensionPluginBlockEntity#getEnergyStorage) to Oritech's own energy network *and* to
+        // ExtensionAddonBlockEntity#getEnergyStorage) to Oritech's own energy network *and* to
         // NeoForge's energy capability. Oritech's bridge is built in NeoforgeEnergyApiImpl and only
         // wraps block entity types that were registered here, so this call is what makes the block
         // usable as an energy input while a machine acceptor plugin is inserted.
-        EnergyApi.BLOCK.registerBlockEntity(() -> (BlockEntityType<?>) EXTENSION_PLUGIN_ENTITY.get());
+        EnergyApi.BLOCK.registerBlockEntity(() -> (BlockEntityType<?>) EXTENSION_ADDON_ENTITY.get());
 
         LOGGER.info("Oritech Addons One loaded: {}, {} and {} registered",
-                EXTENSION_PLUGIN_1.getId(), EXTENSION_PLUGIN_2.getId(), EXTENSION_PLUGIN_3.getId());
+                EXTENSION_ADDON_1.getId(), EXTENSION_ADDON_2.getId(), EXTENSION_ADDON_3.getId());
     }
 
     /**
@@ -157,43 +157,43 @@ public class OritechAddonsOne {
     private void onCommonSetup(FMLCommonSetupEvent event) {
         event.enqueueWork(() -> {
 
-            var type1 = ExtensionPluginType.type1Plugins().stream()
+            var type1 = ExtensionAddonType.type1Plugins().stream()
                     .map(block -> BuiltInRegistries.BLOCK.getKey(block).toString())
                     .sorted()
                     .toList();
 
-            var type2 = ExtensionPluginType.type2Plugins().stream()
+            var type2 = ExtensionAddonType.type2Plugins().stream()
                     .map(block -> BuiltInRegistries.BLOCK.getKey(block).toString())
                     .sorted()
                     .toList();
 
-            LOGGER.debug("Extension Plugin type I / III accept every plugin of the stat categories; Oritech's reference plugins ({}): {}", type1.size(), type1);
-            LOGGER.debug("Extension Plugin type II accepts {} plugins: {}", type2.size(), type2);
+            LOGGER.debug("Extension Addon type I / III accept every plugin of the stat categories; Oritech's reference plugins ({}): {}", type1.size(), type1);
+            LOGGER.debug("Extension Addon type II accepts {} plugins: {}", type2.size(), type2);
 
             // Types I and III accept plugins by category, so log the category of every registered addon
             // block. This makes it easy to check that tiered plugins from other addon mods (e.g. Oritech
             // Things) are classified as expected.
             var categorized = new java.util.TreeMap<String, String>();
             for (var block : BuiltInRegistries.BLOCK) {
-                var category = ExtensionPluginType.categoryOf(block);
+                var category = ExtensionAddonType.categoryOf(block);
                 if (category != null) {
                     categorized.put(BuiltInRegistries.BLOCK.getKey(block).toString(), category.name());
                 }
             }
-            LOGGER.debug("Extension Plugin stat categories ({} blocks): {}", categorized.size(), categorized);
+            LOGGER.debug("Extension Addon stat categories ({} blocks): {}", categorized.size(), categorized);
 
-            var type3Slots = ExtensionPluginType.type3Slots();
-            LOGGER.debug("Extension Plugin type III: {} slots = {} categories x {} tiers, capacity {} each: {}",
-                    type3Slots.size(), ExtensionPluginType.StatCategory.values().length,
-                    ExtensionPluginType.Type3Slot.rowCount(), Config.slotCapacity(ExtensionPluginType.TYPE_3),
+            var type3Slots = ExtensionAddonType.type3Slots();
+            LOGGER.debug("Extension Addon type III: {} slots = {} categories x {} tiers, capacity {} each: {}",
+                    type3Slots.size(), ExtensionAddonType.StatCategory.values().length,
+                    ExtensionAddonType.Type3Slot.rowCount(), Config.slotCapacity(ExtensionAddonType.TYPE_3),
                     type3Slots.stream()
                             .map(slot -> slot.category() + "/tier" + slot.tier() + "="
                                     + (slot.reference() == null ? "-" : BuiltInRegistries.BLOCK.getKey(slot.reference()).toString()))
                             .toList());
 
-            for (var pluginType : ExtensionPluginType.values()) {
-                var layout = ExtensionPluginLayout.forType(pluginType, Config.slots(pluginType));
-                LOGGER.debug("Extension Plugin {}: {} slots ({}x{}, panel {}x{}, columnMajor={})",
+            for (var pluginType : ExtensionAddonType.values()) {
+                var layout = ExtensionAddonLayout.forType(pluginType, Config.slots(pluginType));
+                LOGGER.debug("Extension Addon {}: {} slots ({}x{}, panel {}x{}, columnMajor={})",
                         pluginType.id(), layout.slots(), layout.columns(), layout.rows(),
                         layout.imageWidth(), layout.imageHeight(), layout.columnMajor());
             }

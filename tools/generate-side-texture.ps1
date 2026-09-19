@@ -1,4 +1,4 @@
-# Generates the side textures of the Extension Plugins.
+# Generates the side textures of the Extension Addons.
 #
 # Base: the Oritech "machine extender" texture (CC0-1.0, by rearth_neosample). It has a big connector
 # graphic in the middle which our half blocks would show cut in half, so every port pixel
@@ -62,13 +62,13 @@ $source = [System.Drawing.Bitmap]::FromStream($ms)
 
 # --- type I: plain side, no port ---
 $plain = New-PlainSide $source
-$plain.Save((Join-Path $OutDir 'extension_plugin_1_side.png'), [System.Drawing.Imaging.ImageFormat]::Png)
-Write-Host "wrote extension_plugin_1_side.png (plain, port removed)"
+$plain.Save((Join-Path $OutDir 'extension_addon_1_side.png'), [System.Drawing.Imaging.ImageFormat]::Png)
+Write-Host "wrote extension_addon_1_side.png (plain, port removed)"
 
 # --- type II: plain side + energy stripes (blue when active, red when inactive) ---
 foreach ($variant in @(
-    @{ Name = 'extension_plugin_2_side.png'; Colors = $activeStripes },
-    @{ Name = 'extension_plugin_2_side_off.png'; Colors = $inactiveStripes }
+    @{ Name = 'extension_addon_2_side.png'; Colors = $activeStripes },
+    @{ Name = 'extension_addon_2_side_off.png'; Colors = $inactiveStripes }
 )) {
     $bmp = New-Object System.Drawing.Bitmap($source.Width, $source.Height, [System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
     for ($y = 0; $y -lt $plain.Height; $y++) {
