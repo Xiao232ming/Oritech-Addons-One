@@ -11,7 +11,7 @@
 
 - 仓库里**没有 `main`**：克隆后默认停在 `26.1.2`，`git switch 1.21.1` 切到旧版本。
 - 两个分支的注册 API / 渲染管线 / 数据格式差异很大，**源码分别维护，不共用**；
-  跨版本的差异对照表见各分支 README 末尾的「与另一版本的移植对照」。
+  移植时逐处对照另一分支的源码，不要凭记忆改。
 - 新增 MC 版本 = 从当前最新分支切一条新分支（建议 `git switch -c <新游戏版本> 26.1.2` 再改 API）。
 
 ### 本机的双工作区（git worktree）
@@ -39,7 +39,7 @@ git branch --show-current   # 确认自己在 26.1.2 或 1.21.1 分支上
 
 - 依赖不用手动准备：Oritech / Athena / GeckoLib 等从 **Modrinth Maven** 解析，Architectury 从
   **官方 Architectury Maven** 解析（它没发布到 Modrinth）；坐标都在 `gradle.properties`。
-  换版本 / 离线用法的说明见 `libs/README.md`。
+  换版本改 `gradle.properties` 里的 `*_version`；要完全离线时，把 `build.gradle` 里的 Maven 坐标换成 `libs/` 下的文件依赖。
 - `.gitattributes` 把文本行尾固定成 LF（`*.bat`/`*.cmd` 保持 CRLF），所以任何机器上检出的源码与
   构建产物都一致；提交前不要用会改行尾的编辑器批量重写文件。
 
@@ -50,12 +50,12 @@ git branch --show-current   # 确认自己在 26.1.2 或 1.21.1 分支上
    两条分支的历史各自独立（移植时是重新写的源码），合并会试图用一版的源码覆盖另一版。
    ```powershell
    git switch 26.1.2
-   git cherry-pick <sha>          # 按 README 的移植对照表解决冲突
+   git cherry-pick <sha>          # 冲突处按另一分支的实际 API 解决
    .\gradlew build                # 另一分支也必须重新构建验证
    ```
 3. 只对某个版本成立的改动（例如某版本特有的 mixin 目标）不必强行同步，
    在提交信息里注明 `(1.21.1 only)` / `(26.1.2 only)`。
-4. 面向玩家的文案（`lang/*.json` 的通用条目、README 的功能表）尽量两版保持一致，便于对照。
+4. 面向玩家的文案（`lang/*.json` 的通用条目、功能说明）尽量两版保持一致，便于对照。
 
 ## 版本与发布 / Versioning & release
 
@@ -67,8 +67,9 @@ git branch --show-current   # 确认自己在 26.1.2 或 1.21.1 分支上
   git push origin "v1.0.0+mc1.21.1"
   ```
 - 发布 GitHub Release 时附上 `build\libs\*.jar`（或直接下载 CI 的 artifact）。
-- 升级 Oritech：改 `gradle.properties` 里的 `*_version` + `libs/README.md` 的表格，
-  跑一次 `runClient` 确认 mixin 目标（各分支 README 的「已知限制」里列了依赖的内部类）与 API 未变。
+- 升级 Oritech：改 `gradle.properties` 里的 `*_version`（Modrinth 版本 ID / 版本号），
+  跑一次 `runClient` 确认 mixin 目标与 API 未变：26.1.2 是 `AddonSplicerBlockEntity#gatherAddonStats`，
+  1.21.1 是 `ShrinkerBlockEntity#gatherAddonStats`，两边都用到 `MachineAddonController` 与能量 API。
 
 ## 提交约定 / Commit conventions
 
