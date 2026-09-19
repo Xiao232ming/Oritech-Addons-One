@@ -73,8 +73,9 @@ git branch --show-current   # 确认自己在 26.1.2 或 1.21.1 分支上
 
 ## 提交约定 / Commit conventions
 
-- Conventional Commits 前缀：`feat:` `fix:` `docs:` `build:` `chore:`，可带作用域（如 `fix(client):`）。
-- 一次提交只做一件事；改动影响游戏内行为时，在正文里写清**怎么验证**（哪台机器 / 哪个界面）。
+- 提交信息用**简洁的英文**，一行说清做了什么（例：`Add the mod logo` / `Fix the 1.21.1 recipes`）。
+- 不强制 Conventional Commits 前缀（用不用 `feat:` / `fix:` 都行），但**不要**写多行长篇说明。
+- 一次提交只做一件事。
 - 不要提交 `build/`、`run/`、`dist/`、`libs/*.jar`、日志与贴图预览图（`.gitignore` 已覆盖）。
 
 ## 许可 / License
