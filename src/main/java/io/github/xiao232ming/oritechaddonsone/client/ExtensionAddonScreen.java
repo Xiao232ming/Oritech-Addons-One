@@ -48,6 +48,23 @@ public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddon
     }
 
     /**
+     * Draws the hovered item tooltip.
+     * <p>
+     * On 1.21.1 {@link AbstractContainerScreen#render} does <b>not</b> call {@code renderTooltip}
+     * itself: every concrete container screen is expected to do it at the end of its own
+     * {@code render} (see vanilla {@code ContainerScreen}, {@code HopperScreen}, ...). Overriding
+     * only {@code renderBg} therefore left this GUI without any item tooltip.
+     * <p>
+     * The tooltip is drawn after {@code super.render}, so it also ends up on top of the type III
+     * hint veils (those are part of the background).
+     */
+    @Override
+    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        super.render(graphics, mouseX, mouseY, partialTick);
+        this.renderTooltip(graphics, mouseX, mouseY);
+    }
+
+    /**
      * Draws the panel, all slot frames and the type III plugin hints.
      * <p>
      * This runs before the slots themselves are rendered, so the dim plugin hints of type III end up
