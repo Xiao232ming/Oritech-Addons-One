@@ -173,15 +173,53 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
             return;
         }
 
-        // No control unit inside: release the machine, so taking the plugin out does not leave it
-        // disabled forever. A control unit that is attached to the machine directly owns the state, so
-        // it is left untouched in that case.
-        if (hasAttachedRedstoneAddon(controller)) {
-            redstoneApplied = false;
-            return;
-        }
+        // Without a stored control unit this block never disabled the machine, so it must not hand it
+        // back either: the machine re-scans every addon whenever one is added, removed or changed, and
+        // an addon without a control unit would otherwise cancel the redstone control that another
+        // addon (the one holding the control unit) had set up.
+        if (!redstoneApplied) return;
+
+        releaseRedstoneControl(controller, controllable);
+    }
+
+    /**
+     * Hands the machine back after the stored control unit went away, either because it was taken out of
+     * the inventory or because this block was mined while it was the one disabling the machine.
+     */
+    private void releaseRedstoneControl(MachineAddonController controller, RedstoneControllable controllable) {
         redstoneApplied = false;
+
+        // Another Extension Addon still holds a control unit: that one owns the redstone state now, so
+        // handing the machine back here would switch it on behind its back.
+        if (hasOtherControlUnit(controller)) return;
+
+        // A control unit that is attached to the machine directly owns the state, so leave it untouched.
+        if (hasAttachedRedstoneAddon(controller)) return;
         controllable.onRedstoneEvent(false);
+    }
+
+    /** True while another Extension Addon attached to the same machine holds a control unit. */
+    private boolean hasOtherControlUnit(MachineAddonController controller) {
+        for (var pos : controller.getConnectedAddons()) {
+            if (pos.equals(worldPosition)) continue;
+            if (level.getBlockEntity(pos) instanceof ExtensionAddonBlockEntity other && other.hasRedstonePlugin()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Called right before this block is removed: if this addon was the one that disabled the connected
+     * machine, the machine has to be released, otherwise it would stay switched off forever.
+     */
+    public void releaseRedstoneOnRemoval() {
+        if (!redstoneApplied) return;
+        if (level == null || level.isClientSide()) return;
+        if (!(level.getBlockEntity(getControllerPos()) instanceof MachineAddonController controller)) return;
+        if (!(controller instanceof RedstoneControllable controllable)) return;
+
+        releaseRedstoneControl(controller, controllable);
     }
 
     /** True while a vanilla control unit plugin block is attached to the machine directly. */
