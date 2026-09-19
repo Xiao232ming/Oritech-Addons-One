@@ -1,5 +1,7 @@
 # Oritech Addons One
 
+**🌐 Language:** [English](README.md) | [简体中文](README.zh-CN.md)
+
 > An Oritech addon that provides three tiers of extension addons, helping you save the space taken up by addons.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
