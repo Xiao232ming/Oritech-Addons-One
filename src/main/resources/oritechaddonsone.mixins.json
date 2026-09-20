@@ -6,8 +6,7 @@
     "AddonSplicerBlockEntityMixin",
     "ItemUseMixin",
     "MachineAddonControllerMixin",
-    "LaserTargetDesignatorMixin",
-    "UpgradableMachineBlockMixin"
+    "LaserTargetDesignatorMixin"
   ],
   "client": [
     "UpgradableOritechScreenHandlerMixin"

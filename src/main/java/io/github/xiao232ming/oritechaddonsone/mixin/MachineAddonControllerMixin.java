@@ -20,11 +20,11 @@ import io.github.xiao232ming.oritechaddonsone.block.entity.WirelessExtensionAddo
  * plugins in and {@code updateEnergyContainer} then recalculates the energy container from that data -
  * including {@code energy = min(energy, capacity)}, which throws away everything above the capacity.
  * <p>
- * A wireless dock is not one of the machine's own addons, so its plugins used to be merged after all of
- * that: the machine briefly held the capacity without the dock's bonus (dropping stored energy above it)
- * and got it back a moment later, which shows up as energy that rises and falls. Adding the docks at the
- * end of {@code gatherAddonStats} puts them exactly where a wired addon contributes, i.e. before the
- * container is recalculated, so nothing is dropped and no separate re-scan is needed.
+ * A wireless dock is not one of the machine's own addons, so this is where its plugins are added: at the
+ * end of {@code gatherAddonStats}, i.e. exactly where a wired addon contributes and before the container
+ * is recalculated, so a dock can neither drop stored energy nor see its stats counted twice. Every scan
+ * passes through here once, which also makes several docks of one machine accumulate in a defined order
+ * (each one merges on top of the previous one).
  */
 @Mixin(MachineAddonController.class)
 public interface MachineAddonControllerMixin {
