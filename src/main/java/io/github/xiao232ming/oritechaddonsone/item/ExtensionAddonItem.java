@@ -11,14 +11,14 @@ import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.block.Block;
 import net.neoforged.fml.loading.FMLEnvironment;
 
-import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonBlock;
+import io.github.xiao232ming.oritechaddonsone.block.AddonDetailProvider;
 
 /**
- * Block item of the Extension Addons.
+ * Block item of the Extension Addons (both the wired and the wireless ones).
  * <p>
  * A block does not automatically contribute to the tooltip of its block item, so Oritech uses custom
  * item classes for its own blocks and this class does the same: it adds the Ctrl gated description of
- * {@link ExtensionAddonBlock#appendDetails} to {@link #appendHoverText}.
+ * {@link AddonDetailProvider#appendDetails} to {@link #appendHoverText}.
  * <p>
  * Just like Oritech's own addon items, only Oritech's "hold Ctrl for more information" line is shown
  * while Ctrl is not held.
@@ -34,7 +34,7 @@ public class ExtensionAddonItem extends BlockItem {
             TooltipFlag tooltipFlag) {
         super.appendHoverText(stack, context, tooltipComponents, tooltipFlag);
 
-        if (!(getBlock() instanceof ExtensionAddonBlock addonBlock)) return;
+        if (!(getBlock() instanceof AddonDetailProvider provider)) return;
 
         if (!isControlDown()) {
             tooltipComponents.add(Component.translatable("tooltip.oritech.item_extra_info")
@@ -43,7 +43,7 @@ public class ExtensionAddonItem extends BlockItem {
             return;
         }
 
-        addonBlock.appendDetails(tooltipComponents::add);
+        provider.appendDetails(tooltipComponents::add);
     }
 
     /** True while the player holds Ctrl, like Oritech's own addon items check. */

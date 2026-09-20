@@ -55,7 +55,7 @@ import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonLayout;
  * gated description lives in {@link io.github.xiao232ming.oritechaddonsone.item.ExtensionAddonItem} and only
  * the detail lines ({@link #appendDetails}) are provided here.
  */
-public class ExtensionAddonBlock extends MachineAddonBlock {
+public class ExtensionAddonBlock extends MachineAddonBlock implements AddonDetailProvider {
 
     /** Used for the standing orientation: which half of the block the slab occupies. */
     public static final EnumProperty<Direction> HORIZONTAL_FACING = BlockStateProperties.HORIZONTAL_FACING;
@@ -101,6 +101,7 @@ public class ExtensionAddonBlock extends MachineAddonBlock {
     }
 
     /** Which Extension Addon this block is (decides slot count, accepted plugins and GUI). */
+    @Override
     public ExtensionAddonType getType() {
         return type;
     }
@@ -254,6 +255,7 @@ public class ExtensionAddonBlock extends MachineAddonBlock {
     }
 
     /** All detail lines of this plugin type, shown while Ctrl is held. */
+    @Override
     public void appendDetails(Consumer<Component> consumer) {
         var key = "tooltip.oritechaddonsone." + type.id();
 

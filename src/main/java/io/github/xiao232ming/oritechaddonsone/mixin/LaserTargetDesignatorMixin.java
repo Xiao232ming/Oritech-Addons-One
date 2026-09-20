@@ -1,0 +1,83 @@
+package io.github.xiao232ming.oritechaddonsone.mixin;
+
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.item.context.UseOnContext;
+
+import rearth.oritech.block.blocks.processing.MachineCoreBlock;
+import rearth.oritech.block.entity.interaction.DronePortEntity;
+import rearth.oritech.block.entity.interaction.LaserArmBlockEntity;
+import rearth.oritech.init.BlockContent;
+import rearth.oritech.init.ComponentContent;
+import rearth.oritech.item.tools.LaserTargetDesignator;
+import rearth.oritech.util.MachineAddonController;
+
+import io.github.xiao232ming.oritechaddonsone.block.entity.WirelessExtensionAddonBlockEntity;
+
+/**
+ * Teaches Oritech's target designator to link a wireless extension addon to a machine.
+ * <p>
+ * The designator already stores the position of any clicked block in the
+ * {@code oritech:target_position} component, so saving a wireless dock needs no change. To store a
+ * position <b>into a machine</b> it only knows the laser arm and the drone port
+ * ({@code setTargetFromDesignator}), so this injection adds the third case: while the stored position is
+ * one of our wireless docks and the clicked block belongs to an upgradable machine, the dock is linked
+ * to that machine (linking again simply moves the link).
+ * <p>
+ * The injection runs before Oritech's own code but deliberately keeps out of its way: laser arms, drone
+ * ports and everything that is not an addon machine are left untouched, and the stored position is only
+ * consumed when it really points at a loaded wireless dock.
+ */
+@Mixin(LaserTargetDesignator.class)
+public class LaserTargetDesignatorMixin {
+
+    @Inject(method = "useOn", at = @At("HEAD"), cancellable = true)
+    private void oritechaddonsone$linkWirelessAddon(UseOnContext context,
+            CallbackInfoReturnable<InteractionResult> cir) {
+        var level = context.getLevel();
+        if (level.isClientSide()) return;
+
+        var stack = context.getItemInHand();
+        var dockPos = stack.get(ComponentContent.TARGET_POSITION.get());
+        if (dockPos == null) return;
+
+        var clickedPos = context.getClickedPos();
+        var clickedState = level.getBlockState(clickedPos);
+
+        // keep Oritech's own designator targets working
+        if (clickedState.is(BlockContent.LASER_ARM_BLOCK) || clickedState.is(BlockContent.DRONE_PORT_BLOCK)) return;
+        if (level.getBlockEntity(clickedPos) instanceof LaserArmBlockEntity
+                || level.getBlockEntity(clickedPos) instanceof DronePortEntity) return;
+
+        // multiblock machines keep their controller in a core block, so resolve that first
+        var machinePos = MachineCoreBlock.getControllerPos(level, clickedPos);
+        if (machinePos == null) machinePos = clickedPos;
+        if (!(level.getBlockEntity(machinePos) instanceof MachineAddonController)) return;
+
+        if (!level.isLoaded(dockPos)) {
+            var player = context.getPlayer();
+            if (player != null) {
+                player.sendSystemMessage(
+                        Component.translatable("message.oritechaddonsone.wireless.not_loaded"));
+            }
+            cir.setReturnValue(InteractionResult.FAIL);
+            return;
+        }
+
+        if (!(level.getBlockEntity(dockPos) instanceof WirelessExtensionAddonBlockEntity dock)) return;
+
+        dock.linkTo(machinePos);
+
+        var player = context.getPlayer();
+        if (player != null) {
+            player.sendSystemMessage(Component.translatable("message.oritechaddonsone.wireless.linked",
+                    level.getBlockState(machinePos).getBlock().getName()));
+        }
+        cir.setReturnValue(InteractionResult.SUCCESS);
+    }
+}

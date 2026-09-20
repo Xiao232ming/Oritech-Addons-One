@@ -136,6 +136,10 @@ configurations {
 dependencies {
     // Oritech 1.21.1 作为编译期依赖（从 Modrinth Maven 拉取，坐标见 gradle.properties）
     compileOnly "maven.modrinth:oritech:${oritech_version}"
+    // Architectury 是 Oritech 的前置，而且 Oritech 的公开 API 直接暴露了它的类型
+    // （例如 ComponentContent.TARGET_POSITION 是 dev.architectury 的 RegistrySupplier），
+    // 所以编译期也要有它。它不会被放进产物 jar。
+    compileOnly "dev.architectury:architectury-neoforge:${architectury_version}"
 
     // 开发运行时加载：Oritech 本体与其前置（architectury / athena / geckolib）。
     // 这些模组不会被打进本模组的产物 jar。
