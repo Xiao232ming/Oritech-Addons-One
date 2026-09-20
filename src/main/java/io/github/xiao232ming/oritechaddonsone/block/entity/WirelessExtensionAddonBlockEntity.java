@@ -10,6 +10,8 @@ import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 
+import rearth.oritech.api.networking.NetworkedBlockEntity;
+import rearth.oritech.api.networking.SyncType;
 import rearth.oritech.util.MachineAddonController;
 
 import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
@@ -79,7 +81,12 @@ public class WirelessExtensionAddonBlockEntity extends ExtensionAddonBlockEntity
      * unlink without breaking the block (as requested: no manual unlink action).
      */
     public void linkTo(BlockPos machine) {
-        if (level == null || level.isClientSide() || machine == null) return;
+        if (level == null || level.isClientSide() || machine == null) {
+            OritechAddonsOne.LOGGER.debug("[diag] link: dock {} ignored (level={}, client={}, machine={})",
+                    worldPosition, level, level != null && level.isClientSide(), machine);
+            return;
+        }
+        OritechAddonsOne.LOGGER.debug("[diag] link: dock {} -> machine {} (was {})", worldPosition, machine, linkedMachine);
 
         var previous = linkedMachine;
         if (machine.equals(previous)) {
@@ -92,7 +99,10 @@ public class WirelessExtensionAddonBlockEntity extends ExtensionAddonBlockEntity
 
         // hand the old machine back before moving the link
         releaseRedstoneOnRemoval();
-        if (previous != null) WirelessLinks.unregister(level, previous, worldPosition);
+        if (previous != null) {
+            WirelessLinks.unregister(level, previous, worldPosition);
+            releaseMachine(previous);
+        }
 
         linkedMachine = machine.immutable();
         setChanged();
@@ -108,8 +118,27 @@ public class WirelessExtensionAddonBlockEntity extends ExtensionAddonBlockEntity
 
         releaseRedstoneOnRemoval();
         if (level != null) WirelessLinks.unregister(level, linkedMachine, worldPosition);
+        releaseMachine(linkedMachine);
         linkedMachine = null;
         setChanged();
+    }
+
+    /**
+     * Lets a machine this dock was linked to recompute its addons, which removes the stats of this dock
+     * from it again, and tells its clients about the new values. Without this a machine would keep the
+     * plugins of a dock that was moved or broken until something else makes it recompute.
+     */
+    private void releaseMachine(BlockPos machine) {
+        forgetAppliedStats();
+        if (machine == null || !(level instanceof ServerLevel serverLevel)) return;
+        if (!(serverLevel.getBlockEntity(machine) instanceof MachineAddonController controller)) return;
+
+        serverLevel.getServer().execute(() -> {
+            controller.initAddons();
+            if (controller instanceof NetworkedBlockEntity networked) {
+                networked.sendUpdate(SyncType.GUI_OPEN);
+            }
+        });
     }
 
     private void registerWithMachine() {
@@ -124,10 +153,20 @@ public class WirelessExtensionAddonBlockEntity extends ExtensionAddonBlockEntity
      * foreign thread.
      */
     public void refreshMachine() {
-        if (!(level instanceof ServerLevel serverLevel) || linkedMachine == null) return;
-        if (!(serverLevel.getBlockEntity(linkedMachine) instanceof MachineAddonController controller)) return;
+        if (!(level instanceof ServerLevel serverLevel) || linkedMachine == null) {
+            OritechAddonsOne.LOGGER.debug("[diag] refresh: dock {} skipped (level={}, link={})",
+                    worldPosition, level, linkedMachine);
+            return;
+        }
+        if (!(serverLevel.getBlockEntity(linkedMachine) instanceof MachineAddonController controller)) {
+            OritechAddonsOne.LOGGER.debug("[diag] refresh: dock {} found no addon machine at {} (block={}, be={})",
+                    worldPosition, linkedMachine, serverLevel.getBlockState(linkedMachine),
+                    serverLevel.getBlockEntity(linkedMachine));
+            return;
+        }
 
         var machinePos = linkedMachine;
+        OritechAddonsOne.LOGGER.debug("[diag] refresh: dock {} scheduling initAddons of {}", worldPosition, machinePos);
         serverLevel.getServer().execute(() -> {
             controller.initAddons();
             applyAllDocks(serverLevel, machinePos);
@@ -139,10 +178,15 @@ public class WirelessExtensionAddonBlockEntity extends ExtensionAddonBlockEntity
      * data, so this is the point where the wireless contributions have to be merged on top.
      */
     public static void applyAllDocks(Level level, BlockPos machinePos) {
-        for (var dockPos : WirelessLinks.docksOf(level, machinePos)) {
+        var docks = WirelessLinks.docksOf(level, machinePos);
+        OritechAddonsOne.LOGGER.debug("[diag] applyAllDocks: {} -> {} dock(s)", machinePos, docks.size());
+        for (var dockPos : docks) {
             if (level.getBlockEntity(dockPos) instanceof WirelessExtensionAddonBlockEntity dock
                     && dock.isLinkedTo(machinePos)) {
                 dock.applyCombinedStats();
+            } else {
+                OritechAddonsOne.LOGGER.debug("[diag] applyAllDocks: skipping {} (be={})", dockPos,
+                        level.getBlockEntity(dockPos));
             }
         }
     }
@@ -158,6 +202,9 @@ public class WirelessExtensionAddonBlockEntity extends ExtensionAddonBlockEntity
         if (level.getGameTime() % REFRESH_INTERVAL == 0) {
             // re-register (covers world loads and removed entries) and let the machine recompute, so a
             // link survives addon changes on the machine side that we cannot observe
+            if (level.getGameTime() % 100 == 0) {
+                OritechAddonsOne.LOGGER.debug("[diag] tick: dock {} alive, link={}", worldPosition, linkedMachine);
+            }
             registerWithMachine();
             updateLinkedState();
             refreshMachine();
