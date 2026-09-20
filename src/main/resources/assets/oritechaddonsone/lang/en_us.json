@@ -41,5 +41,8 @@
   "tooltip.oritechaddonsone.wireless_extension_addon_1.link": "Link it with Oritech's target designator: shift + right click this block to save its position, then shift + right click the machine.",
   "tooltip.oritechaddonsone.wireless_extension_addon_2.link": "Link it with Oritech's target designator: shift + right click this block to save its position, then shift + right click the machine.",
   "tooltip.oritechaddonsone.wireless_extension_addon_3.link": "Link it with Oritech's target designator: shift + right click this block to save its position, then shift + right click the machine.",
-  "message.oritechaddonsone.wireless.cleared": "Designator cleared"
+  "message.oritechaddonsone.wireless.cleared": "Designator cleared",
+  "gui.oritechaddonsone.wireless.linked": "Linked to %s (%s, %s, %s)",
+  "gui.oritechaddonsone.wireless.unlinked": "Not linked",
+  "gui.oritechaddonsone.wireless.machine": "Machine"
 }

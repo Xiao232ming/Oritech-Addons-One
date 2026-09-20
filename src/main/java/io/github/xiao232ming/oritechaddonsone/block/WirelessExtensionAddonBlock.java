@@ -169,6 +169,14 @@ public class WirelessExtensionAddonBlock extends Block implements EntityBlock, A
             serverPlayer.openMenu(dock, buffer -> {
                 buffer.writeBlockPos(pos);
                 buffer.writeVarInt(slots);
+                // the GUI shows which machine this dock is linked to, so the link goes along with the menu
+                var machine = dock.linkedMachine();
+                buffer.writeBoolean(machine != null);
+                if (machine != null) {
+                    buffer.writeBlockPos(machine);
+                    var nameKey = dock.linkedMachineNameKey();
+                    buffer.writeUtf(nameKey == null ? "" : nameKey);
+                }
             });
         }
         return InteractionResult.SUCCESS;

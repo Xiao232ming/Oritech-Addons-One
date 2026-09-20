@@ -228,6 +228,8 @@ public class ExtensionAddonBlock extends MachineAddonBlock implements AddonDetai
             serverPlayer.openMenu(blockEntity, buffer -> {
                 buffer.writeBlockPos(pos);
                 buffer.writeVarInt(slots);
+                // wired addons are never linked, but the menu reads this field for both variants
+                buffer.writeBoolean(false);
             });
         }
         return InteractionResult.SUCCESS;

@@ -36,6 +36,10 @@ public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddon
     private static final float HINT_ICON_Z = 50.0F;
     /** z of the veil: in front of the hint icons, behind real items and item decorations. */
     private static final int HINT_VEIL_Z = 60;
+    /** Colour of the link line in the top right corner of the panel. */
+    private static final int LINK_COLOR = 0xFF1E6B1E;
+    /** Colour of that line while the addon is not linked to a machine. */
+    private static final int UNLINKED_COLOR = 0xFF707070;
 
     private final ExtensionAddonLayout layout;
 
@@ -62,6 +66,36 @@ public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddon
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         super.render(graphics, mouseX, mouseY, partialTick);
         this.renderTooltip(graphics, mouseX, mouseY);
+    }
+
+    /**
+     * Adds the link line of the wireless addons to the top right corner of the panel: which machine this
+     * dock is linked to and where that machine stands. The wired addons simply show that they are not
+     * linked, so both variants keep the same layout.
+     */
+    @Override
+    protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
+        super.renderLabels(graphics, mouseX, mouseY);
+
+        var text = linkText();
+        var x = this.imageWidth - 8 - this.font.width(text.getString());
+        graphics.drawString(this.font, text, x, 6,
+                this.menu.linkedMachine() == null ? UNLINKED_COLOR : LINK_COLOR, false);
+    }
+
+    /** Text of the link line, either the linked machine with its coordinates or "not linked". */
+    private Component linkText() {
+        var machine = this.menu.linkedMachine();
+        if (machine == null) {
+            return Component.translatable("gui.oritechaddonsone.wireless.unlinked");
+        }
+
+        var nameKey = this.menu.linkedMachineNameKey();
+        var name = nameKey == null
+                ? Component.translatable("gui.oritechaddonsone.wireless.machine")
+                : Component.translatable(nameKey);
+        return Component.translatable("gui.oritechaddonsone.wireless.linked", name,
+                machine.getX(), machine.getY(), machine.getZ());
     }
 
     /**
