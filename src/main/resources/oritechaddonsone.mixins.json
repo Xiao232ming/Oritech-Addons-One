@@ -4,9 +4,7 @@
   "package": "io.github.xiao232ming.oritechaddonsone.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
-    "FrameInteractionBlockDesignatorMixin",
     "LaserTargetDesignatorMixin",
-    "MachineBlockDesignatorMixin",
     "ShrinkerBlockEntityMixin"
   ],
   "client": [
