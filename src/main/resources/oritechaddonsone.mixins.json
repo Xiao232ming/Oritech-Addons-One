@@ -3,7 +3,8 @@
   "package": "io.github.xiao232ming.oritechaddonsone.mixin",
   "compatibilityLevel": "JAVA_25",
   "mixins": [
-    "AddonSplicerBlockEntityMixin"
+    "AddonSplicerBlockEntityMixin",
+    "LaserTargetDesignatorMixin"
   ],
   "client": [
     "UpgradableOritechScreenHandlerMixin"

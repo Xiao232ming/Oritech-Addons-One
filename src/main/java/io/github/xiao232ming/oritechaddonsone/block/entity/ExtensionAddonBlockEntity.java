@@ -17,7 +17,9 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.neoforged.neoforge.transfer.energy.EnergyHandler;
@@ -41,8 +43,10 @@ import io.github.xiao232ming.oritechaddonsone.Config;
 import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonType;
+import io.github.xiao232ming.oritechaddonsone.block.WirelessExtensionAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonLayout;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonMenu;
+import io.github.xiao232ming.oritechaddonsone.wireless.WirelessLinks;
 
 /**
  * Block entity of the Extension Addons (shared by type I and type II).
@@ -80,8 +84,20 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity implements Conta
     private boolean redstoneApplied;
 
     public ExtensionAddonBlockEntity(BlockPos pos, BlockState state) {
-        super(OritechAddonsOne.EXTENSION_ADDON_ENTITY.get(), pos, state);
-        this.type = state.getBlock() instanceof ExtensionAddonBlock block ? block.getType() : ExtensionAddonType.TYPE_1;
+        this(OritechAddonsOne.EXTENSION_ADDON_ENTITY.get(), pos, state);
+    }
+
+    /**
+     * Constructor for subclasses that use their own block entity type (the wireless extension addons).
+     * The plugin type is always read from the owning block.
+     */
+    protected ExtensionAddonBlockEntity(BlockEntityType<?> entityType, BlockPos pos, BlockState state) {
+        super(entityType, pos, state);
+
+        var owner = state.getBlock();
+        this.type = owner instanceof ExtensionAddonBlock wired ? wired.getType()
+                : owner instanceof WirelessExtensionAddonBlock wireless ? wireless.getType()
+                : ExtensionAddonType.TYPE_1;
     }
 
     // ------------------------------------------------------------------ plugin handling
@@ -204,6 +220,13 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity implements Conta
                 return true;
             }
         }
+
+        // Wireless extension addons linked to the same machine count as well.
+        for (var pos : WirelessLinks.docksOf(level, getControllerPos())) {
+            if (level.getBlockEntity(pos) instanceof WirelessExtensionAddonBlockEntity other && other.hasRedstonePlugin()) {
+                return true;
+            }
+        }
         return false;
     }
 
@@ -230,20 +253,35 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity implements Conta
 
     // ------------------------------------------------------------------ energy input (acceptor plugin)
 
-    private boolean isEnergyInputActive() {
+    protected boolean isEnergyInputActive() {
         return hasAcceptorPlugin()
-                && getBlockState().getValue(MachineAddonBlock.ADDON_USED)
+                && isMachineAddonUsed()
                 && getControllerEntity() instanceof MachineAddonController;
+    }
+
+    /** True while Oritech considers this block a connected addon (always false for the wireless ones). */
+    protected boolean isMachineAddonUsed() {
+        var state = getBlockState();
+        return state.hasProperty(MachineAddonBlock.ADDON_USED) && state.getValue(MachineAddonBlock.ADDON_USED);
+    }
+
+    /** True while the block at our position is one of the blocks this entity belongs to. */
+    protected boolean isOwnBlock() {
+        return getBlockState().getBlock() instanceof ExtensionAddonBlock;
+    }
+
+    /** Block state property that mirrors {@link #hasRedstonePlugin()} (see {@link #updateControlUnitState()}). */
+    protected BooleanProperty controlUnitProperty() {
+        return ExtensionAddonBlock.HAS_CONTROL_UNIT;
     }
 
     private EnergyHandler getMainStorage() {
         return getControllerEntity() instanceof MachineAddonController controller ? controller.getStorageForAddon() : null;
     }
 
-    private BlockEntity getControllerEntity() {
+    protected BlockEntity getControllerEntity() {
         return level == null ? null : level.getBlockEntity(getControllerPos());
     }
-
     /**
      * Energy handler of this block. It always exists so capability caches stay valid, but it only
      * reports capacity / accepts energy while an acceptor plugin is inside and a machine is connected.
@@ -312,9 +350,9 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity implements Conta
     }
 
     /** Adds the combined plugin stats on top of the data the machine computed for its other addons. */
-    private void applyCombinedStats() {
+    protected void applyCombinedStats() {
         if (!(level instanceof ServerLevel serverLevel)) return;
-        if (!(level.getBlockState(worldPosition).getBlock() instanceof ExtensionAddonBlock)) return;
+        if (!isOwnBlock()) return;
         if (!(serverLevel.getBlockEntity(getControllerPos()) instanceof MachineAddonController controller)) return;
 
         // Keep the synced block state and the machine's redstone state in sync. Doing it here covers
@@ -393,7 +431,7 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity implements Conta
     }
 
     /** Asks the connected machine to re-scan its addons after this block's contents changed. */
-    private void refreshController() {
+    protected void refreshController() {
         if (level instanceof ServerLevel serverLevel
                 && serverLevel.getBlockEntity(getControllerPos()) instanceof MachineAddonController controller) {
             serverLevel.getServer().execute(controller::initAddons);
@@ -417,12 +455,12 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity implements Conta
         if (level == null || level.isClientSide()) return;
 
         var state = getBlockState();
-        if (!state.hasProperty(ExtensionAddonBlock.HAS_CONTROL_UNIT)) return;
+        var property = controlUnitProperty();
+        if (property == null || !state.hasProperty(property)) return;
 
         var hasControlUnit = hasRedstonePlugin();
-        if (state.getValue(ExtensionAddonBlock.HAS_CONTROL_UNIT) != hasControlUnit) {
-            level.setBlock(worldPosition, state.setValue(ExtensionAddonBlock.HAS_CONTROL_UNIT, hasControlUnit),
-                    Block.UPDATE_ALL);
+        if (state.getValue(property) != hasControlUnit) {
+            level.setBlock(worldPosition, state.setValue(property, hasControlUnit), Block.UPDATE_ALL);
         }
     }
 

@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "I": { "item": "minecraft:iron_ingot" },
+    "D": { "item": "oritech:target_designator" },
+    "R": { "item": "minecraft:ender_pearl" },
+    "A": { "item": "oritechaddonsone:extension_addon_2" }
+  },
+  "pattern": [
+    "IDI",
+    "RAR",
+    "IDI"
+  ],
+  "result": {
+    "count": 1,
+    "id": "oritechaddonsone:wireless_extension_addon_2"
+  }
+}

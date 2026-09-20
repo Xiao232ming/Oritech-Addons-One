@@ -1,0 +1,22 @@
+{
+  "textures": {
+    "port": "oritechaddonsone:block/extension_addon_3_port_off",
+    "side": "oritechaddonsone:block/extension_addon_3_side",
+    "particle": "oritechaddonsone:block/extension_addon_3_side"
+  },
+  "elements": [
+    {
+      "name": "dock",
+      "from": [0, 0, 0],
+      "to": [16, 16, 16],
+      "faces": {
+        "north": { "uv": [0, 0, 16, 16], "texture": "#port" },
+        "east": { "uv": [0, 0, 16, 16], "texture": "#side" },
+        "south": { "uv": [0, 0, 16, 16], "texture": "#side" },
+        "west": { "uv": [0, 0, 16, 16], "texture": "#side" },
+        "up": { "uv": [0, 0, 16, 16], "texture": "#side" },
+        "down": { "uv": [0, 0, 16, 16], "texture": "#side" }
+      }
+    }
+  ]
+}
