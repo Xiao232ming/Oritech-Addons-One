@@ -29,10 +29,10 @@ public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddon
     private static final int SLOT_DARK = 0xFF373737;
     /** Dark veil drawn over the type III slot hints so they read as a dim background icon. */
     private static final int HINT_VEIL = 0x99000000;
-    /** Colour of the link line in the top right corner of the panel. */
-    private static final int LINK_COLOR = 0xFF1E6B1E;
+    /** Colour of the link line under the panel (bright green, no drop shadow). */
+    private static final int LINK_COLOR = 0xFF55FF55;
     /** Colour of that line while the addon is not linked to a machine. */
-    private static final int UNLINKED_COLOR = 0xFF707070;
+    private static final int UNLINKED_COLOR = 0xFFAAAAAA;
 
     private final ExtensionAddonLayout layout;
 
@@ -43,18 +43,20 @@ public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddon
     }
 
     /**
-     * Adds the link line of the wireless addons to the panel, right aligned on the player inventory label
-     * row: which machine this dock is linked to and where that machine stands. The wired addons simply show that they are not
+     * Adds the link line of the wireless addons: which machine this dock is linked to and where it
+     * stands. It is centred right below the panel, so it cannot overlap any other text. The wired addons simply show that they are not
      * linked, so both variants keep the same layout.
      */
     @Override
     protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         super.extractLabels(graphics, mouseX, mouseY);
 
-        var text = linkText();
-        var x = this.imageWidth - 8 - this.font.width(text.getString());
-        graphics.text(this.font, text, x, this.inventoryLabelY,
-                this.menu.linkedMachine() == null ? UNLINKED_COLOR : LINK_COLOR);
+        var text = linkText().getString();
+        var x = (this.imageWidth - this.font.width(text)) / 2;
+        // drawn under the panel, so it can never overlap the title or the inventory label; the String
+        // overload is used because it takes the drop shadow flag (the Component one always adds one)
+        graphics.text(this.font, text, x, this.imageHeight + 4,
+                this.menu.linkedMachine() == null ? UNLINKED_COLOR : LINK_COLOR, false);
     }
 
     /** Text of the link line, either the linked machine with its coordinates or "not linked". */
