@@ -392,6 +392,18 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity implements Conta
         // they take effect exactly as if they were attached to the machine directly.
         forwardSpecialBehaviours(controller);
 
+        // A stored control unit has to be visible to the machine's GUI. Oritech shows the redstone panel
+        // of a machine when it finds a control unit in its connected addons, and that list is synced to
+        // the client when the GUI is opened - a wireless dock is not one of the machine's own addons, so
+        // it announces itself here while it really stores a control unit (see
+        // UpgradeableOritechScreenHandlerMixin, which accepts this block as a control unit too).
+        var connectedAddons = controller.getConnectedAddons();
+        if (hasRedstonePlugin()) {
+            if (!connectedAddons.contains(worldPosition)) connectedAddons.add(worldPosition.immutable());
+        } else {
+            connectedAddons.remove(worldPosition);
+        }
+
         var stats = combinedStats();
         if (stats.isEmpty()) {
             lastApplied = null;
