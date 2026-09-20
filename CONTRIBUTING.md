@@ -63,8 +63,8 @@ git branch --show-current   # 确认自己在 26.1.2 或 1.21.1 分支上
 - 产物名由 `build.gradle` 拼成 `<mod_id>-<mod_version>+mc<minecraft_version>.jar`，全小写、无空格。
 - 打标签（标签带游戏版本，两个分支的标签互不冲突）：
   ```powershell
-  git tag -a "v1.0.0+mc1.21.1" -m "Oritech Addons One 1.0.0 for MC 1.21.1"
-  git push origin "v1.0.0+mc1.21.1"
+  git tag -a "v1.1.0+mc1.21.1" -m "Oritech Addons One 1.1.0 for MC 1.21.1"
+  git push origin "v1.1.0+mc1.21.1"
   ```
 - 发布 GitHub Release 时附上 `build\libs\*.jar`（或直接下载 CI 的 artifact）。
 - 升级 Oritech：改 `gradle.properties` 里的 `*_version`（Modrinth 版本 ID / 版本号），
