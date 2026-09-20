@@ -8,8 +8,10 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
 
 import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonBlock;
+import io.github.xiao232ming.oritechaddonsone.block.WirelessExtensionAddonBlock;
 
 import rearth.oritech.client.ui.UpgradableOritechScreenHandler;
 import rearth.oritech.util.MachineAddonController;
@@ -23,6 +25,9 @@ import rearth.oritech.util.MachineAddonController;
  * Extension Addon instead, so the check has to be extended. The stored control unit is visible through
  * the synced {@link ExtensionAddonBlock#HAS_CONTROL_UNIT} block state (a block entity inventory is not
  * synced to the client, and this check runs on the client).
+ * <p>
+ * A wireless extension addon reports itself in the machine's connected addons while it stores a control
+ * unit (that list is synced with the machine's GUI), so both variants are accepted here.
  * <p>
  * The panel itself only displays the state (torch on/off, signal strength, effect text); the machine's
  * {@code receivedRedstoneSignal()} / {@code currentRedstoneEffect()} already report the state that is
@@ -45,13 +50,23 @@ public abstract class UpgradableOritechScreenHandlerMixin {
         if (this.addonController == null) return;
 
         for (var addonPos : this.addonController.getConnectedAddons()) {
-            var state = this.worldAccess.getBlockState(addonPos);
-            if (state.getBlock() instanceof ExtensionAddonBlock
-                    && state.hasProperty(ExtensionAddonBlock.HAS_CONTROL_UNIT)
-                    && state.getValue(ExtensionAddonBlock.HAS_CONTROL_UNIT)) {
+            if (oritechaddonsone$storesControlUnit(this.worldAccess.getBlockState(addonPos))) {
                 cir.setReturnValue(true);
                 return;
             }
         }
+    }
+
+    /** True while that block is one of our extension addons and stores a control unit plugin. */
+    private static boolean oritechaddonsone$storesControlUnit(BlockState state) {
+        if (state.getBlock() instanceof ExtensionAddonBlock) {
+            return state.hasProperty(ExtensionAddonBlock.HAS_CONTROL_UNIT)
+                    && state.getValue(ExtensionAddonBlock.HAS_CONTROL_UNIT);
+        }
+        if (state.getBlock() instanceof WirelessExtensionAddonBlock) {
+            return state.hasProperty(WirelessExtensionAddonBlock.HAS_CONTROL_UNIT)
+                    && state.getValue(WirelessExtensionAddonBlock.HAS_CONTROL_UNIT);
+        }
+        return false;
     }
 }
