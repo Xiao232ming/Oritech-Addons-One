@@ -74,6 +74,13 @@ public class WirelessExtensionAddonBlock extends Block implements EntityBlock, T
     public WirelessExtensionAddonBlock(Properties properties, ExtensionAddonType type) {
         super(properties);
         this.type = type;
+
+        // A BooleanProperty defaults to its *first* possible value, which is true - so the unlinked state
+        // has to be set explicitly, otherwise a freshly placed dock would show the active port texture.
+        registerDefaultState(stateDefinition.any()
+                .setValue(FACING, Direction.NORTH)
+                .setValue(LINKED, false)
+                .setValue(HAS_CONTROL_UNIT, false));
     }
 
     /** Which Extension Addon this block is (decides slot count, accepted plugins and GUI). */
@@ -92,7 +99,9 @@ public class WirelessExtensionAddonBlock extends Block implements EntityBlock, T
     @Nullable
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
-        return defaultBlockState().setValue(FACING, context.getClickedFace());
+        return defaultBlockState()
+                .setValue(FACING, context.getClickedFace())
+                .setValue(LINKED, false);
     }
 
     @Override
