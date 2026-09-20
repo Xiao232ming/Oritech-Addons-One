@@ -92,7 +92,9 @@ public class WirelessExtensionAddonBlock extends Block implements EntityBlock, A
     @Nullable
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
-        return defaultBlockState().setValue(FACING, context.getClickedFace());
+        return defaultBlockState()
+                .setValue(FACING, context.getClickedFace())
+                .setValue(LINKED, false);
     }
 
     @Override
