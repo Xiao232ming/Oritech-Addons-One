@@ -41,27 +41,6 @@ import io.github.xiao232ming.oritechaddonsone.block.entity.WirelessExtensionAddo
 @Mixin(LaserTargetDesignator.class)
 public class LaserTargetDesignatorMixin {
 
-    /**
-     * Right clicking air clears the stored position.
-     * <p>
-     * Oritech's designator only ever overwrites its stored position (its power pole branch is the only
-     * place that removes it), so a player who wants to drop a stored dock would have to aim at some other
-     * block first. Right clicking air is the natural "cancel" gesture and is added here.
-     */
-    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
-        var stack = player.getItemInHand(hand);
-
-        if (stack.get(ComponentContent.TARGET_POSITION.get()) == null) {
-            return InteractionResultHolder.pass(stack);
-        }
-
-        if (!level.isClientSide()) {
-            stack.remove(ComponentContent.TARGET_POSITION.get());
-            player.sendSystemMessage(Component.translatable("message.oritechaddonsone.wireless.cleared"));
-        }
-        return InteractionResultHolder.success(stack);
-    }
-
     @Inject(method = "useOn", at = @At("HEAD"), cancellable = true)
     private void oritechaddonsone$linkWirelessAddon(UseOnContext context,
             CallbackInfoReturnable<InteractionResult> cir) {
