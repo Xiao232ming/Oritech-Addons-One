@@ -5,6 +5,7 @@
   "mixins": [
     "AddonSplicerBlockEntityMixin",
     "ItemUseMixin",
+    "MachineAddonControllerMixin",
     "LaserTargetDesignatorMixin",
     "UpgradableMachineBlockMixin"
   ],
