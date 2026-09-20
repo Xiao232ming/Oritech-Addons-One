@@ -1,4 +1,5 @@
 {
+  "parent": "minecraft:block/block",
   "textures": {
     "port": "oritech:block/machine_extender_off",
     "side": "oritechaddonsone:block/extension_addon_1_side",

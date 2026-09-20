@@ -40,6 +40,5 @@
   "tooltip.oritechaddonsone.wireless_extension_addon_3.link": "Link it to a machine with Oritech's target designator: right click this block to save its position, then right click the machine.",
   "tooltip.oritechaddonsone.wireless_extension_addon_3.splicer": "Cannot be used by the addon splicer.",
   "message.oritechaddonsone.wireless.not_loaded": "The wireless addon is in an unloaded chunk - move closer and try again.",
-  "message.oritechaddonsone.wireless.hint": "Save this position with the target designator, then right click a machine to link it",
   "message.oritechaddonsone.wireless.linked": "Wireless addon linked to %s"
 }
