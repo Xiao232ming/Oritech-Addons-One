@@ -43,6 +43,9 @@ public class WirelessExtensionAddonBlockEntity extends ExtensionAddonBlockEntity
     /** How often the dock re-applies itself, in ticks (the machine may recompute without telling us). */
     private static final int REFRESH_INTERVAL = 20;
 
+    /** Guards {@link #applyAllDocks} against re-entering itself through the block updates it causes. */
+    private static boolean applying;
+
     /** Machine this dock is linked to, or {@code null} while it is not linked. */
     private BlockPos linkedMachine;
 
@@ -179,24 +182,42 @@ public class WirelessExtensionAddonBlockEntity extends ExtensionAddonBlockEntity
     }
 
     /**
-     * Applies the plugins of every dock linked to that machine. The machine just recomputed its addon
-     * data, so this is the point where the wireless contributions have to be merged on top.
+     * Applies the plugins of every dock linked to that machine, on top of the data the machine just
+     * computed for its own addons. Called from the machine's own addon scan (see
+     * {@code MachineAddonControllerMixin}), i.e. before it recalculates its energy container.
      */
     public static void applyAllDocks(Level level, BlockPos machinePos) {
-        var docks = WirelessLinks.docksOf(level, machinePos);
-        OritechAddonsOne.LOGGER.debug("[diag] applyAllDocks: {} -> {} dock(s)", machinePos, docks.size());
-        for (var dockPos : docks) {
-            if (level.getBlockEntity(dockPos) instanceof WirelessExtensionAddonBlockEntity dock
-                    && dock.isLinkedTo(machinePos)) {
-                dock.applyCombinedStats();
-            } else {
-                OritechAddonsOne.LOGGER.debug("[diag] applyAllDocks: skipping {} (be={})", dockPos,
-                        level.getBlockEntity(dockPos));
+        // Applying the stats updates synced block states, which sends block updates that can make a
+        // neighbouring machine scan its addons again. Running the merge once is enough, so nested calls
+        // are dropped instead of recursing.
+        if (applying) return;
+
+        applying = true;
+        try {
+            var docks = WirelessLinks.docksOf(level, machinePos);
+            OritechAddonsOne.LOGGER.debug("[diag] applyAllDocks: {} -> {} dock(s)", machinePos, docks.size());
+            for (var dockPos : docks) {
+                if (level.getBlockEntity(dockPos) instanceof WirelessExtensionAddonBlockEntity dock
+                        && dock.isLinkedTo(machinePos)) {
+                    dock.applyCombinedStats();
+                } else {
+                    OritechAddonsOne.LOGGER.debug("[diag] applyAllDocks: skipping {} (be={})", dockPos,
+                            level.getBlockEntity(dockPos));
+                }
             }
+        } finally {
+            applying = false;
         }
     }
 
-    /** Server ticker of the wireless addons: redstone control plus a periodic re-apply. */
+    /**
+     * Server ticker of the wireless addons: redstone control plus a periodic re-apply.
+     * <p>
+     * The machine applies the docks itself whenever it recomputes its addons, so this only re-applies the
+     * merged stats (which is a no-op while they are already in place) and refreshes the link and the
+     * synced block states - it must not ask the machine to recompute, because that would reset its energy
+     * container every second.
+     */
     public void serverTick() {
         if (level == null || level.isClientSide()) return;
 
@@ -205,14 +226,14 @@ public class WirelessExtensionAddonBlockEntity extends ExtensionAddonBlockEntity
         if (linkedMachine == null) return;
 
         if (level.getGameTime() % REFRESH_INTERVAL == 0) {
-            // re-register (covers world loads and removed entries) and let the machine recompute, so a
+            // re-register (covers world loads and removed entries) and refresh the merged stats, so a
             // link survives addon changes on the machine side that we cannot observe
             if (level.getGameTime() % 100 == 0) {
                 OritechAddonsOne.LOGGER.debug("[diag] tick: dock {} alive, link={}", worldPosition, linkedMachine);
             }
             registerWithMachine();
             updateLinkedState();
-            refreshMachine();
+            applyAllDocks(level, linkedMachine);
         }
     }
 
