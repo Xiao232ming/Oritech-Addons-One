@@ -7,8 +7,7 @@
     "ItemUseMixin",
     "MachineAddonControllerMixin",
     "LaserTargetDesignatorMixin",
-    "ShrinkerBlockEntityMixin",
-    "UpgradableMachineBlockMixin"
+    "ShrinkerBlockEntityMixin"
   ],
   "client": [
     "UpgradableOritechScreenHandlerMixin"

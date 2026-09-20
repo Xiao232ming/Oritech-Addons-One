@@ -78,9 +78,8 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
             new DelegatingEnergyStorage(this::getMainStorage, this::isEnergyInputActive);
 
     /**
-     * Addon data this block wrote into its machine last. The machine recomputes its data on many events
-     * (opening its GUI, addon changes, ...) and asks us to merge again right afterwards, so this is what
-     * keeps the merge from being counted twice.
+     * Addon data this block wrote into its machine last, used to tell whether the client has to be told
+     * about a change (the machine only sends its addon data when a GUI is opened).
      */
     @Nullable
     private BaseAddonData lastApplied;
@@ -379,6 +378,9 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
 
     /** Adds the combined plugin stats on top of the data the machine computed for its other addons. */
     protected void applyCombinedStats() {
+        // Called exactly once per dock and per addon recomputation of the machine (see
+        // MachineAddonControllerMixin for the wireless docks and setControllerPos for the wired ones), so
+        // several docks of one machine simply accumulate on top of each other like several addons do.
         if (!(level instanceof ServerLevel serverLevel)) return;
         if (!isOwnBlock()) return;
         if (!(serverLevel.getBlockEntity(getControllerPos()) instanceof MachineAddonController controller)) {
@@ -415,12 +417,6 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         }
 
         var base = controller.getBaseAddonData();
-
-        // The machine just recomputed its own data and we were asked to merge into it a second time (for
-        // example once from the addon scan of the machine and once from the wireless dock that drives its
-        // own refresh): if the machine already carries our result there is nothing left to do.
-        if (base.equals(lastApplied)) return;
-
         var additive = OritechConfig.additiveAddons.get();
         var merged = merge(base, stats, additive);
         var previous = lastApplied;

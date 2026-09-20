@@ -156,9 +156,10 @@ public class WirelessExtensionAddonBlockEntity extends ExtensionAddonBlockEntity
     // ------------------------------------------------------------------ driving the machine
 
     /**
-     * Asks the linked machine to recompute its addons and applies every wireless dock of that machine
-     * afterwards. Runs on the server thread, because {@code initAddons} must not be called from a
-     * foreign thread.
+     * Asks the linked machine to recompute its addons. The machine applies every wireless dock of that
+     * machine during that recomputation itself (see {@code MachineAddonControllerMixin}), so nothing else
+     * has to be done here. Runs on the server thread, because {@code initAddons} must not be called from
+     * a foreign thread.
      */
     public void refreshMachine() {
         if (!(level instanceof ServerLevel serverLevel) || linkedMachine == null) {
@@ -173,12 +174,7 @@ public class WirelessExtensionAddonBlockEntity extends ExtensionAddonBlockEntity
             return;
         }
 
-        var machinePos = linkedMachine;
-        OritechAddonsOne.LOGGER.debug("[diag] refresh: dock {} scheduling initAddons of {}", worldPosition, machinePos);
-        serverLevel.getServer().execute(() -> {
-            controller.initAddons();
-            applyAllDocks(serverLevel, machinePos);
-        });
+        serverLevel.getServer().execute(controller::initAddons);
     }
 
     /**
@@ -211,12 +207,11 @@ public class WirelessExtensionAddonBlockEntity extends ExtensionAddonBlockEntity
     }
 
     /**
-     * Server ticker of the wireless addons: redstone control plus a periodic re-apply.
+     * Server ticker of the wireless addons: redstone control plus a periodic re-register of the link.
      * <p>
-     * The machine applies the docks itself whenever it recomputes its addons, so this only re-applies the
-     * merged stats (which is a no-op while they are already in place) and refreshes the link and the
-     * synced block states - it must not ask the machine to recompute, because that would reset its energy
-     * container every second.
+     * The machine applies the docks itself whenever it recomputes its addons, and a dock whose contents
+     * changed asks for such a recomputation, so this must not touch the machine's addon data or energy
+     * container - only the link and the synced block states are refreshed here.
      */
     public void serverTick() {
         if (level == null || level.isClientSide()) return;
@@ -226,14 +221,8 @@ public class WirelessExtensionAddonBlockEntity extends ExtensionAddonBlockEntity
         if (linkedMachine == null) return;
 
         if (level.getGameTime() % REFRESH_INTERVAL == 0) {
-            // re-register (covers world loads and removed entries) and refresh the merged stats, so a
-            // link survives addon changes on the machine side that we cannot observe
-            if (level.getGameTime() % 100 == 0) {
-                OritechAddonsOne.LOGGER.debug("[diag] tick: dock {} alive, link={}", worldPosition, linkedMachine);
-            }
             registerWithMachine();
             updateLinkedState();
-            applyAllDocks(level, linkedMachine);
         }
     }
 
