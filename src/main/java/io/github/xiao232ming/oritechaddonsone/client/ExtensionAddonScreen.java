@@ -43,8 +43,8 @@ public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddon
     }
 
     /**
-     * Adds the link line of the wireless addons to the top right corner of the panel: which machine this
-     * dock is linked to and where that machine stands. The wired addons simply show that they are not
+     * Adds the link line of the wireless addons to the panel, right aligned on the player inventory label
+     * row: which machine this dock is linked to and where that machine stands. The wired addons simply show that they are not
      * linked, so both variants keep the same layout.
      */
     @Override
@@ -53,7 +53,7 @@ public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddon
 
         var text = linkText();
         var x = this.imageWidth - 8 - this.font.width(text.getString());
-        graphics.text(this.font, text, x, 6,
+        graphics.text(this.font, text, x, this.inventoryLabelY,
                 this.menu.linkedMachine() == null ? UNLINKED_COLOR : LINK_COLOR);
     }
 
