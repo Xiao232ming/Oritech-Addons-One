@@ -86,9 +86,16 @@ public class LaserTargetDesignatorMixin {
             return;
         }
 
-        // multiblock machines keep their controller in a core block, so resolve that first
-        var machinePos = MachineCoreBlock.getControllerPos(level, clickedPos);
-        if (machinePos == null) machinePos = clickedPos;
+        // Multiblock machines keep their controller in a core block, so resolve that - but only when the
+        // clicked block really is one of those core blocks. Oritech's helper casts the block entity at that
+        // position to its core type, so calling it for anything else (our dock, a plain block, ...) throws.
+        var machinePos = clickedPos;
+        if (clickedState.getBlock() instanceof MachineCoreBlock) {
+            var controllerPos = MachineCoreBlock.getControllerPos(level, clickedPos);
+            if (controllerPos != null) machinePos = controllerPos;
+        }
+
+        // Not an upgradable machine: leave the click to Oritech, which then stores this position.
         if (!(level.getBlockEntity(machinePos) instanceof MachineAddonController)) return;
 
         if (!level.isLoaded(dockPos)) {

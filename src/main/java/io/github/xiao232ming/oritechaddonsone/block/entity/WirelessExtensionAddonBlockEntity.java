@@ -3,6 +3,7 @@ package io.github.xiao232ming.oritechaddonsone.block.entity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import org.jetbrains.annotations.Nullable;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
@@ -58,6 +59,17 @@ public class WirelessExtensionAddonBlockEntity extends ExtensionAddonBlockEntity
         return linkedMachine != null;
     }
 
+    /**
+     * Translation key of the linked machine's display name, used by the GUI. Returns null while the dock
+     * is not linked or the machine is in an unloaded chunk (in that case the GUI shows the coordinates
+     * only).
+     */
+    @Nullable
+    public String linkedMachineNameKey() {
+        if (linkedMachine == null || level == null || !level.isLoaded(linkedMachine)) return null;
+        var state = level.getBlockState(linkedMachine);
+        return state.isAir() ? null : state.getBlock().getDescriptionId();
+    }
     public boolean isLinkedTo(BlockPos machine) {
         return linkedMachine != null && linkedMachine.equals(machine);
     }

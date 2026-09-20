@@ -2,10 +2,10 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "key": {
-    "I": { "item": "minecraft:iron_ingot" },
-    "D": { "item": "oritech:target_designator" },
-    "R": { "item": "minecraft:ender_pearl" },
-    "A": { "item": "oritechaddonsone:extension_addon_1" }
+    "I": "minecraft:iron_ingot",
+    "D": "oritech:target_designator",
+    "R": "minecraft:ender_pearl",
+    "A": "oritechaddonsone:extension_addon_1"
   },
   "pattern": [
     "IDI",

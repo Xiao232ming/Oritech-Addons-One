@@ -9,11 +9,13 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
+import org.jetbrains.annotations.Nullable;
 
 import io.github.xiao232ming.oritechaddonsone.Config;
 import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonType;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEntity;
+import io.github.xiao232ming.oritechaddonsone.block.entity.WirelessExtensionAddonBlockEntity;
 
 /**
  * Menu of the Extension Addons: the plugin slots of this {@link ExtensionAddonType} (their amount is
@@ -25,9 +27,33 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
     private final ExtensionAddonType type;
     private final ExtensionAddonLayout layout;
 
+    /** Machine a wireless addon is linked to, or {@code null} (wired addons are never linked). */
+    @Nullable
+    private BlockPos linkedMachine;
+    /** Translation key of that machine's display name, or {@code null} while it is unknown. */
+    @Nullable
+    private String linkedMachineNameKey;
+
     /** Server side constructor. */
     public ExtensionAddonMenu(int containerId, Inventory inventory, ExtensionAddonBlockEntity blockEntity) {
         this(containerId, inventory, blockEntity, blockEntity.pluginType(), blockEntity.getContainerSize());
+
+        if (blockEntity instanceof WirelessExtensionAddonBlockEntity dock) {
+            this.linkedMachine = dock.linkedMachine();
+            this.linkedMachineNameKey = dock.linkedMachineNameKey();
+        }
+    }
+
+    /** Machine this addon is linked to; only the wireless addons ever have one. */
+    @Nullable
+    public BlockPos linkedMachine() {
+        return linkedMachine;
+    }
+
+    /** Translation key of that machine's name, or {@code null} while it is unknown. */
+    @Nullable
+    public String linkedMachineNameKey() {
+        return linkedMachineNameKey;
     }
 
     private ExtensionAddonMenu(int containerId, Inventory inventory, Container container,
@@ -70,6 +96,13 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
     /** Client side constructor; block position and slot count are sent along when the menu is opened. */
     public ExtensionAddonMenu(int containerId, Inventory inventory, RegistryFriendlyByteBuf buffer) {
         this(containerId, inventory, buffer.readBlockPos(), buffer.readVarInt());
+
+        // the link of a wireless addon is sent along with the menu, so the GUI can show it right away
+        if (buffer.readBoolean()) {
+            this.linkedMachine = buffer.readBlockPos();
+            var nameKey = buffer.readUtf();
+            this.linkedMachineNameKey = nameKey.isEmpty() ? null : nameKey;
+        }
     }
 
     private ExtensionAddonMenu(int containerId, Inventory inventory, BlockPos pos, int slots) {
