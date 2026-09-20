@@ -37,6 +37,7 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import io.github.xiao232ming.oritechaddonsone.Config;
 import io.github.xiao232ming.oritechaddonsone.block.entity.WirelessExtensionAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonLayout;
+import io.github.xiao232ming.oritechaddonsone.wireless.WirelessLinking;
 
 /**
  * The Wireless Extension Addon: a full block that stores the same plugins as the wired Extension Addon
@@ -143,15 +144,24 @@ public class WirelessExtensionAddonBlock extends Block implements EntityBlock, A
         }
     }
 
+    /**
+     * Opening the menu must not swallow the click of Oritech's target designator: vanilla runs the block
+     * first and only reaches {@code Item#useOn} (where the designator stores this dock's position) when
+     * the block passes on the interaction. With the designator in hand the dock therefore steps aside.
+     */
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player,
             BlockHitResult hit) {
+        if (WirelessLinking.isHoldingLinkDesignator(player)) return InteractionResult.PASS;
         return openPluginMenu(level, pos, player);
     }
 
     @Override
     protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
             Player player, InteractionHand hand, BlockHitResult hit) {
+        if (WirelessLinking.isLinkDesignator(stack)) {
+            return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        }
         return openPluginMenu(level, pos, player) == InteractionResult.SUCCESS
                 ? ItemInteractionResult.SUCCESS
                 : ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
