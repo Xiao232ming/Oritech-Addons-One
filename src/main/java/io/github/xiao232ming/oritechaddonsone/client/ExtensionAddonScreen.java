@@ -36,10 +36,10 @@ public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddon
     private static final float HINT_ICON_Z = 50.0F;
     /** z of the veil: in front of the hint icons, behind real items and item decorations. */
     private static final int HINT_VEIL_Z = 60;
-    /** Colour of the link line in the top right corner of the panel. */
-    private static final int LINK_COLOR = 0xFF1E6B1E;
+    /** Colour of the link line under the panel (bright green, no drop shadow). */
+    private static final int LINK_COLOR = 0xFF55FF55;
     /** Colour of that line while the addon is not linked to a machine. */
-    private static final int UNLINKED_COLOR = 0xFF707070;
+    private static final int UNLINKED_COLOR = 0xFFAAAAAA;
 
     private final ExtensionAddonLayout layout;
 
@@ -69,17 +69,18 @@ public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddon
     }
 
     /**
-     * Adds the link line of the wireless addons to the panel, right aligned on the player inventory label
-     * row: which machine this dock is linked to and where that machine stands. The wired addons simply show that they are not
+     * Adds the link line of the wireless addons: which machine this dock is linked to and where it
+     * stands. It is centred right below the panel, so it cannot overlap any other text. The wired addons simply show that they are not
      * linked, so both variants keep the same layout.
      */
     @Override
     protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
         super.renderLabels(graphics, mouseX, mouseY);
 
-        var text = linkText();
-        var x = this.imageWidth - 8 - this.font.width(text.getString());
-        graphics.drawString(this.font, text, x, this.inventoryLabelY,
+        var text = linkText().getString();
+        var x = (this.imageWidth - this.font.width(text)) / 2;
+        // drawn under the panel, so it can never overlap the title or the inventory label
+        graphics.drawString(this.font, text, x, this.imageHeight + 4,
                 this.menu.linkedMachine() == null ? UNLINKED_COLOR : LINK_COLOR, false);
     }
 
