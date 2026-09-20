@@ -9,6 +9,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 
+import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
+
 /**
  * Server side index of the wireless extension addons per machine.
  * <p>
@@ -34,7 +36,10 @@ public final class WirelessLinks {
         if (level == null || level.isClientSide() || machine == null || dock == null) return;
 
         var perLevel = LINKS.computeIfAbsent(level, ignored -> new ConcurrentHashMap<>());
-        perLevel.computeIfAbsent(machine.immutable(), ignored -> ConcurrentHashMap.newKeySet()).add(dock.immutable());
+        var docks = perLevel.computeIfAbsent(machine.immutable(), ignored -> ConcurrentHashMap.newKeySet());
+        var added = docks.add(dock.immutable());
+        OritechAddonsOne.LOGGER.debug("[diag] register: machine {} -> dock {} (new={}, docks={})",
+                machine, dock, added, docks.size());
     }
 
     /** Removes a dock from a machine (idempotent). */
@@ -62,6 +67,8 @@ public final class WirelessLinks {
         if (perLevel == null) return Set.of();
 
         var docks = perLevel.get(machine);
+        OritechAddonsOne.LOGGER.debug("[diag] docksOf: machine {} -> {} dock(s), {} machine(s) indexed",
+                machine, docks == null ? 0 : docks.size(), perLevel.size());
         return docks == null ? Set.of() : Set.copyOf(docks);
     }
 }

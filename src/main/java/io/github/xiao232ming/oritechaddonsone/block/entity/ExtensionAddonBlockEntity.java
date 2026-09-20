@@ -25,6 +25,8 @@ import org.jetbrains.annotations.Nullable;
 import rearth.oritech.api.energy.EnergyApi;
 import rearth.oritech.api.energy.containers.DelegatingEnergyStorage;
 import rearth.oritech.block.blocks.addons.MachineAddonBlock;
+import rearth.oritech.api.networking.NetworkedBlockEntity;
+import rearth.oritech.api.networking.SyncType;
 import rearth.oritech.block.entity.addons.AddonBlockEntity;
 import rearth.oritech.block.entity.addons.RedstoneAddonBlockEntity;
 import rearth.oritech.block.entity.addons.RedstoneAddonBlockEntity.RedstoneControllable;
@@ -74,6 +76,14 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
     /** Feeds the connected machine while an acceptor plugin is inserted. */
     private final DelegatingEnergyStorage delegatedStorage =
             new DelegatingEnergyStorage(this::getMainStorage, this::isEnergyInputActive);
+
+    /**
+     * Addon data this block wrote into its machine last. The machine recomputes its data on many events
+     * (opening its GUI, addon changes, ...) and asks us to merge again right afterwards, so this is what
+     * keeps the merge from being counted twice.
+     */
+    @Nullable
+    private BaseAddonData lastApplied;
 
     /** Last redstone state we forwarded to the machine. */
     private boolean lastRedstonePowered;
@@ -180,7 +190,13 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
     public void applyRedstoneSignal(boolean powered) {
         if (level == null || level.isClientSide()) return;
         if (!(level.getBlockEntity(getControllerPos()) instanceof MachineAddonController controller)) return;
-        if (!(controller instanceof RedstoneControllable controllable)) return;
+        if (!(controller instanceof RedstoneControllable controllable)) {
+            OritechAddonsOne.LOGGER.debug("[diag] redstone: {} machine {} is not controllable",
+                    worldPosition, getControllerPos());
+            return;
+        }
+        OritechAddonsOne.LOGGER.debug("[diag] redstone: {} powered={} plugin={} applied={} -> {}",
+                worldPosition, powered, hasRedstonePlugin(), redstoneApplied, getControllerPos());
 
         if (hasRedstonePlugin()) {
             redstoneApplied = true;
@@ -353,11 +369,21 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         applyCombinedStats();
     }
 
+    /**
+     * Forgets the addon data this block merged into its machine. Used when the block stops working on that
+     * machine (a wireless dock that was moved away or broken), so that the next merge is a fresh one.
+     */
+    protected void forgetAppliedStats() {
+        lastApplied = null;
+    }
+
     /** Adds the combined plugin stats on top of the data the machine computed for its other addons. */
     protected void applyCombinedStats() {
         if (!(level instanceof ServerLevel serverLevel)) return;
         if (!isOwnBlock()) return;
-        if (!(serverLevel.getBlockEntity(getControllerPos()) instanceof MachineAddonController controller)) return;
+        if (!(serverLevel.getBlockEntity(getControllerPos()) instanceof MachineAddonController controller)) {
+            return;
+        }
 
         // Keep the synced block state and the machine's redstone state in sync. Doing it here covers
         // placement, world loads and plugin changes, because every addon scan ends up in this method.
@@ -371,14 +397,33 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         forwardSpecialBehaviours(controller);
 
         var stats = combinedStats();
-        if (stats.isEmpty()) return;
+        if (stats.isEmpty()) {
+            lastApplied = null;
+            return;
+        }
 
         var base = controller.getBaseAddonData();
+
+        // The machine just recomputed its own data and we were asked to merge into it a second time (for
+        // example once from the addon scan of the machine and once from the wireless dock that drives its
+        // own refresh): if the machine already carries our result there is nothing left to do.
+        if (base.equals(lastApplied)) return;
+
         var additive = OritechConfig.additiveAddons.get();
         var merged = merge(base, stats, additive);
+        var previous = lastApplied;
 
         controller.setBaseAddonData(merged);
         controller.updateEnergyContainer();
+        lastApplied = merged;
+
+        // Oritech only sends the machine's addon data to the client when its GUI is opened, and the machine
+        // recomputes - i.e. drops our contribution - right before that. The client builds the speed and
+        // efficiency panel from that copy, so push our result whenever it really changed (plugins inserted
+        // or removed, a dock linked or unlinked, ...).
+        if (!merged.equals(previous) && controller instanceof NetworkedBlockEntity networked) {
+            networked.sendUpdate(SyncType.GUI_OPEN);
+        }
 
         OritechAddonsOne.LOGGER.debug(
                 "Extension addon at {} merged {} plugin(s) into {} (additive={}): speed {} -> {}, efficiency {} -> {}",
@@ -443,6 +488,7 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
     }
 
     private void contentsChanged() {
+        OritechAddonsOne.LOGGER.debug("[diag] contents changed on {} (slot 0 = {})", worldPosition, items.get(0));
         setChanged();
         // keep the synced "has a control unit" state (and the machine) up to date right away
         updateControlUnitState();
