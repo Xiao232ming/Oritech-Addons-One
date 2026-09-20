@@ -40,5 +40,6 @@
   "message.oritechaddonsone.wireless.linked": "无线扩展坞已连接到 %s",
   "tooltip.oritechaddonsone.wireless_extension_addon_1.link": "用 Oritech 的目标标识器连接：按住 Shift 右键本方块保存坐标，再按住 Shift 右键机器。",
   "tooltip.oritechaddonsone.wireless_extension_addon_2.link": "用 Oritech 的目标标识器连接：按住 Shift 右键本方块保存坐标，再按住 Shift 右键机器。",
-  "tooltip.oritechaddonsone.wireless_extension_addon_3.link": "用 Oritech 的目标标识器连接：按住 Shift 右键本方块保存坐标，再按住 Shift 右键机器。"
+  "tooltip.oritechaddonsone.wireless_extension_addon_3.link": "用 Oritech 的目标标识器连接：按住 Shift 右键本方块保存坐标，再按住 Shift 右键机器。",
+  "message.oritechaddonsone.wireless.cleared": "已清空标识器储存的坐标"
 }

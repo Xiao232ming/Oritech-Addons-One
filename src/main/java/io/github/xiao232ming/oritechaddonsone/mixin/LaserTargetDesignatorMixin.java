@@ -6,8 +6,12 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.level.Level;
 
 import rearth.oritech.block.blocks.processing.MachineCoreBlock;
 import rearth.oritech.block.entity.interaction.DronePortEntity;
@@ -36,6 +40,27 @@ import io.github.xiao232ming.oritechaddonsone.block.entity.WirelessExtensionAddo
  */
 @Mixin(LaserTargetDesignator.class)
 public class LaserTargetDesignatorMixin {
+
+    /**
+     * Right clicking air clears the stored position.
+     * <p>
+     * Oritech's designator only ever overwrites its stored position, so a player who wants to drop a
+     * stored dock would have to aim at some other block first. Right clicking air is the natural "cancel"
+     * gesture and is added here.
+     */
+    public InteractionResult use(Level level, Player player, InteractionHand hand) {
+        var stack = player.getItemInHand(hand);
+
+        if (stack.get(ComponentContent.TARGET_POSITION.get()) == null) {
+            return InteractionResult.PASS;
+        }
+
+        if (!level.isClientSide()) {
+            stack.remove(ComponentContent.TARGET_POSITION.get());
+            player.sendSystemMessage(Component.translatable("message.oritechaddonsone.wireless.cleared"));
+        }
+        return InteractionResult.SUCCESS;
+    }
 
     @Inject(method = "useOn", at = @At("HEAD"), cancellable = true)
     private void oritechaddonsone$linkWirelessAddon(UseOnContext context,
