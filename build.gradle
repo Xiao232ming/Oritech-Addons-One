@@ -14,7 +14,7 @@ tasks.named('wrapper', Wrapper).configure {
     distributionType = Wrapper.DistributionType.BIN
 }
 
-// The artifact name carries the targeted game version, e.g. "oritechaddonsone-1.0.0+mc26.1.2.jar".
+// The artifact name carries the targeted game version, e.g. "oritechaddonsone-1.1.0+mc26.1.2.jar".
 // The mod metadata keeps the plain mod_version, because it is expanded from the property below.
 version = "${mod_version}+mc${minecraft_version}"
 group = mod_group_id
