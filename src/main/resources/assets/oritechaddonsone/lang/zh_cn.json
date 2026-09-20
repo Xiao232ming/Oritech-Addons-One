@@ -39,7 +39,6 @@
   "tooltip.oritechaddonsone.wireless_extension_addon_3.capacity": "每格容量：%s",
   "tooltip.oritechaddonsone.wireless_extension_addon_3.link": "用 Oritech 的目标标识器右键本方块保存坐标，再右键机器即可无线连接。",
   "tooltip.oritechaddonsone.wireless_extension_addon_3.splicer": "无法被插件绞接器使用。",
-  "message.oritechaddonsone.wireless.hint": "用目标标识器右键保存坐标，再右键机器即可建立无线连接",
   "message.oritechaddonsone.wireless.linked": "无线扩展坞已连接到 %s",
   "message.oritechaddonsone.wireless.not_loaded": "无线扩展坞所在区块未加载，请靠近它之后再链接"
 }
