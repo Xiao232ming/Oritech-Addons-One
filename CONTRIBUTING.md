@@ -128,6 +128,16 @@ git branch --show-current   # 确认自己在 26.1.2 或 1.21.1 分支上
 
 顺带一提，这也是把坞做成「必须加载区块才生效」的代价，改动坞的加载/注册时机时要重新验证这一点。
 
+**打开机器 GUI 也会触发 `initAddons`**（`UpgradableMachineBlock#useWithoutItem` 与
+`SmallStorageBlock#useWithoutItem` 在开界面前都会调一次），所以「开 GUI 时上限掉回默认值、
+能量条显示异常」和重进游戏是同一个根因，不是两个 bug。
+
+因此坞的贡献现在有**两条来源**，`applyAllDocks` 与 `initAddons` RETURN 的重列钩子都同时用：
+运行期索引 `WirelessLinks`，以及 `WirelessLinks#docksFromAddonList`——后者从机器自己的
+`connectedAddons`（`writeAddonToNbt` 会写进存档）反查**已加载且仍链接本机**的坞，并顺手把索引补回来。
+这样索引还是冷的时候（刚读档、坞刚加载）机器也能拿到贡献，上限不会塌回默认值；
+区块确实没加载的坞读不到，仍由上面的 guard 保住存量。
+
 ## 提交约定 / Commit conventions
 
 - 提交信息用**简洁的英文**，一行说清做了什么（例：`Add the mod logo` / `Fix the 1.21.1 recipes`）。
