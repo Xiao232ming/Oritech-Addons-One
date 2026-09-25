@@ -15,6 +15,7 @@ import net.minecraft.world.level.Level;
 import rearth.oritech.util.MachineAddonController;
 
 import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
+import io.github.xiao232ming.oritechaddonsone.block.entity.WirelessExtensionAddonBlockEntity;
 
 /**
  * Keeps a machine from destroying stored energy while the contribution of one of its addons is missing.
@@ -57,8 +58,9 @@ public final class AddonEnergyGuard {
     }
 
     /**
-     * Recomputes the unreadable addons of a machine. Has to run at the start of an addon scan, while
-     * {@code getConnectedAddons()} still holds the addons the machine knew before that scan.
+     * Recomputes the addons of a machine that cannot contribute right now. Has to run at the start of an
+     * addon scan, while {@code getConnectedAddons()} still holds the addons the machine knew before that
+     * scan.
      */
     public static void refresh(MachineAddonController controller) {
         var level = controller.getWorldForAddon();
@@ -79,8 +81,13 @@ public final class AddonEnergyGuard {
     }
 
     /**
-     * Collects the positions of {@code positions} whose chunk is not loaded, i.e. the addons whose
-     * plugins cannot be part of the addon data the machine is about to compute.
+     * Collects the positions of {@code positions} that cannot contribute to the addon data the machine
+     * is about to compute, i.e. the addons whose plugins are missing from it.
+     * <p>
+     * An addon that is really gone (its chunk is loaded and there is no block entity any more) is not
+     * kept, so a removed addon lowers the capacity and clamps the stored energy exactly like Oritech
+     * does. Only the two states in which the addon still exists somewhere - its chunk is not loaded, or
+     * it is a dock that has not announced itself yet - keep the guard up.
      */
     private static void collect(Level level, BlockPos machine, Collection<BlockPos> positions,
                                 Set<BlockPos> into) {
@@ -88,8 +95,17 @@ public final class AddonEnergyGuard {
 
         for (var pos : positions) {
             if (pos == null || pos.equals(machine)) continue;
-            // A loaded chunk without a block entity means the addon is gone, so it is not kept.
-            if (level.getBlockEntity(pos) == null && !level.isLoaded(pos)) {
+
+            var be = level.getBlockEntity(pos);
+            if (be == null) {
+                // Unloaded chunk: the addon may well be there, so its contribution is still expected.
+                if (!level.isLoaded(pos)) into.add(pos.immutable());
+                continue;
+            }
+
+            if (be instanceof WirelessExtensionAddonBlockEntity dock
+                    && dock.isLinkedTo(machine) && !WirelessLinks.isRegistered(level, machine, pos)) {
+                // Loaded and linked, but it has not handed its plugins to the machine yet.
                 into.add(pos.immutable());
             }
         }
@@ -99,6 +115,12 @@ public final class AddonEnergyGuard {
      * True while the machine's addon data is missing the contribution of an addon that cannot be read
      * right now. Besides the remembered positions this also checks the machine's own addon list, because
      * the first energy container update after a world load runs before the machine's addon scan.
+     * <p>
+     * A linked dock that is loaded but has not announced itself yet counts as missing too. That state is
+     * the normal one right after a world load: the machine recomputes its addons before the dock's first
+     * tick, so the scan resets the addon data to the machine's own addons and the container is clamped
+     * against the much smaller default capacity. The dock is known through the machine's own addon list,
+     * which survives a save, so this works for remote docks as well.
      */
     public static boolean isGuarded(MachineAddonController controller) {
         var level = controller.getWorldForAddon();
@@ -108,11 +130,34 @@ public final class AddonEnergyGuard {
         var perLevel = UNRESOLVED.get(level);
         if (perLevel != null && perLevel.containsKey(machine)) return true;
 
-        for (var pos : controller.getConnectedAddons()) {
+        return hasMissingAddon(level, machine, controller.getConnectedAddons());
+    }
+
+    /** Whether any of {@code positions} cannot contribute to the addon data the machine is computing. */
+    private static boolean hasMissingAddon(Level level, BlockPos machine, Collection<BlockPos> positions) {
+        if (positions == null) return false;
+
+        for (var pos : positions) {
             if (pos == null || pos.equals(machine)) continue;
-            if (level.getBlockEntity(pos) == null) return true;
+            if (!contributes(level, machine, pos)) return true;
         }
         return false;
+    }
+
+    /**
+     * Whether the addon at {@code pos} can be part of the addon data the machine computes right now.
+     * A plain addon is read straight from the world. A wireless dock only contributes once it has
+     * announced itself for this machine, which happens when its chunk loads - after the machine has
+     * already recomputed its addons. A dock that is linked elsewhere contributes nothing.
+     */
+    private static boolean contributes(Level level, BlockPos machine, BlockPos pos) {
+        var be = level.getBlockEntity(pos);
+        if (be == null) return false;
+
+        if (be instanceof WirelessExtensionAddonBlockEntity dock) {
+            return dock.isLinkedTo(machine) && WirelessLinks.isRegistered(level, machine, pos);
+        }
+        return true;
     }
 
     /** Remembers the stored energy of the container before it is recalculated. */

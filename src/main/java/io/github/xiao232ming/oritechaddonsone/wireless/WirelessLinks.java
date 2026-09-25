@@ -71,4 +71,19 @@ public final class WirelessLinks {
                 machine, docks == null ? 0 : docks.size(), perLevel.size());
         return docks == null ? Set.of() : Set.copyOf(docks);
     }
+
+    /**
+     * Whether a dock has already announced itself for a machine. A linked dock that is not registered
+     * yet is loaded but not contributing, which is exactly the state a machine must not mistake for
+     * "this addon is gone".
+     */
+    public static boolean isRegistered(Level level, BlockPos machine, BlockPos dock) {
+        if (level == null || machine == null || dock == null) return false;
+
+        var perLevel = LINKS.get(level);
+        if (perLevel == null) return false;
+
+        var docks = perLevel.get(machine);
+        return docks != null && docks.contains(dock);
+    }
 }
