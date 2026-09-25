@@ -100,6 +100,24 @@ git branch --show-current   # 确认自己在 26.1.2 或 1.21.1 分支上
 `width` / `height` 这类继承成员改用 `getMenu()` / `getGuiLeft()` / `getGuiTop()` 与
 `Screen.width` / `Screen.height` 公共字段。新增 UI mixin 时按同样的写法来。
 
+## 存档兼容 / Saved data
+
+**别让机器重算插件时丢掉存量能量。** Oritech 的 `MachineAddonController#updateEnergyContainer`
+最后一行是 `energy = min(energy, capacity)`：上限一旦变小，超出的能量**当场永久销毁**。
+而重进游戏时的顺序天然会踩到这个坑——`MachineControllerLifecycle.onLoad` 把一次 `initAddons`
+推迟到下一个服务器 tick，此时我们的无线坞索引（`WirelessLinks`，刻意只存在于运行期）
+还是空的，于是机器先用「没有我们贡献」的插件数据把上限算回默认值，把存量截断；
+一秒内坞重新注册、上限恢复，但能量已经没了（表现为「上限重置又迅速恢复，存量丢失」）。
+因此有两条防线，改动能量相关的逻辑时都要一起考虑：
+
+- `WirelessExtensionAddonBlockEntity#onLoad`：坞在区块加载时**立即**注册链接并让机器重算，
+  使机器加载后的那次扫描就能看到它（而不是等到最多一秒后的 `serverTick`）。
+- `AddonEnergyGuard`（`MachineAddonControllerMixin` 在 `updateEnergyContainer` 的 HEAD/RETURN
+  以及 `initAddons(BlockPos)` 的 HEAD 挂钩）：记录「因区块未加载而读不到的插件」，
+  只要存在这种插件，就把重算前的存量原样放回。插件真的被拆掉（区块已加载但方块实体不存在）
+  时会从记录里剔除，截断行为与 Oritech 原生一致。原则是**宁可暂时不截断，也绝不销毁玩家存的能量**；
+  顺带一提，这也是把坞做成「必须加载区块才生效」的代价，改动坞的加载/注册时机时要重新验证这一点。
+
 ## 提交约定 / Commit conventions
 
 - 提交信息用**简洁的英文**，一行说清做了什么（例：`Add the mod logo` / `Fix the 1.21.1 recipes`）。
