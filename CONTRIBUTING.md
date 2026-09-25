@@ -68,8 +68,37 @@ git branch --show-current   # 确认自己在 26.1.2 或 1.21.1 分支上
   ```
 - 发布 GitHub Release 时附上 `build\libs\*.jar`（或直接下载 CI 的 artifact）。
 - 升级 Oritech：改 `gradle.properties` 里的 `*_version`（Modrinth 版本 ID / 版本号），
-  跑一次 `runClient` 确认 mixin 目标与 API 未变：26.1.2 是 `AddonSplicerBlockEntity#gatherAddonStats`，
-  1.21.1 是 `ShrinkerBlockEntity#gatherAddonStats`，两边都用到 `MachineAddonController` 与能量 API。
+  跑一次 `runClient` 确认 mixin 目标与 API 未变。26.1.2 侧的目标：`AddonSplicerBlockEntity`、
+  `MachineAddonController#gatherAddonStats` 与 `#initAddons(BlockPos)`、`ItemUseMixin` /
+  `LaserTargetDesignatorMixin` 指向的物品，以及客户端 UI 的
+  `OritechMachineScreen#addExtensionContent` / `#tickExtra`、`OritechWidgetScreen`（组件表访问）、
+  `OritechScreenHandler#showRedstoneAddon`、`UpgradableOritechScreenHandler#showRedstoneAddon`。
+  两边都用到 `MachineAddonController` 与能量 API；升级后重点回归精炼厂 GUI 的插件数值面板。
+
+## 客户端 UI 补丁 / Client UI patches
+
+精炼厂（含污染精炼厂）在 Oritech 里用的是普通 `OritechScreenHandler`，而插件数值面板
+（速度/效率/爆发/腔室 + “插件”浮层按钮）只由 `UpgradableOritechScreen` 添加，所以精炼厂 GUI 一直
+没有这块面板——但它的方块实体本身就是 `MachineAddonController`（`MultiblockMachineEntity` →
+`UpgradableMachineBlockEntity`），我们的无线扩展坞可以链接它并让插件真正生效。补丁构成：
+
+- `OritechMachineScreenMixin`：在 `addExtensionContent` 末尾为「handler 不是
+  `UpgradableOritechScreenHandler`、但方块实体是 `MachineAddonController`」的机器补上面板，
+  并在 `tickExtra` 里刷新爆发标签（与上游 `UpgradableOritechScreen` 的行为一致）。浮层是
+  `UpgradableOritechScreen#toggleAddonOverlay` 的副本，额外把无线扩展坞按方块名列出来。
+- `MachineAddonControllerMixin`：`initAddons` 结束时会用扫描到的方块重建 `connectedAddons`，
+  把无线坞全部抹掉；这里在 `initAddons` 返回后把仍然链接的无线坞放回去并推送 `GUI_OPEN`，
+  这样浮层与红石面板才看得到它们。
+- `OritechScreenHandlerMixin`：普通 handler 的 `showRedstoneAddon` 只看
+  `screenData.hasRedstoneControlAvailable()`（精炼厂恒为 false），这里补上与
+  `UpgradableOritechScreenHandlerMixin` 相同的「连接的插件里存有控制单元」判断。
+
+**Mixin 限制（踩过的坑）**：本项目的 Mixin 只在**目标类自身**解析 `@Shadow` 成员，
+不会去父类找。所以 `addComponent` / `removeComponent`（声明在 `OritechWidgetScreen`）
+不能从 `OritechMachineScreen` 的 mixin 里 shadow，改用
+`OritechWidgetScreenMixin` + `AddonOverlayHost` 鸭子接口；`menu` / `leftPos` / `topPos` /
+`width` / `height` 这类继承成员改用 `getMenu()` / `getGuiLeft()` / `getGuiTop()` 与
+`Screen.width` / `Screen.height` 公共字段。新增 UI mixin 时按同样的写法来。
 
 ## 提交约定 / Commit conventions
 
