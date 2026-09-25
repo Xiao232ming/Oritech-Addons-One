@@ -221,6 +221,25 @@ public class WirelessExtensionAddonBlockEntity extends ExtensionAddonBlockEntity
         }
     }
 
+    /**
+     * Announces the link as soon as the dock is loaded again.
+     * <p>
+     * The link index is runtime only, so without this a dock is unknown until its next {@link #serverTick}
+     * (up to a second later) - while the machine recomputes its addons right after a load, because
+     * Oritech's {@code MachineControllerLifecycle.onLoad} defers an addon scan to the next server tick.
+     * That scan would compute the machine's capacity (and clamp its stored energy to it) without this
+     * dock's plugins, so the dock has to be part of it. Asking the machine to recompute covers the other
+     * order, where the machine scanned its addons before this chunk was loaded.
+     */
+    @Override
+    public void onLoad() {
+        super.onLoad();
+        if (level == null || level.isClientSide() || linkedMachine == null) return;
+
+        registerWithMachine();
+        refreshMachine();
+    }
+
     // ------------------------------------------------------------------ inherited hooks
 
     /**

@@ -13,6 +13,7 @@ import rearth.oritech.util.MachineAddonController;
 import rearth.oritech.util.MachineAddonController.AddonBlock;
 
 import io.github.xiao232ming.oritechaddonsone.block.entity.WirelessExtensionAddonBlockEntity;
+import io.github.xiao232ming.oritechaddonsone.wireless.AddonEnergyGuard;
 import io.github.xiao232ming.oritechaddonsone.wireless.WirelessLinks;
 
 /**
@@ -47,6 +48,31 @@ public interface MachineAddonControllerMixin {
         if (level == null || level.isClientSide()) return;
 
         WirelessExtensionAddonBlockEntity.applyAllDocks(level, controller.getPosForAddon());
+    }
+
+    /**
+     * Remembers which addons of the machine cannot be read before this scan recomputes its addon data.
+     * Has to run before {@code initAddons} clears {@code getConnectedAddons()}, because that list is
+     * where the addons of an unloaded chunk are still known (see {@link AddonEnergyGuard}).
+     */
+    @Inject(method = "initAddons(Lnet/minecraft/core/BlockPos;)V", at = @At("HEAD"))
+    private void oritechaddonsone$trackUnreadableAddons(CallbackInfo callback) {
+        AddonEnergyGuard.refresh((MachineAddonController) (Object) this);
+    }
+
+    /**
+     * Keeps the machine's stored energy while its addon data is incomplete: {@code updateEnergyContainer}
+     * ends in {@code energy = min(energy, capacity)}, and a capacity that is too small because an addon
+     * could not be read would silently delete the energy the player stored with that addon.
+     */
+    @Inject(method = "updateEnergyContainer", at = @At("HEAD"))
+    private void oritechaddonsone$captureStoredEnergy(CallbackInfo callback) {
+        AddonEnergyGuard.capture((MachineAddonController) (Object) this);
+    }
+
+    @Inject(method = "updateEnergyContainer", at = @At("RETURN"))
+    private void oritechaddonsone$keepStoredEnergy(CallbackInfo callback) {
+        AddonEnergyGuard.restore((MachineAddonController) (Object) this);
     }
 
     /**
