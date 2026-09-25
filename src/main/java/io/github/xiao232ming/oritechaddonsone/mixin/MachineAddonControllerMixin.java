@@ -1,6 +1,9 @@
 package io.github.xiao232ming.oritechaddonsone.mixin;
 
+import java.util.HashSet;
 import java.util.List;
+
+import net.minecraft.core.BlockPos;
 
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -89,8 +92,18 @@ public interface MachineAddonControllerMixin {
 
         var machinePos = controller.getPosForAddon();
         var connected = controller.getConnectedAddons();
+
+        // The runtime index first, then the machine's own addon list. The second source is what makes the
+        // list survive the moments the index is cold: right after a world load the machine recomputes its
+        // addons before its docks have announced themselves, and a dock whose chunk is unloaded never
+        // announces itself at all. Without that fallback the docks would drop out of the list here, which
+        // both loses their plugins from the speed / efficiency panel and lets the capacity fall back to the
+        // default - the latter is what made a machine's stored energy look reset in an opened GUI.
+        var docks = new HashSet<BlockPos>(WirelessLinks.docksOf(level, machinePos));
+        docks.addAll(WirelessLinks.docksFromAddonList(level, machinePos, connected));
+
         var changed = false;
-        for (var dockPos : WirelessLinks.docksOf(level, machinePos)) {
+        for (var dockPos : docks) {
             if (connected.contains(dockPos)) continue;
             if (!(level.getBlockEntity(dockPos) instanceof WirelessExtensionAddonBlockEntity dock)) continue;
             if (!dock.isLinkedTo(machinePos)) continue;

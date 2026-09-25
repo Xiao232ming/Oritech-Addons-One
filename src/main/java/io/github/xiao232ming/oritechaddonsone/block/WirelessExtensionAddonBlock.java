@@ -221,6 +221,7 @@ public class WirelessExtensionAddonBlock extends Block implements EntityBlock, A
         }
 
         consumer.accept(Component.translatable(key + ".link").withStyle(ChatFormatting.LIGHT_PURPLE));
+        consumer.accept(Component.translatable(key + ".chunkload").withStyle(ChatFormatting.GRAY));
         consumer.accept(Component.translatable(key + ".splicer").withStyle(ChatFormatting.DARK_RED));
     }
 }
