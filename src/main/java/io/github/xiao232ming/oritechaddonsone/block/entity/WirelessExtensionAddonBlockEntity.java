@@ -1,5 +1,7 @@
 package io.github.xiao232ming.oritechaddonsone.block.entity;
 
+import java.util.HashSet;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -185,7 +187,20 @@ public class WirelessExtensionAddonBlockEntity extends ExtensionAddonBlockEntity
 
         applying = true;
         try {
-            var docks = WirelessLinks.docksOf(level, machinePos);
+            // The runtime index only lists docks that have already announced themselves. Its cold state is
+            // the normal one while the machine recomputes right after a world load, and a dock in an
+            // unloaded chunk never announces itself at all - both would leave the machine with the default
+            // capacity and let it clamp (i.e. delete) the energy the player stored with that dock's
+            // plugins. The machine's own addon list names those docks and survives a save, so it is read
+            // as a second source. A dock that is not loaded is skipped here; its energy is protected by
+            // AddonEnergyGuard instead.
+            var docks = new HashSet<BlockPos>(WirelessLinks.docksOf(level, machinePos));
+            var controller = level.getBlockEntity(machinePos);
+            if (controller instanceof MachineAddonController addonController) {
+                docks.addAll(WirelessLinks.docksFromAddonList(level, machinePos,
+                        addonController.getConnectedAddons()));
+            }
+
             OritechAddonsOne.LOGGER.debug("[diag] applyAllDocks: {} -> {} dock(s)", machinePos, docks.size());
             for (var dockPos : docks) {
                 if (level.getBlockEntity(dockPos) instanceof WirelessExtensionAddonBlockEntity dock

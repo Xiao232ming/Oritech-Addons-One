@@ -34,6 +34,12 @@ import io.github.xiao232ming.oritechaddonsone.block.entity.WirelessExtensionAddo
  * recomputed with its contribution, so the container is consistent again. When an addon is really gone
  * (its chunk is loaded but there is no block entity) it is dropped from the guard, so the clamp behaves
  * like Oritech's again.
+ * <p>
+ * A dock whose chunk <em>is</em> loaded is recovered instead of merely guarded:
+ * {@code WirelessLinks#docksFromAddonList} reads the link back from the machine's own addon list, which
+ * survives a save, so the dock contributes again even while the runtime index is still cold. That is what
+ * keeps the capacity (and with it the energy bar of an opened GUI) correct right after a world load, where
+ * the machine recomputes its addons before any dock has announced itself.
  */
 public final class AddonEnergyGuard {
 
@@ -149,10 +155,13 @@ public final class AddonEnergyGuard {
      * A plain addon is read straight from the world. A wireless dock only contributes once it has
      * announced itself for this machine, which happens when its chunk loads - after the machine has
      * already recomputed its addons. A dock that is linked elsewhere contributes nothing.
+     * <p>
+     * A missing block entity only counts as missing while its chunk is not loaded: a loaded chunk without
+     * a block entity means the addon was really removed, and that has to keep clamping like Oritech.
      */
     private static boolean contributes(Level level, BlockPos machine, BlockPos pos) {
         var be = level.getBlockEntity(pos);
-        if (be == null) return false;
+        if (be == null) return level.isLoaded(pos);
 
         if (be instanceof WirelessExtensionAddonBlockEntity dock) {
             return dock.isLinkedTo(machine) && WirelessLinks.isRegistered(level, machine, pos);

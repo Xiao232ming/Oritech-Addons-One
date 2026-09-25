@@ -1,6 +1,8 @@
 package io.github.xiao232ming.oritechaddonsone.wireless;
 
+import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
@@ -10,6 +12,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 
 import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
+import io.github.xiao232ming.oritechaddonsone.block.entity.WirelessExtensionAddonBlockEntity;
 
 /**
  * Server side index of the wireless extension addons per machine.
@@ -85,5 +88,32 @@ public final class WirelessLinks {
 
         var docks = perLevel.get(machine);
         return docks != null && docks.contains(dock);
+    }
+
+    /**
+     * Docks a machine should treat as its own, taken from the machine's addon list instead of this index.
+     * <p>
+     * This is the fallback for the moment the index is still cold - after a world load, or while a dock's
+     * chunk is not loaded and the dock therefore never announced itself. The machine's addon list survives
+     * a save and names those docks, so reading the link back from the loaded dock block entities recovers
+     * them without any extra bookkeeping. Docks whose chunk is not loaded cannot be read here; they are
+     * covered by {@link AddonEnergyGuard}, which keeps the stored energy while their contribution is
+     * missing.
+     */
+    public static Set<BlockPos> docksFromAddonList(Level level, BlockPos machine,
+                                                   Collection<BlockPos> connectedAddons) {
+        if (level == null || machine == null || connectedAddons == null) return Set.of();
+
+        var found = new HashSet<BlockPos>();
+        for (var pos : connectedAddons) {
+            if (pos == null || pos.equals(machine)) continue;
+            if (!(level.getBlockEntity(pos) instanceof WirelessExtensionAddonBlockEntity dock)) continue;
+            if (!dock.isLinkedTo(machine)) continue;
+
+            found.add(pos.immutable());
+            // The dock is loaded and linked again, so the index can be rebuilt from it.
+            register(level, machine, pos);
+        }
+        return found;
     }
 }
