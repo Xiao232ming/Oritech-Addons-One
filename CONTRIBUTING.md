@@ -113,10 +113,20 @@ git branch --show-current   # 确认自己在 26.1.2 或 1.21.1 分支上
 - `WirelessExtensionAddonBlockEntity#onLoad`：坞在区块加载时**立即**注册链接并让机器重算，
   使机器加载后的那次扫描就能看到它（而不是等到最多一秒后的 `serverTick`）。
 - `AddonEnergyGuard`（`MachineAddonControllerMixin` 在 `updateEnergyContainer` 的 HEAD/RETURN
-  以及 `initAddons(BlockPos)` 的 HEAD 挂钩）：记录「因区块未加载而读不到的插件」，
-  只要存在这种插件，就把重算前的存量原样放回。插件真的被拆掉（区块已加载但方块实体不存在）
-  时会从记录里剔除，截断行为与 Oritech 原生一致。原则是**宁可暂时不截断，也绝不销毁玩家存的能量**；
-  顺带一提，这也是把坞做成「必须加载区块才生效」的代价，改动坞的加载/注册时机时要重新验证这一点。
+  以及 `initAddons(BlockPos)` 的 HEAD 挂钩）：记录「这次扫描拿不到贡献的插件」，只要存在这种插件，
+  就把重算前的存量原样放回。插件真的被拆掉（区块已加载但方块实体不存在）时会从记录里剔除，
+  截断行为与 Oritech 原生一致。原则是**宁可暂时不截断，也绝不销毁玩家存的能量**。
+
+**注意「读不到」有三种，别只判方块实体为空**（这是第一次修复漏掉的情况，表现为上限恢复了但存量照样丢）：
+`initAddons` 的顺序是 `getAllAddons` → `gatherAddonStats`（**重置**插件数据）→ `updateEnergyContainer`
+→ `connectedAddons.clear()` → `updateEnergyContainer`，所以第二次重算用的是**已被重置的容量**，
+截断就发生在这里。而坞的方块实体此时往往**是存在的**——它只是还没执行到 `serverTick`/`onLoad`
+里的 `WirelessLinks.register`。只判断 `getBlockEntity(pos) == null` 会漏掉「方块在、但没注册」，
+必须把「坞已加载且链接本机、却还没注册」也算作拿不到贡献（`WirelessLinks.isRegistered`）。
+`refresh` 挂在 `initAddons` HEAD，此时 `connectedAddons` 还是**上一次保存的**内容（`clear()` 在后面），
+这正是判断所需的、且能跨存档存活的信息。
+
+顺带一提，这也是把坞做成「必须加载区块才生效」的代价，改动坞的加载/注册时机时要重新验证这一点。
 
 ## 提交约定 / Commit conventions
 
