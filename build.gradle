@@ -127,6 +127,11 @@ dependencies {
     // Only needed at compile time - the real mod supplies these classes at runtime.
     compileOnly "maven.modrinth:oritech:${oritech_version}"
 
+    // Oritech's machine entities extend GeckoLib's GeoBlockEntity, so those classes are needed at
+    // compile time whenever the machine entity types are referenced (runtime supply stays with the
+    // real mods above).
+    compileOnly "maven.modrinth:geckolib:${geckolib_version}"
+
     // Loaded in dev runs (gradlew runClient / runData) so the addon can actually be tested in game.
     // These mods are NOT bundled into the built jar.
     localRuntime "maven.modrinth:oritech:${oritech_version}"

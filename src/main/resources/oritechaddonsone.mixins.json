@@ -9,6 +9,9 @@
     "LaserTargetDesignatorMixin"
   ],
   "client": [
+    "OritechMachineScreenMixin",
+    "OritechScreenHandlerMixin",
+    "OritechWidgetScreenMixin",
     "UpgradableOritechScreenHandlerMixin"
   ],
   "injectors": {
