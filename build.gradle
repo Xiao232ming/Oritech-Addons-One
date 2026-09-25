@@ -141,6 +141,10 @@ dependencies {
     // 所以编译期也要有它。它不会被放进产物 jar。
     compileOnly "dev.architectury:architectury-neoforge:${architectury_version}"
 
+    // Oritech 的机器方块实体实现了 GeckoLib 的 GeoBlockEntity，引用这些类型时编译期也需要 GeckoLib
+    // 的类（运行期仍然由真实模组提供，不会打进产物 jar）。
+    compileOnly "maven.modrinth:geckolib:${geckolib_version}"
+
     // 开发运行时加载：Oritech 本体与其前置（architectury / athena / geckolib）。
     // 这些模组不会被打进本模组的产物 jar。
     localRuntime "maven.modrinth:oritech:${oritech_version}"
