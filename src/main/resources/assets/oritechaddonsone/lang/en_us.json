@@ -45,6 +45,8 @@
   "tooltip.oritechaddonsone.wireless_extension_addon_1.chunkload": "Requires the chunk to be loaded to work",
   "tooltip.oritechaddonsone.wireless_extension_addon_2.chunkload": "Requires the chunk to be loaded to work",
   "tooltip.oritechaddonsone.wireless_extension_addon_3.chunkload": "Requires the chunk to be loaded to work",
+  "title.oritechaddonsone.atomic_forge_speed": "Speed x%s",
+  "tooltip.oritechaddonsone.atomic_forge_speed": "Measured from the lasers aiming at this machine: each laser's charge per shot over an unupgraded laser. Several lasers add up; efficiency plugins do not affect charging.",
   "message.oritechaddonsone.wireless.cleared": "Designator cleared",
   "gui.oritechaddonsone.wireless.linked": "Linked to %s (%s, %s, %s)",
   "gui.oritechaddonsone.wireless.unlinked": "Not linked",

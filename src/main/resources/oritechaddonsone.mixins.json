@@ -4,8 +4,10 @@
   "package": "io.github.xiao232ming.oritechaddonsone.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "AtomicForgeBlockEntityMixin",
     "ItemUseMixin",
     "MachineAddonControllerMixin",
+    "LaserAimIndexMixin",
     "LaserTargetDesignatorMixin",
     "ShrinkerBlockEntityMixin"
   ],
