@@ -1,7 +1,12 @@
 {
-  "variants": {
-    "": {
-      "model": "oritech:block/machine_speed_addon"
+  "multipart": [
+    {
+      "when": {"addon_used": "false"},
+      "apply": {"model": "oritechaddonsone:block/tank_addon"}
+    },
+    {
+      "when": {"addon_used": "true"},
+      "apply": {"model": "oritechaddonsone:block/tank_addon_on"}
     }
-  }
+  ]
 }
