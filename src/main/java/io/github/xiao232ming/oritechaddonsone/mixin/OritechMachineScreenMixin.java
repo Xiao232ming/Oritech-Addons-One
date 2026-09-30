@@ -44,6 +44,7 @@ import rearth.oritech.util.TooltipHelper;
 import io.github.xiao232ming.oritechaddonsone.Config;
 import io.github.xiao232ming.oritechaddonsone.block.WirelessExtensionAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.client.AddonOverlayHost;
+import io.github.xiao232ming.oritechaddonsone.forge.ForgeLaserSpeedupHost;
 
 /**
  * Shows the machine's addon stats panel on screens that skipped it: the refinery (and tainted
@@ -109,17 +110,29 @@ public abstract class OritechMachineScreenMixin {
 
         content.add(BoxWidget.filled(0, 0, 60, 1, OritechMachineScreen.SEPARATOR_COLOR));
 
-        LabelWidget speedLabel = new LabelWidget(0, 0, 60, 10,
-                Component.translatable("title.oritech.machine_speed", speed));
-        speedLabel.withTooltip(Component.translatable("tooltip.oritech.machine_speed"));
+        // The atomic forge is only charged by lasers, so neither its own addon speed nor any efficiency
+        // applies to it: the panel shows how much faster the lasers aiming at it make it instead (0 without
+        // a laser, 1 for a plain one, 2 for one with a speed plugin, ...), and skips the efficiency line.
+        var forge = handler.blockEntity instanceof ForgeLaserSpeedupHost host ? host : null;
+
+        Component speedText = forge == null
+                ? Component.translatable("title.oritech.machine_speed", speed)
+                : Component.translatable("title.oritechaddonsone.atomic_forge_speed",
+                        String.format("%.2f", forge.oritechaddonsone$laserSpeedup()));
+        LabelWidget speedLabel = new LabelWidget(0, 0, 60, 10, speedText);
+        speedLabel.withTooltip(forge == null
+                ? Component.translatable("tooltip.oritech.machine_speed")
+                : Component.translatable("tooltip.oritechaddonsone.atomic_forge_speed"));
         speedLabel.withAlignment(LabelWidget.Alignment.CENTER);
         content.add(speedLabel);
 
-        LabelWidget efficiencyLabel = new LabelWidget(0, 0, 60, 10,
-                Component.translatable("title.oritech.machine_efficiency", efficiencyText));
-        efficiencyLabel.withTooltip(Component.translatable("tooltip.oritech.machine_efficiency"));
-        efficiencyLabel.withAlignment(LabelWidget.Alignment.CENTER);
-        content.add(efficiencyLabel);
+        if (forge == null) {
+            LabelWidget efficiencyLabel = new LabelWidget(0, 0, 60, 10,
+                    Component.translatable("title.oritech.machine_efficiency", efficiencyText));
+            efficiencyLabel.withTooltip(Component.translatable("tooltip.oritech.machine_efficiency"));
+            efficiencyLabel.withAlignment(LabelWidget.Alignment.CENTER);
+            content.add(efficiencyLabel);
+        }
 
         String burstKey = oritechaddonsone$getBurstStatusKey(controller);
         if (!burstKey.isBlank()) {

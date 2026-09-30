@@ -45,6 +45,8 @@
   "tooltip.oritechaddonsone.wireless_extension_addon_1.chunkload": "需要区块加载以生效",
   "tooltip.oritechaddonsone.wireless_extension_addon_2.chunkload": "需要区块加载以生效",
   "tooltip.oritechaddonsone.wireless_extension_addon_3.chunkload": "需要区块加载以生效",
+  "title.oritechaddonsone.atomic_forge_speed": "处理速度 ×%s",
+  "tooltip.oritechaddonsone.atomic_forge_speed": "按瞄准本机的激光计算：每台激光的单发充能量 ÷ 无加速时（一台未装速度插件的激光）。多台激光叠加；效率插件不影响充能。",
   "message.oritechaddonsone.wireless.cleared": "已清空标识器储存的坐标",
   "gui.oritechaddonsone.wireless.linked": "已连接 %s（%s, %s, %s）",
   "gui.oritechaddonsone.wireless.unlinked": "未连接",
