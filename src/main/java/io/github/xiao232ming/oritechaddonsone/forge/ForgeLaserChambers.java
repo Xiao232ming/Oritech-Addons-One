@@ -5,6 +5,8 @@ import net.minecraft.world.level.Level;
 
 import rearth.oritech.block.entity.interaction.LaserArmBlockEntity;
 import rearth.oritech.block.entity.processing.AtomicForgeBlockEntity;
+import rearth.oritech.init.OritechConfig;
+import rearth.oritech.init.OritechStartupConfig;
 import rearth.oritech.util.MachineAddonController;
 
 /**
@@ -47,5 +49,35 @@ public final class ForgeLaserChambers {
 
         forge.setBaseAddonData(new MachineAddonController.BaseAddonData(data.speed(), data.efficiency(),
                 data.energyBonusCapacity(), data.energyBonusTransfer(), chambers, data.maxBurstTicks()));
+    }
+
+    /**
+     * Energy multiplier the processing chambers on the charging lasers cost, merged exactly like Oritech
+     * merges the addons of one machine. A chamber addon is not only an extra item per cycle: it also has an
+     * efficiency multiplier (1.5 by default, so +50% energy each), which every other machine pays through its
+     * per tick energy use. The forge has to pay it as extra charge, because its per tick energy use already
+     * is the recipe's whole cost.
+     * <p>
+     * Oritech's own chamber addon is the only one in the game, and it always contributes exactly one chamber
+     * with the configured multiplier, so counting the chambers is enough.
+     */
+    public static float efficiencyFactor(Level level, BlockPos forgePos) {
+        int chambers = chambersOf(level, forgePos);
+        if (chambers <= 0) return 1.0F;
+
+        float multiplier = OritechStartupConfig.chamberAddonEfficiency.get().floatValue();
+        boolean additive = OritechConfig.additiveAddons.get();
+
+        float efficiency = additive
+                ? 1.0F + chambers * (1.0F - multiplier)
+                : (float) Math.pow(multiplier, chambers);
+
+        if (additive) {
+            // Oritech's additive mode converts the accumulated value back the same way for every machine.
+            float change = efficiency - 1.0F;
+            efficiency = 1.0F / efficiency;
+            if (change < 0.0F) efficiency = 1.0F + Math.abs(change);
+        }
+        return efficiency;
     }
 }

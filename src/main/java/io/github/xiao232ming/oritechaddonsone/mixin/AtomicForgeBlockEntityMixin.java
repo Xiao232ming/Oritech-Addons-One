@@ -1,19 +1,24 @@
 package io.github.xiao232ming.oritechaddonsone.mixin;
 
+import java.util.Optional;
+
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.item.crafting.RecipeHolder;
 
 import rearth.oritech.api.networking.NetworkedBlockEntity;
 import rearth.oritech.api.networking.SyncField;
 import rearth.oritech.api.networking.SyncType;
 import rearth.oritech.block.entity.interaction.LaserArmBlockEntity;
 import rearth.oritech.block.entity.processing.AtomicForgeBlockEntity;
+import rearth.oritech.init.recipes.OritechRecipe;
 
 import io.github.xiao232ming.oritechaddonsone.forge.ForgeLaserChambers;
 import io.github.xiao232ming.oritechaddonsone.forge.ForgeLaserSpeedupHost;
@@ -57,6 +62,29 @@ public abstract class AtomicForgeBlockEntityMixin implements ForgeLaserSpeedupHo
         // does for every other machine.
         if (forge instanceof NetworkedBlockEntity networked) {
             networked.sendUpdate(SyncType.GUI_OPEN);
+        }
+    }
+
+    /**
+     * Charges the forge the energy its charging lasers' processing chambers cost. The forge sets its buffer
+     * to the recipe's whole cost, so unlike every other machine it never multiplies that by an efficiency
+     * value - without this the extra items the chambers process would be free.
+     * <p>
+     * The forge re-sets the buffer from the recipe on every call, so scaling it here cannot compound.
+     */
+    @Inject(method = "getRecipe", at = @At("RETURN"))
+    private void oritechaddonsone$chargeForChambers(
+            CallbackInfoReturnable<Optional<RecipeHolder<OritechRecipe>>> callback) {
+        var forge = (AtomicForgeBlockEntity) (Object) this;
+        if (!(forge.getLevel() instanceof ServerLevel serverLevel)) return;
+
+        var storage = forge.getStorageForAddon();
+        // Without a recipe the buffer is set to 1, which is not a charge requirement to scale.
+        if (storage == null || storage.capacity <= 10L) return;
+
+        float factor = ForgeLaserChambers.efficiencyFactor(serverLevel, forge.getBlockPos());
+        if (factor != 1.0F) {
+            storage.setCapacity(Math.round(storage.capacity * factor));
         }
     }
 
