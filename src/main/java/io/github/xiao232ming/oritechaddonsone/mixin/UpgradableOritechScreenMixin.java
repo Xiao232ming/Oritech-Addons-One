@@ -22,6 +22,7 @@ import rearth.oritech.client.ui.OritechWidgetScreen;
 import rearth.oritech.client.ui.UpgradableOritechScreen;
 import rearth.oritech.client.ui.UpgradableOritechScreenHandler;
 
+import io.github.xiao232ming.oritechaddonsone.Config;
 import io.github.xiao232ming.oritechaddonsone.block.WirelessExtensionAddonBlock;
 
 /**
@@ -51,6 +52,10 @@ public abstract class UpgradableOritechScreenMixin {
     /** Docks this machine lists and that are readable on the client, in addon list order. */
     @Unique
     private List<BlockPos> oritechaddonsone$wirelessDocks() {
+        // The config switch turns the whole feature off: both hooks size themselves from this list, so an
+        // empty list leaves Oritech's page exactly as it is.
+        if (!Config.showWirelessDocksInAddonPage()) return List.of();
+
         var menu = ((AbstractContainerScreen<?>) (Object) this).getMenu();
         if (!(menu instanceof UpgradableOritechScreenHandler handler)) return List.of();
 

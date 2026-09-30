@@ -6,6 +6,7 @@
   "oritechaddonsone.configuration.type1Slots": "扩展插件Ⅰ型的物品栏格数",
   "oritechaddonsone.configuration.type2Slots": "扩展插件Ⅱ型的物品栏格数",
   "oritechaddonsone.configuration.type3SlotCapacity": "扩展插件Ⅲ型的每格容量",
+  "oritechaddonsone.configuration.showWirelessDocksInAddonPage": "在机器插件页面中显示无线扩展坞",
   "block.oritechaddonsone.extension_addon_1": "扩展插件Ⅰ型",
   "container.oritechaddonsone.extension_addon_1": "扩展插件Ⅰ型",
   "tooltip.oritechaddonsone.extension_addon_1.insert": "允许将数值型插件放入物品栏",

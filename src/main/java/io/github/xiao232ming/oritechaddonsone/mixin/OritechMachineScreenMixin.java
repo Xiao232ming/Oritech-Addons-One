@@ -41,6 +41,7 @@ import rearth.oritech.util.ColorHelper;
 import rearth.oritech.util.MachineAddonController;
 import rearth.oritech.util.TooltipHelper;
 
+import io.github.xiao232ming.oritechaddonsone.Config;
 import io.github.xiao232ming.oritechaddonsone.block.WirelessExtensionAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.client.AddonOverlayHost;
 
@@ -217,9 +218,11 @@ public abstract class OritechMachineScreenMixin {
 
         for (BlockPos addonPos : addons) {
             BlockState addonState = level.getBlockState(addonPos);
-            if (addonState.getBlock() instanceof WirelessExtensionAddonBlock) {
-                // A wireless extension addon is not a machine addon block, so the stock list skips it;
-                // show it as a linked dock instead.
+            // A wireless extension addon is not a machine addon block, so the stock list skips it; show it
+            // as a linked dock instead. Disabled by config, it falls through to the check below and is
+            // skipped like Oritech skips it.
+            if (Config.showWirelessDocksInAddonPage()
+                    && addonState.getBlock() instanceof WirelessExtensionAddonBlock) {
                 ItemWidget icon = new ItemWidget(3, yOffset + 3, 20, new ItemStack(addonState.getBlock()));
                 icon.withShowOverlay(false);
                 icon.withTooltipFromStack(false);
