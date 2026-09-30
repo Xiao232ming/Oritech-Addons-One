@@ -39,17 +39,19 @@ public final class LaserAimIndex {
     }
 
     /** Forgets a laser, for a laser that stopped aiming at a forge or was removed. */
-    public static void unregister(Level level, BlockPos laser) {
-        if (level == null || laser == null) return;
+    public static Set<BlockPos> unregister(Level level, BlockPos laser) {
+        if (level == null || laser == null) return Set.of();
 
         var forges = LASERS.get(level);
-        if (forges == null) return;
+        if (forges == null) return Set.of();
 
+        var affected = new java.util.HashSet<BlockPos>();
         for (var entry : forges.entrySet()) {
-            entry.getValue().remove(laser);
+            if (entry.getValue().remove(laser)) affected.add(entry.getKey());
         }
         forges.entrySet().removeIf(entry -> entry.getValue().isEmpty());
         if (forges.isEmpty()) LASERS.remove(level);
+        return affected;
     }
 
     /** Lasers last seen aiming at that forge, as an immutable snapshot. */

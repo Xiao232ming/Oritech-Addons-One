@@ -15,6 +15,7 @@ import rearth.oritech.api.networking.SyncType;
 import rearth.oritech.block.entity.interaction.LaserArmBlockEntity;
 import rearth.oritech.block.entity.processing.AtomicForgeBlockEntity;
 
+import io.github.xiao232ming.oritechaddonsone.forge.ForgeLaserChambers;
 import io.github.xiao232ming.oritechaddonsone.forge.ForgeLaserSpeedupHost;
 import io.github.xiao232ming.oritechaddonsone.forge.LaserAimIndex;
 
@@ -47,6 +48,8 @@ public abstract class AtomicForgeBlockEntityMixin implements ForgeLaserSpeedupHo
         var forge = (AtomicForgeBlockEntity) (Object) this;
         if (!(forge.getLevel() instanceof ServerLevel serverLevel)) return;
 
+        // Refresh the chambers first: they live in the addon data that the update below carries to the client.
+        ForgeLaserChambers.refresh(serverLevel, forge.getBlockPos());
         this.oritechaddonsone$laserSpeedup = oritechaddonsone$measureLaserSpeedup(serverLevel);
 
         // The forge's own saveExtraData only writes its position, so the addon data (and the value above)
