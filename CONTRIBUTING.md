@@ -19,9 +19,9 @@
 两个版本在同一台机器上并行开发时，用 `git worktree` 共享同一个 `.git`，不用来回切分支：
 
 ```powershell
-$repo = "D:\Games\MC\MOD\26.1.2-NeoForge\Oritech Addons One"   # 主检出（26.1.2 分支）
+$repo = "D:\Games\MC\MOD\Oritech Addons One\26.1.2"   # 主检出（26.1.2 分支）
 git -C $repo worktree list
-git -C $repo worktree add "D:\Games\MC\MOD\1.21.1-NeoForge\Oritech Addons One" 1.21.1   # 链接工作区
+git -C $repo worktree add "D:\Games\MC\MOD\Oritech Addons One\1.21.1" 1.21.1   # 链接工作区
 ```
 
 链接工作区里的 `.git` 是**文件**（指向主仓库的 `.git\worktrees\...`）：不要在里面再 `git init`，
