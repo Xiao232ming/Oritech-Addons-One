@@ -16,14 +16,19 @@ public record ExtensionAddonLayout(int slots, int columns, int rows, int firstSl
                                     boolean columnMajor) {
 
     public static final int MIN_SLOTS = 1;
-    /** Internal storage size: 6 categories x up to 12 tiers for type III. */
-    public static final int MAX_SLOTS = 72;
     public static final int SLOT_SIZE = 18;
     public static final int WIDTH = 176;
     /** Y of the player inventory label, matching vanilla container screens. */
     public static final int LABEL_OFFSET = 94;
-    /** Columns of the type III grid, one per stat category. */
-    public static final int TYPE_3_COLUMNS = 6;
+    /**
+     * Columns of the type III grid, one per stat category - derived from the enum so a new category gets
+     * its own column without touching the geometry here. Eight columns still fit the vanilla panel width:
+     * the first slot starts at {@code 8 + (9 - 8) * 18 / 2 = 17} and the grid ends at {@code 17 + 8 * 18 =
+     * 161}, inside {@link #WIDTH}.
+     */
+    public static final int TYPE_3_COLUMNS = ExtensionAddonType.StatCategory.values().length;
+    /** Internal storage size: one column per stat category, up to 12 tiers each. */
+    public static final int MAX_SLOTS = 12 * TYPE_3_COLUMNS;
     /** Highest number of tier rows the type III grid can show. */
     public static final int TYPE_3_MAX_ROWS = MAX_SLOTS / TYPE_3_COLUMNS;
 

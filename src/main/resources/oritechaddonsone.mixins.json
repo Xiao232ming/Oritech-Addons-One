@@ -9,7 +9,9 @@
     "MachineAddonControllerMixin",
     "LaserAimIndexMixin",
     "LaserTargetDesignatorMixin",
-    "ShrinkerBlockEntityMixin"
+    "ShrinkerBlockEntityMixin",
+    "SimpleFluidStorageMixin",
+    "SimpleInventoryStorageMixin"
   ],
   "client": [
     "OritechMachineScreenMixin",

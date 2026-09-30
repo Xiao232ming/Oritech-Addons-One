@@ -20,6 +20,7 @@ import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import rearth.oritech.block.blocks.addons.MachineAddonBlock;
 import rearth.oritech.init.BlockContent;
 
+import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonLayout;
 
 /**
@@ -29,6 +30,12 @@ import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonLayout;
  * Type II takes every other Oritech addon (except the inventory proxy) and additionally forwards its
  * special, block-type based behaviour to the machine.
  * Type III takes the same stat plugins, but gives every plugin tier its own slot.
+ * <p>
+ * Besides the six Oritech stat plugins this mod adds two plugins of its own, the warehouse addon
+ * ({@code warehouse_addon}, +16 item slots per machine slot) and the tank addon ({@code tank_addon},
+ * +8000 mB per machine tank). They are ordinary {@link MachineAddonBlock}s with neutral stats, they are
+ * categorised like the stat plugins (so types I and III accept them, including in a Type III column of
+ * their own) and the machine side implements their effect from {@code MachineStorageBonuses}.
  * <p>
  * Note on the 1.21.1 mapping: Oritech 1.21.1 calls the combined speed/efficiency plugin
  * {@code MACHINE_ULTIMATE_ADDON} (the "synergy matrix" of newer versions) and the extra processing
@@ -49,7 +56,8 @@ public enum ExtensionAddonType {
 
     /**
      * The stat plugin categories shared by type I and type III. The order of the constants is the column
-     * order of the type III grid.
+     * order of the type III grid, so the two categories of this mod are appended after Oritech's six and
+     * do not shift the columns the existing categories have.
      */
     public enum StatCategory {
         /** Speed only (Oritech: machine speed addon). */
@@ -63,7 +71,11 @@ public enum ExtensionAddonType {
         /** Energy capacity / transfer (Oritech: machine capacitor addon). */
         CAPACITOR,
         /** Energy input for the machine (Oritech: machine acceptor addon). */
-        ACCEPTOR
+        ACCEPTOR,
+        /** Item slot capacity of every machine slot (this mod: warehouse addon). */
+        WAREHOUSE,
+        /** Fluid capacity of every machine tank (this mod: tank addon). */
+        TANK
     }
 
     /**
@@ -136,7 +148,8 @@ public enum ExtensionAddonType {
     /**
      * Resolves the stat category of an addon block, or {@code null} when it is not a stat plugin.
      * <ol>
-     *     <li>the six Oritech stat plugins are matched by block identity,</li>
+     *     <li>the six Oritech stat plugins and the two plugin blocks of this mod are matched by block
+     *     identity,</li>
      *     <li>then the category tags of Oritech Things are checked (covers every tier),</li>
      *     <li>finally the registry path is matched by keyword, so tiered plugins of other addon mods
      *     are recognised as well.</li>
@@ -151,6 +164,11 @@ public enum ExtensionAddonType {
         if (block == BlockContent.MACHINE_PROCESSING_ADDON) return StatCategory.PROCESSING;
         if (block == BlockContent.MACHINE_CAPACITOR_ADDON) return StatCategory.CAPACITOR;
         if (block == BlockContent.MACHINE_ACCEPTOR_ADDON) return StatCategory.ACCEPTOR;
+
+        // This mod's own two plugins. They are matched here instead of by name so that no other addon's
+        // block (or a translation-like registry path) can be mistaken for them.
+        if (block == OritechAddonsOne.WAREHOUSE_ADDON.get()) return StatCategory.WAREHOUSE;
+        if (block == OritechAddonsOne.TANK_ADDON.get()) return StatCategory.TANK;
 
         var item = block.asItem();
         if (item != Items.AIR) {
@@ -274,9 +292,10 @@ public enum ExtensionAddonType {
     private static Set<Block> type2;
 
     /**
-     * The six Oritech stat plugins. Type I and III accept more than these (any plugin of the same
-     * category and tier, including the tiers of other addon mods), this set is the reference list used
-     * for the logs and to keep them out of type II.
+     * The eight plugins of the stat categories that this mod knows by identity: Oritech's six and the two
+     * this mod registers. Type I and III accept more than these (any plugin of the same category and
+     * tier, including the tiers of other addon mods), this set is the reference list used for the logs
+     * and to keep them out of type II.
      */
     public static Set<Block> type1Plugins() {
         if (type1 == null) {
@@ -286,20 +305,27 @@ public enum ExtensionAddonType {
                     BlockContent.MACHINE_ULTIMATE_ADDON,
                     BlockContent.MACHINE_PROCESSING_ADDON,
                     BlockContent.MACHINE_CAPACITOR_ADDON,
-                    BlockContent.MACHINE_ACCEPTOR_ADDON);
+                    BlockContent.MACHINE_ACCEPTOR_ADDON,
+                    OritechAddonsOne.WAREHOUSE_ADDON.get(),
+                    OritechAddonsOne.TANK_ADDON.get());
         }
         return type1;
     }
 
     /**
-     * Every Oritech addon that is not one of the six stat plugins, except the inventory proxy (it
+     * Every Oritech addon that is not one of the stat plugins, except the inventory proxy (it
      * provides its own inventory, which cannot be forwarded). Discovered from the block registry so
      * addons from other mods are included as well.
      */
     public static Set<Block> type2Plugins() {
         if (type2 == null) {
+            // The two plugins of this mod are listed explicitly as well: they are stat plugins of their
+            // own category, and their effect (a bigger inventory / bigger tanks) is implemented by this
+            // mod instead of by Oritech, so they belong in the stat categories and not in type II.
             var excluded = new HashSet<>(type1Plugins());
             excluded.add(BlockContent.MACHINE_INVENTORY_PROXY_ADDON);
+            excluded.add(OritechAddonsOne.WAREHOUSE_ADDON.get());
+            excluded.add(OritechAddonsOne.TANK_ADDON.get());
 
             var result = new HashSet<Block>();
             for (var block : BuiltInRegistries.BLOCK) {

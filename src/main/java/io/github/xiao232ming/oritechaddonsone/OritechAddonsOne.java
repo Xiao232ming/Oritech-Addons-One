@@ -11,6 +11,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.CreativeModeTab;
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -29,6 +30,7 @@ import io.github.xiao232ming.oritechaddonsone.item.ExtensionAddonItem;
 import rearth.oritech.api.energy.EnergyApi;
 import rearth.oritech.block.blocks.addons.MachineAddonBlock;
 
+import io.github.xiao232ming.oritechaddonsone.addon.AddonStorageBonus;
 import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonType;
 import io.github.xiao232ming.oritechaddonsone.block.WirelessExtensionAddonBlock;
@@ -103,6 +105,30 @@ public class OritechAddonsOne {
             wirelessBlockProperties());
 
     /**
+     * 仓库插件 - a stat plugin of its own category: every installed one raises the stack limit of
+     * <b>every</b> item slot of the machine by {@link AddonStorageBonus#SLOTS_PER_WAREHOUSE_ADDON}.
+     * <p>
+     * It is a plain Oritech {@link MachineAddonBlock} with neutral stats, so Oritech itself treats it like
+     * any other plugin (it occupies an addon slot and contributes nothing to the six stats). The effect
+     * is applied by this mod, see {@code MachineStorageBonuses}. The model and the texture are the ones of
+     * Oritech's machine speed addon until a dedicated one exists.
+     */
+    public static final DeferredBlock<MachineAddonBlock> WAREHOUSE_ADDON = BLOCKS.registerBlock(
+            "warehouse_addon",
+            properties -> new MachineAddonBlock(properties, addonSettings()),
+            blockProperties());
+
+    /**
+     * 储罐插件 - the fluid counterpart of {@link #WAREHOUSE_ADDON}: every installed one raises the
+     * capacity of <b>every</b> fluid tank of the machine by
+     * {@link AddonStorageBonus#CAPACITY_PER_TANK_ADDON}.
+     */
+    public static final DeferredBlock<MachineAddonBlock> TANK_ADDON = BLOCKS.registerBlock(
+            "tank_addon",
+            properties -> new MachineAddonBlock(properties, addonSettings()),
+            blockProperties());
+
+    /**
      * Block items of all three types. They forward the block's tooltip to the item (the bridge Oritech
      * uses for its own blocks) and use the block name as their item name.
      * <p>
@@ -139,6 +165,21 @@ public class OritechAddonsOne {
             properties -> new ExtensionAddonItem(WIRELESS_EXTENSION_ADDON_3.get(), properties),
             new Item.Properties());
 
+    /**
+     * Block items of the warehouse and tank addons. They are plain block items: the blocks are ordinary
+     * Oritech plugins whose stats Oritech's own tooltip already describes, and both are neutral.
+     */
+    public static final DeferredItem<BlockItem> WAREHOUSE_ADDON_ITEM = ITEMS.registerItem(
+            "warehouse_addon",
+            properties -> new BlockItem(WAREHOUSE_ADDON.get(), properties),
+            new Item.Properties());
+
+    /** Block item of the tank addon, see {@link #WAREHOUSE_ADDON_ITEM}. */
+    public static final DeferredItem<BlockItem> TANK_ADDON_ITEM = ITEMS.registerItem(
+            "tank_addon",
+            properties -> new BlockItem(TANK_ADDON.get(), properties),
+            new Item.Properties());
+
     /** All plugin types share one block entity type, the type is read from the owning block. */
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<ExtensionAddonBlockEntity>> EXTENSION_ADDON_ENTITY =
             BLOCK_ENTITIES.register("extension_addon",
@@ -167,6 +208,8 @@ public class OritechAddonsOne {
                         output.accept(WIRELESS_EXTENSION_ADDON_1_ITEM.get());
                         output.accept(WIRELESS_EXTENSION_ADDON_2_ITEM.get());
                         output.accept(WIRELESS_EXTENSION_ADDON_3_ITEM.get());
+                        output.accept(WAREHOUSE_ADDON_ITEM.get());
+                        output.accept(TANK_ADDON_ITEM.get());
                     })
                     .build());
 
