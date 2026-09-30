@@ -138,6 +138,13 @@ git branch --show-current   # 确认自己在 26.1.2 或 1.21.1 分支上
 这样索引还是冷的时候（刚读档、坞刚加载）机器也能拿到贡献，上限不会塌回默认值；
 区块确实没加载的坞读不到，仍由上面的 guard 保住存量。
 
+**合并坞的整个过程都算「拿不到贡献」，必须用 `AddonEnergyGuard.beginDockMerge` / `endDockMerge`
+把 `applyAllDocks` 的循环包起来。** 合并一个坞会写同步方块状态、并转发插件行为，两者都可能让机器
+**在合并中途**重算插件：此时 `addonData` 里还没有这个坞的贡献，容量会掉回默认值（例如 50000），
+而 `updateEnergyContainer` 结尾的 `min` 就把玩家存的能量抹掉了。26.1.2 上每次打开机器 UI 都会踩到
+（表现为「重开 UI 能量重置」），21.1 恰好不触发，但窗口同样存在，所以两边都加。判断依据不能只看
+「坞注册了没有」——`isRegistered` 为真、贡献却还没合并进去，正是这里的坑。
+
 ## 提交约定 / Commit conventions
 
 - 提交信息用**简洁的英文**，一行说清做了什么（例：`Add the mod logo` / `Fix the 1.21.1 recipes`）。
