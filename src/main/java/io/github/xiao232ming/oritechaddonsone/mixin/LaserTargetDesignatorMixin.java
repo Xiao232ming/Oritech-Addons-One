@@ -1,15 +1,15 @@
 package io.github.xiao232ming.oritechaddonsone.mixin;
 
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 
@@ -21,22 +21,32 @@ import rearth.oritech.init.BlockContent;
 import rearth.oritech.init.ComponentContent;
 import rearth.oritech.item.tools.LaserTargetDesignator;
 import rearth.oritech.util.MachineAddonController;
+import rearth.oritech.util.MachineAddonProvider;
 
+import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
+import io.github.xiao232ming.oritechaddonsone.block.WirelessExtensionAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.block.entity.WirelessExtensionAddonBlockEntity;
 
 /**
  * Teaches Oritech's target designator to link a wireless extension addon to a machine.
  * <p>
- * The designator already stores the position of any clicked block in the
- * {@code oritech:target_position} component, so saving a wireless dock needs no change. To store a
- * position <b>into a machine</b> it only knows the enderic laser, the drone port and the energy
- * transmission pole ({@code setTargetFromDesignator} / {@code assignNewTarget}), so this injection adds
- * the missing case: while the stored position is one of our wireless docks and the clicked block belongs
- * to an upgradable machine, the dock is linked to that machine (linking again simply moves the link).
+ * The designator stores the position of the clicked block in the {@code oritech:target_position} component,
+ * so saving a dock needs no change. To store a position <b>into</b> a machine it only knows the enderic
+ * laser, the drone port and the energy transmission pole ({@code setTargetFromDesignator} /
+ * {@code assignNewTarget}), so this injection adds the missing case - in both orders a player can click in:
+ * <ul>
+ *     <li>dock first: the stored position is a wireless dock and the clicked block is a machine, one of its
+ *     addons or the core of a multiblock, and the dock is linked to that machine;</li>
+ *     <li>machine first: the stored position is a machine and the clicked block is a wireless dock, which
+ *     then joins that machine.</li>
+ * </ul>
+ * Either way the position that stays stored is the <b>machine's own block</b>, not the clicked addon and
+ * not the dock, so the designator keeps pointing at the machine and every further dock that is clicked
+ * joins the same one.
  * <p>
- * The injection runs before Oritech's own code but deliberately keeps out of its way: Oritech's own
- * designator targets and everything that is not an addon machine are left untouched, and the stored
- * position is only consumed when it really points at a loaded wireless dock.
+ * Shift clicking an addon or a multiblock core likewise stores the machine it belongs to. Oritech's own
+ * designator targets and everything that is not an addon machine are left untouched, and a stored position
+ * is only consumed when it really points at a loaded wireless dock.
  */
 @Mixin(LaserTargetDesignator.class)
 public class LaserTargetDesignatorMixin {
@@ -48,14 +58,13 @@ public class LaserTargetDesignatorMixin {
         if (level.isClientSide()) return;
 
         var stack = context.getItemInHand();
-        var dockPos = stack.get(ComponentContent.TARGET_POSITION.get());
+        var player = context.getPlayer();
+        var storedPos = stack.get(ComponentContent.TARGET_POSITION.get());
         var clickedPos = context.getClickedPos();
-        io.github.xiao232ming.oritechaddonsone.OritechAddonsOne.LOGGER.info(
-                "[diag] designator useOn: clicked={} ({}) stored={}", clickedPos,
-                level.getBlockState(clickedPos).getBlock(), dockPos);
-        if (dockPos == null) return;
-
         var clickedState = level.getBlockState(clickedPos);
+
+        OritechAddonsOne.LOGGER.debug("[diag] designator useOn: clicked={} ({}), stored={}",
+                clickedPos, clickedState.getBlock(), storedPos);
 
         // keep Oritech's own designator targets working
         if (clickedState.is(BlockContent.ENDERIC_LASER.get()) || clickedState.is(BlockContent.DRONE_PORT.get())
@@ -68,47 +77,98 @@ public class LaserTargetDesignatorMixin {
             return;
         }
 
-        // Multiblock machines keep their controller in a core block, so resolve that - but only when the
-        // clicked block really is one of those core blocks. Oritech's helper casts the block entity at that
-        // position to its core type, so calling it for anything else (our dock, a plain block, ...) throws.
-        var machinePos = clickedPos;
-        if (clickedState.getBlock() instanceof MachineCoreBlock) {
-            var controllerPos = MachineCoreBlock.getControllerPos(level, clickedPos);
-            if (controllerPos != null) machinePos = controllerPos;
-        }
+        var clickedDock = level.getBlockEntity(clickedPos) instanceof WirelessExtensionAddonBlockEntity dock
+                ? dock : null;
+        var clickedMachine = clickedDock != null ? null : oritechaddonsone$machineOf(level, clickedPos);
 
-        // Not an upgradable machine: leave the click to Oritech, which then stores this position.
-        if (!(level.getBlockEntity(machinePos) instanceof MachineAddonController)) {
-            io.github.xiao232ming.oritechaddonsone.OritechAddonsOne.LOGGER.info(
-                    "[diag] designator: {} is not an addon machine (be={}), leaving it to Oritech",
-                    machinePos, level.getBlockEntity(machinePos));
-            return;
-        }
-
-        if (!level.isLoaded(dockPos)) {
-            var player = context.getPlayer();
-            if (player != null) {
-                player.sendSystemMessage(
-                        Component.translatable("message.oritechaddonsone.wireless.not_loaded"));
+        // Machine was stored first: a dock that is clicked now joins that machine. The stored position stays
+        // the machine, so clicking further docks keeps binding them to the same one.
+        if (clickedDock != null && storedPos != null) {
+            var storedMachine = oritechaddonsone$machineOf(level, storedPos);
+            if (storedMachine != null) {
+                clickedDock.linkTo(storedMachine);
+                oritechaddonsone$sendLinked(player, level, storedMachine);
+                cir.setReturnValue(InteractionResult.SUCCESS);
+                return;
             }
-            cir.setReturnValue(InteractionResult.FAIL);
+        }
+
+        // Dock was stored first: a machine, one of its addons or its multiblock core is clicked.
+        if (storedPos != null && clickedMachine != null) {
+            if (!level.isLoaded(storedPos)) {
+                if (player != null) {
+                    player.sendSystemMessage(
+                            Component.translatable("message.oritechaddonsone.wireless.not_loaded"));
+                }
+                cir.setReturnValue(InteractionResult.FAIL);
+                return;
+            }
+
+            if (!(level.getBlockEntity(storedPos) instanceof WirelessExtensionAddonBlockEntity dock)) {
+                OritechAddonsOne.LOGGER.debug("[diag] designator: stored {} is not a wireless dock (be={})",
+                        storedPos, level.getBlockEntity(storedPos));
+                return;
+            }
+
+            dock.linkTo(clickedMachine);
+            stack.set(ComponentContent.TARGET_POSITION.get(), clickedMachine);
+            oritechaddonsone$sendLinked(player, level, clickedMachine);
+            cir.setReturnValue(InteractionResult.SUCCESS);
             return;
         }
 
-        if (!(level.getBlockEntity(dockPos) instanceof WirelessExtensionAddonBlockEntity dock)) {
-            io.github.xiao232ming.oritechaddonsone.OritechAddonsOne.LOGGER.info(
-                    "[diag] designator: stored {} is not a wireless dock (be={}, loaded={})",
-                    dockPos, level.getBlockEntity(dockPos), level.isLoaded(dockPos));
-            return;
+        // Shift clicking an addon or a multiblock core stores the machine it belongs to, so a machine can be
+        // picked up by clicking anything that sits on it.
+        if (clickedMachine != null && !clickedMachine.equals(clickedPos) && player != null
+                && player.isShiftKeyDown()) {
+            stack.set(ComponentContent.TARGET_POSITION.get(), clickedMachine);
+            player.sendSystemMessage(
+                    Component.translatable("message.oritech.target_designator.position_stored"));
+            cir.setReturnValue(InteractionResult.SUCCESS);
+        }
+    }
+
+    @Unique
+    private static void oritechaddonsone$sendLinked(Player player, Level level, BlockPos machinePos) {
+        if (player == null) return;
+
+        player.sendSystemMessage(Component.translatable("message.oritechaddonsone.wireless.linked",
+                level.getBlockState(machinePos).getBlock().getName()));
+    }
+
+    /**
+     * The addon machine a position belongs to: the machine's own block, the controller behind a multiblock
+     * core at that position, or the machine a mounted addon reports as its controller. Returns null for
+     * everything else - in particular for our wireless docks, whose controller position is a link and not
+     * a mount.
+     */
+    @Unique
+    private static BlockPos oritechaddonsone$machineOf(Level level, BlockPos pos) {
+        if (level == null || pos == null || !level.isLoaded(pos)) return null;
+
+        var state = level.getBlockState(pos);
+        if (state.getBlock() instanceof WirelessExtensionAddonBlock) return null;
+
+        // Multiblock machines keep their controller in a core block. Only a core block may be passed to the
+        // helper: Oritech's version casts the block entity at that position to its core type.
+        if (state.getBlock() instanceof MachineCoreBlock) {
+            var controllerPos = MachineCoreBlock.getControllerPos(level, pos);
+            return controllerPos != null && level.getBlockEntity(controllerPos) instanceof MachineAddonController
+                    ? controllerPos : null;
         }
 
-        dock.linkTo(machinePos);
+        if (level.getBlockEntity(pos) instanceof MachineAddonController) return pos;
 
-        var player = context.getPlayer();
-        if (player != null) {
-            player.sendSystemMessage(Component.translatable("message.oritechaddonsone.wireless.linked",
-                    level.getBlockState(machinePos).getBlock().getName()));
+        // An addon mounted on a machine reports that machine; an addon that is not mounted reports its own
+        // position, which is not a machine.
+        if (level.getBlockEntity(pos) instanceof MachineAddonProvider provider) {
+            var controllerPos = provider.getControllerPos();
+            if (controllerPos != null && !controllerPos.equals(pos)
+                    && level.getBlockEntity(controllerPos) instanceof MachineAddonController) {
+                return controllerPos;
+            }
         }
-        cir.setReturnValue(InteractionResult.SUCCESS);
+
+        return null;
     }
 }
