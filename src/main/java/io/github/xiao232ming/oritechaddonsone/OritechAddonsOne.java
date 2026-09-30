@@ -5,6 +5,7 @@ import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
@@ -18,6 +19,7 @@ import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.config.ModConfig;
@@ -32,10 +34,12 @@ import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import io.github.xiao232ming.oritechaddonsone.item.ExtensionAddonItem;
 import rearth.oritech.block.blocks.addons.MachineAddonBlock;
+import rearth.oritech.block.entity.addons.AddonBlockEntity;
 
 import io.github.xiao232ming.oritechaddonsone.addon.StorageBonusHolder;
 import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonType;
+import io.github.xiao232ming.oritechaddonsone.block.PluginAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.block.WirelessExtensionAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.WirelessExtensionAddonBlockEntity;
@@ -115,10 +119,13 @@ public class OritechAddonsOne {
      * any other plugin (it occupies an addon slot and contributes nothing to the six stats). The effect
      * is applied by this mod, see {@code MachineStorageBonuses}. The model and the texture are the ones of
      * Oritech's machine speed addon until a dedicated one exists.
+     * <p>
+     * It is a {@link PluginAddonBlock} because it needs its own block entity type, see
+     * {@link #PLUGIN_ADDON_ENTITY}.
      */
-    public static final DeferredBlock<MachineAddonBlock> WAREHOUSE_ADDON = BLOCKS.registerBlock(
+    public static final DeferredBlock<PluginAddonBlock> WAREHOUSE_ADDON = BLOCKS.registerBlock(
             "warehouse_addon",
-            properties -> new MachineAddonBlock(properties, addonSettings()),
+            properties -> new PluginAddonBlock(properties, addonSettings()),
             OritechAddonsOne::blockProperties);
 
     /**
@@ -126,9 +133,9 @@ public class OritechAddonsOne {
      * capacity of <b>every</b> fluid tank of the machine by
      * {@link StorageBonusHolder#CAPACITY_PER_TANK_ADDON}.
      */
-    public static final DeferredBlock<MachineAddonBlock> TANK_ADDON = BLOCKS.registerBlock(
+    public static final DeferredBlock<PluginAddonBlock> TANK_ADDON = BLOCKS.registerBlock(
             "tank_addon",
-            properties -> new MachineAddonBlock(properties, addonSettings()),
+            properties -> new PluginAddonBlock(properties, addonSettings()),
             OritechAddonsOne::blockProperties);
 
     /**
@@ -193,6 +200,26 @@ public class OritechAddonsOne {
                             WIRELESS_EXTENSION_ADDON_1.get(), WIRELESS_EXTENSION_ADDON_2.get(),
                             WIRELESS_EXTENSION_ADDON_3.get()));
 
+    /**
+     * Block entity type of the warehouse and tank addons.
+     * <p>
+     * The block entities are Oritech's ordinary {@link AddonBlockEntity}; the type exists because
+     * Minecraft validates the block state against the block entity's type when the block entity is
+     * created ({@code BlockEntity#validateBlockState}). Oritech's shared {@code oritech:addon} type only
+     * lists Oritech's own addon blocks, so this type lists the two plugin blocks instead and is used by
+     * {@link PluginAddonBlock#newBlockEntity} as well as by the factory below (which is what creates the
+     * block entities when a saved chunk is loaded again).
+     * <p>
+     * The factory cannot be {@code AddonBlockEntity::new}: that two argument constructor passes Oritech's
+     * shared type, which would fail the very same validation on load. The three argument constructor
+     * takes the type explicitly, which is why the factory is a method of this class
+     * ({@link #pluginAddonEntity}).
+     */
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<AddonBlockEntity>> PLUGIN_ADDON_ENTITY =
+            BLOCK_ENTITIES.register("plugin_addon",
+                    () -> new BlockEntityType<AddonBlockEntity>(OritechAddonsOne::pluginAddonEntity,
+                            WAREHOUSE_ADDON.get(), TANK_ADDON.get()));
+
     public static final DeferredHolder<MenuType<?>, MenuType<ExtensionAddonMenu>> EXTENSION_ADDON_MENU =
             MENUS.register("extension_addon", () -> IMenuTypeExtension.create(ExtensionAddonMenu::new));
 
@@ -215,6 +242,17 @@ public class OritechAddonsOne {
 
     private static MachineAddonBlock.AddonSettings addonSettings() {
         return MachineAddonBlock.AddonSettings.getDefaultSettings().withNeedsSupport(false);
+    }
+
+    /**
+     * Factory of {@link #PLUGIN_ADDON_ENTITY}: Oritech's ordinary {@link AddonBlockEntity}, created with
+     * this mod's own block entity type (see there why the two argument constructor is not usable).
+     * <p>
+     * It is a method instead of an inline lambda only because a static field cannot refer to itself by
+     * simple name inside its own initializer.
+     */
+    private static AddonBlockEntity pluginAddonEntity(BlockPos pos, BlockState state) {
+        return new AddonBlockEntity(PLUGIN_ADDON_ENTITY.get(), pos, state);
     }
 
     private static BlockBehaviour.Properties blockProperties() {
