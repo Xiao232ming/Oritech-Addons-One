@@ -51,6 +51,17 @@ public final class AddonEnergyGuard {
             Collections.synchronizedMap(new WeakHashMap<>());
 
     /**
+     * Machines whose docks are being merged into their addon data right now, per level. While a dock is
+     * being merged its plugins are not in the machine's data yet, so a recompute that happens in between -
+     * merging a dock writes block states and replays the plugins' special behaviours, either of which can
+     * make a machine scan its addons again - would compute the default capacity and clamp the stored energy
+     * against it. Oritech 26 hits this every time a GUI is opened; 21.1 does not, but the window exists
+     * there too, so both branches guard it.
+     */
+    private static final Map<Level, Set<BlockPos>> MERGING_DOCKS =
+            Collections.synchronizedMap(new WeakHashMap<>());
+
+    /**
      * Stored energy of the container before {@code updateEnergyContainer} clamped it, for the call that is
      * currently running. The controller is part of it so that a capture that never reached its restore
      * (an exception in between) can never be applied to another machine's container.
@@ -61,6 +72,33 @@ public final class AddonEnergyGuard {
     }
 
     private AddonEnergyGuard() {
+    }
+
+    /**
+     * Marks that the docks of a machine are being merged into its addon data. Has to bracket the whole
+     * merge, because everything in between sees an addon data set without those docks.
+     */
+    public static void beginDockMerge(Level level, BlockPos machine) {
+        if (level == null || machine == null) return;
+
+        MERGING_DOCKS.computeIfAbsent(level, ignored -> ConcurrentHashMap.newKeySet()).add(machine.immutable());
+    }
+
+    /** Ends the merge window opened by {@link #beginDockMerge}; safe to call without a matching begin. */
+    public static void endDockMerge(Level level, BlockPos machine) {
+        if (level == null || machine == null) return;
+
+        var machines = MERGING_DOCKS.get(level);
+        if (machines == null) return;
+
+        machines.remove(machine);
+        if (machines.isEmpty()) MERGING_DOCKS.remove(level);
+    }
+
+    /** Whether the docks of that machine are being merged right now. */
+    private static boolean isDockMergePending(Level level, BlockPos machine) {
+        var machines = MERGING_DOCKS.get(level);
+        return machines != null && machines.contains(machine);
     }
 
     /**
@@ -133,6 +171,8 @@ public final class AddonEnergyGuard {
         if (!(level instanceof ServerLevel)) return false;
 
         var machine = controller.getPosForAddon();
+        if (isDockMergePending(level, machine)) return true;
+
         var perLevel = UNRESOLVED.get(level);
         if (perLevel != null && perLevel.containsKey(machine)) return true;
 

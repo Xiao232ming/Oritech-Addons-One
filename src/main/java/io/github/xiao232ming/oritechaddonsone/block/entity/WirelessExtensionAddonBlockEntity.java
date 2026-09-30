@@ -18,6 +18,7 @@ import rearth.oritech.util.MachineAddonController;
 
 import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 import io.github.xiao232ming.oritechaddonsone.block.WirelessExtensionAddonBlock;
+import io.github.xiao232ming.oritechaddonsone.wireless.AddonEnergyGuard;
 import io.github.xiao232ming.oritechaddonsone.wireless.WirelessLinks;
 
 /**
@@ -207,14 +208,23 @@ public class WirelessExtensionAddonBlockEntity extends ExtensionAddonBlockEntity
             }
 
             OritechAddonsOne.LOGGER.debug("[diag] applyAllDocks: {} -> {} dock(s)", machinePos, docks.size());
-            for (var dockPos : docks) {
-                if (level.getBlockEntity(dockPos) instanceof WirelessExtensionAddonBlockEntity dock
-                        && dock.isLinkedTo(machinePos)) {
-                    dock.applyCombinedStats();
-                } else {
-                    OritechAddonsOne.LOGGER.debug("[diag] applyAllDocks: skipping {} (be={})", dockPos,
-                            level.getBlockEntity(dockPos));
+            // Everything inside this window runs with an addon data set that does not contain these docks
+            // yet, and merging one writes block states and replays plugin behaviours - either can make the
+            // machine recompute its addons and clamp its stored energy in the middle of the merge. The
+            // guard keeps the energy while the merge is open.
+            AddonEnergyGuard.beginDockMerge(level, machinePos);
+            try {
+                for (var dockPos : docks) {
+                    if (level.getBlockEntity(dockPos) instanceof WirelessExtensionAddonBlockEntity dock
+                            && dock.isLinkedTo(machinePos)) {
+                        dock.applyCombinedStats();
+                    } else {
+                        OritechAddonsOne.LOGGER.debug("[diag] applyAllDocks: skipping {} (be={})", dockPos,
+                                level.getBlockEntity(dockPos));
+                    }
                 }
+            } finally {
+                AddonEnergyGuard.endDockMerge(level, machinePos);
             }
         } finally {
             applying = false;
