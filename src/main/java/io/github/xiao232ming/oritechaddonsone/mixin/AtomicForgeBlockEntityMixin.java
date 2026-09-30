@@ -62,6 +62,27 @@ public abstract class AtomicForgeBlockEntityMixin implements ForgeLaserSpeedupHo
     }
 
     /**
+     * Charges the forge the energy its charging lasers' processing chambers cost. The forge sets its buffer
+     * to the recipe's whole cost, so unlike every other machine it never multiplies that by an efficiency
+     * value - without this the extra items the chambers process would be free.
+     * <p>
+     * The forge re-sets the buffer from the recipe on every resetProgress, so scaling it here cannot compound.
+     */
+    @Inject(method = "resetProgress", at = @At("RETURN"))
+    private void oritechaddonsone$chargeForChambers(CallbackInfo callback) {
+        var forge = (AtomicForgeBlockEntity) (Object) this;
+        if (!(forge.getLevel() instanceof ServerLevel serverLevel)) return;
+
+        var storage = forge.getStorageForAddon();
+        // Without a recipe the buffer is set to 1, which is not a charge requirement to scale.
+        if (storage == null || storage.capacity <= 10L) return;
+
+        float factor = ForgeLaserChambers.efficiencyFactor(serverLevel, forge.getBlockPos());
+        if (factor != 1.0F) {
+            storage.setCapacity(Math.round(storage.capacity * factor));
+        }
+    }
+    /**
      * Sums up the charge rate of every laser training on this forge, relative to one laser without speed
      * plugins: a plain laser contributes 1, a laser whose speed plugin halved its shot cost contributes 2.
      */
