@@ -29,6 +29,13 @@ public final class Config {
                     "扩展插件Ⅲ型每个格子的容量（每格最多能放多少个插件）。")
             .defineInRange("type3SlotCapacity", 256, 1, Integer.MAX_VALUE);
 
+    public static final ModConfigSpec.BooleanValue SHOW_WIRELESS_DOCKS_IN_ADDON_PAGE = BUILDER
+            .comment("List the wireless extension addons of a machine in its addon page, next to Oritech's own addons.",
+                    "Client side display option: turn it off to get Oritech's stock addon page back.",
+                    "在机器的插件页面中列出它的无线扩展坞（与 Oritech 自带插件并列显示）。",
+                    "这是客户端显示选项：关掉就恢复 Oritech 原生的插件页面。")
+            .define("showWirelessDocksInAddonPage", true);
+
     public static final ModConfigSpec SPEC = BUILDER.build();
 
     private Config() {
@@ -57,6 +64,20 @@ public final class Config {
             return Math.max(1, TYPE_3_SLOT_CAPACITY.get());
         } catch (IllegalStateException notLoadedYet) {
             return 256;
+        }
+    }
+
+    /**
+     * Whether the addon pages list the machine's wireless extension addons. Both pages ask this - the stock
+     * page of the upgradable machines and the one this mod adds to the machines that have none - so turning
+     * it off restores Oritech's original page everywhere.
+     */
+    public static boolean showWirelessDocksInAddonPage() {
+        try {
+            return SHOW_WIRELESS_DOCKS_IN_ADDON_PAGE.get();
+        } catch (IllegalStateException notLoadedYet) {
+            // Config values are not available in every early loading stage; fall back to the default.
+            return true;
         }
     }
 }

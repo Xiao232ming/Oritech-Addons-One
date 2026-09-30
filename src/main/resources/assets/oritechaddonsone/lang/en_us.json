@@ -6,6 +6,7 @@
   "oritechaddonsone.configuration.type1Slots": "Extension Addon Type I slots",
   "oritechaddonsone.configuration.type2Slots": "Extension Addon Type II slots",
   "oritechaddonsone.configuration.type3SlotCapacity": "Extension Addon Type III slot capacity",
+  "oritechaddonsone.configuration.showWirelessDocksInAddonPage": "Show wireless extension addons in the machine addon page",
   "block.oritechaddonsone.extension_addon_1": "Extension Addon Type I",
   "container.oritechaddonsone.extension_addon_1": "Extension Addon Type I",
   "tooltip.oritechaddonsone.extension_addon_1.insert": "Allows stat plugins to be placed in its inventory",
