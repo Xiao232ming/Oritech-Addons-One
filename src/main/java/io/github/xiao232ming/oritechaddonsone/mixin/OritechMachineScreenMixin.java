@@ -111,18 +111,17 @@ public abstract class OritechMachineScreenMixin {
         content.add(BoxWidget.filled(0, 0, 60, 1, OritechMachineScreen.SEPARATOR_COLOR));
 
         // The atomic forge is only charged by lasers, so neither its own addon speed nor any efficiency
-        // applies to it: the panel shows how much faster the lasers aiming at it make it instead (0 without
-        // a laser, 1 for a plain one, 2 for one with a speed plugin, ...), and skips the efficiency line.
+        // applies to it. Its speed line shows how much faster the lasers aiming at it make it, in the same
+        // style as every other machine: 100% is one laser without speed plugins, 200% one with a speed
+        // plugin, and 0% no laser at all. The efficiency line is left out - nothing can influence it.
         var forge = handler.blockEntity instanceof ForgeLaserSpeedupHost host ? host : null;
+        if (forge != null) {
+            speed = Math.round(forge.oritechaddonsone$laserSpeedup() * 100.0F / 5.0F) * 5;
+        }
 
-        Component speedText = forge == null
-                ? Component.translatable("title.oritech.machine_speed", speed)
-                : Component.translatable("title.oritechaddonsone.atomic_forge_speed",
-                        String.format("%.2f", forge.oritechaddonsone$laserSpeedup()));
-        LabelWidget speedLabel = new LabelWidget(0, 0, 60, 10, speedText);
-        speedLabel.withTooltip(forge == null
-                ? Component.translatable("tooltip.oritech.machine_speed")
-                : Component.translatable("tooltip.oritechaddonsone.atomic_forge_speed"));
+        LabelWidget speedLabel = new LabelWidget(0, 0, 60, 10,
+                Component.translatable("title.oritech.machine_speed", speed));
+        speedLabel.withTooltip(Component.translatable("tooltip.oritech.machine_speed"));
         speedLabel.withAlignment(LabelWidget.Alignment.CENTER);
         content.add(speedLabel);
 
