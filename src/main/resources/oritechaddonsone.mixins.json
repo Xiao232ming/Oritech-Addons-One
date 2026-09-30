@@ -5,10 +5,13 @@
   "mixins": [
     "AddonSplicerBlockEntityMixin",
     "AtomicForgeBlockEntityMixin",
+    "FluidStacksResourceHandlerMixin",
+    "ItemStacksResourceHandlerMixin",
     "ItemUseMixin",
     "MachineAddonControllerMixin",
     "LaserAimIndexMixin",
-    "LaserTargetDesignatorMixin"
+    "LaserTargetDesignatorMixin",
+    "SimpleFluidStorageMixin"
   ],
   "client": [
     "OritechMachineScreenMixin",

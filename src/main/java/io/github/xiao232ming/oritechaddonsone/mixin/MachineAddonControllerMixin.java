@@ -15,6 +15,7 @@ import rearth.oritech.api.networking.SyncType;
 import rearth.oritech.util.MachineAddonController;
 import rearth.oritech.util.MachineAddonController.AddonBlock;
 
+import io.github.xiao232ming.oritechaddonsone.addon.MachineStorageBonuses;
 import io.github.xiao232ming.oritechaddonsone.block.entity.WirelessExtensionAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.wireless.AddonEnergyGuard;
 import io.github.xiao232ming.oritechaddonsone.wireless.WirelessLinks;
@@ -44,6 +45,21 @@ import io.github.xiao232ming.oritechaddonsone.wireless.WirelessLinks;
 @Mixin(MachineAddonController.class)
 public interface MachineAddonControllerMixin {
 
+    /**
+     * Puts the warehouse / tank bonus this mod applied to the machine back on its inventory and tanks
+     * before its addon data is rebuilt.
+     * <p>
+     * It has to happen here and not only at the end of the scan: {@code gatherAddonStats} starts by
+     * resetting the addon data to the machine's own addons, and the machine's update paths below it
+     * clamp stored content to the capacity they see ({@code updateEnergyContainer} does
+     * {@code amount = min(amount, capacity)}, the machine's tanks do the same when something is inserted).
+     * Without the bonus the machine would shrink its own contents every time it recomputes its addons.
+     */
+    @Inject(method = "gatherAddonStats", at = @At("HEAD"))
+    private void oritechaddonsone$restoreStorageBonuses(List<AddonBlock> addons, CallbackInfo callback) {
+        MachineStorageBonuses.applyCached((MachineAddonController) (Object) this);
+    }
+
     @Inject(method = "gatherAddonStats", at = @At("RETURN"))
     private void oritechaddonsone$applyWirelessDocks(List<AddonBlock> addons, CallbackInfo callback) {
         var controller = (MachineAddonController) (Object) this;
@@ -51,6 +67,21 @@ public interface MachineAddonControllerMixin {
         if (level == null || level.isClientSide()) return;
 
         WirelessExtensionAddonBlockEntity.applyAllDocks(level, controller.getPosForAddon());
+    }
+
+    /**
+     * Recomputes the warehouse / tank bonus from the addons that are now attached and applies it.
+     * <p>
+     * This runs at the end of {@code initAddons} rather than at the end of {@code gatherAddonStats}
+     * because the tanks may only be clamped here: {@code gatherAddonStats} is followed by
+     * {@code writeAddons} (which merges this mod's wired addons) and by {@code updateEnergyContainer}, so
+     * a machine whose plugins were just removed would otherwise lose its fluid to the tank limit that is
+     * still in place. At the end of {@code initAddons} the addon list and the addon data are final, so
+     * the clamp is exactly one operation on the final numbers.
+     */
+    @Inject(method = "initAddons(Lnet/minecraft/core/BlockPos;)V", at = @At("RETURN"))
+    private void oritechaddonsone$applyStorageBonuses(CallbackInfo callback) {
+        MachineStorageBonuses.refresh((MachineAddonController) (Object) this);
     }
 
     /**

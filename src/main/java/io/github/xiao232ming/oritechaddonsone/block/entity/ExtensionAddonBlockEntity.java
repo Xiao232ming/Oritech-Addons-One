@@ -43,6 +43,8 @@ import rearth.oritech.util.MachineAddonController.BaseAddonData;
 
 import io.github.xiao232ming.oritechaddonsone.Config;
 import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
+import io.github.xiao232ming.oritechaddonsone.addon.AddonBonusSource;
+import io.github.xiao232ming.oritechaddonsone.addon.StorageBonusHolder;
 import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonType;
 import io.github.xiao232ming.oritechaddonsone.block.WirelessExtensionAddonBlock;
@@ -67,7 +69,8 @@ import io.github.xiao232ming.oritechaddonsone.wireless.WirelessLinks;
  * work as if they were attached directly. While a machine acceptor plugin is stored, this block also
  * offers an energy input that feeds the machine.
  */
-public class ExtensionAddonBlockEntity extends AddonBlockEntity implements Container, MenuProvider, EnergyProvider {
+public class ExtensionAddonBlockEntity extends AddonBlockEntity
+        implements Container, MenuProvider, EnergyProvider, AddonBonusSource {
 
     private final ExtensionAddonType type;
     /**
@@ -149,6 +152,43 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity implements Conta
             if (blockItem.getBlock() == BlockContent.CONTROL_UNIT_ADDON.get()) return true;
         }
         return false;
+    }
+
+    // ------------------------------------------------------------------ storage bonuses
+
+    /**
+     * Item slot bonus this addon gives to every slot of its machine: one warehouse addon per stored item,
+     * so a stack of {@code n} plugins counts {@code n} times.
+     * <p>
+     * The plugin is matched by block identity rather than by the plugin list: only this mod's block has
+     * the effect implemented (see {@code MachineStorageBonuses}), so a foreign block that happens to be
+     * listed with the stat plugins must not claim it.
+     */
+    @Override
+    public int oritechaddonsone$itemSlotBonus() {
+        return StorageBonusHolder.SLOTS_PER_WAREHOUSE_ADDON * countPlugins(OritechAddonsOne.WAREHOUSE_ADDON.get());
+    }
+
+    /** Fluid capacity bonus this addon gives to every tank of its machine, see {@link #oritechaddonsone$itemSlotBonus()}. */
+    @Override
+    public long oritechaddonsone$fluidCapacityBonus() {
+        return StorageBonusHolder.CAPACITY_PER_TANK_ADDON * countPlugins(OritechAddonsOne.TANK_ADDON.get());
+    }
+
+    /**
+     * Number of stored items of the given plugin block (every slot that holds a stack of it, weighted by
+     * the stack size).
+     */
+    private int countPlugins(Block plugin) {
+        var count = 0;
+
+        for (int slot = 0; slot < getContainerSize(); slot++) {
+            var stack = items.get(slot);
+            if (stack.isEmpty() || !(stack.getItem() instanceof BlockItem blockItem)) continue;
+            if (blockItem.getBlock() == plugin) count += stack.getCount();
+        }
+
+        return count;
     }
 
     // ------------------------------------------------------------------ redstone input (control unit plugin)
