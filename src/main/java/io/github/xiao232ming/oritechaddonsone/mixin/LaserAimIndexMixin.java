@@ -8,6 +8,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import rearth.oritech.block.entity.interaction.EndericLaserBlockEntity;
 import rearth.oritech.block.entity.processing.AtomicForgeBlockEntity;
 
+import io.github.xiao232ming.oritechaddonsone.forge.ForgeLaserChambers;
 import io.github.xiao232ming.oritechaddonsone.forge.LaserAimIndex;
 
 /**
@@ -31,8 +32,13 @@ public class LaserAimIndexMixin {
         var target = laser.getCurrentTarget();
         if (target != null && level.getBlockEntity(target) instanceof AtomicForgeBlockEntity) {
             LaserAimIndex.register(level, target, laserPos);
+            ForgeLaserChambers.refresh(level, target);
         } else {
-            LaserAimIndex.unregister(level, laserPos);
+            // A laser that turned away may have been the last one of a forge, so every forge it left has to
+            // recompute its chambers as well.
+            for (var forgePos : LaserAimIndex.unregister(level, laserPos)) {
+                ForgeLaserChambers.refresh(level, forgePos);
+            }
         }
     }
 }
