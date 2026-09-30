@@ -114,8 +114,9 @@ public class OritechAddonsOne {
      * <p>
      * It is a plain Oritech {@link MachineAddonBlock} with neutral stats, so Oritech itself treats it like
      * any other plugin (it occupies an addon slot and contributes nothing to the six stats). The effect
-     * is applied by this mod, see {@code MachineStorageBonuses}. The model and the texture are the ones of
-     * Oritech's machine speed addon until a dedicated one exists.
+     * is applied by this mod, see {@code MachineStorageBonuses}. Its model reuses the base and the
+     * pedestal of Oritech's machine speed addon and replaces the crystal on top of the pedestal with a
+     * miniature vanilla chest, see {@code models/block/warehouse_addon.json}.
      * <p>
      * It is a {@link PluginAddonBlock} because it needs its own block entity type, see
      * {@link #PLUGIN_ADDON_ENTITY}.
@@ -129,6 +130,9 @@ public class OritechAddonsOne {
      * 储罐插件 - the fluid counterpart of {@link #WAREHOUSE_ADDON}: every installed one raises the
      * capacity of <b>every</b> fluid tank of the machine by
      * {@link AddonStorageBonus#CAPACITY_PER_TANK_ADDON}.
+     * <p>
+     * Its model is the same speed addon pedestal with a miniature Oritech fluid tank on top of it, see
+     * {@code models/block/tank_addon.json}.
      */
     public static final DeferredBlock<PluginAddonBlock> TANK_ADDON = BLOCKS.registerBlock(
             "tank_addon",
