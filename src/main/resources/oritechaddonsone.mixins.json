@@ -12,7 +12,8 @@
     "OritechMachineScreenMixin",
     "OritechScreenHandlerMixin",
     "OritechWidgetScreenMixin",
-    "UpgradableOritechScreenHandlerMixin"
+    "UpgradableOritechScreenHandlerMixin",
+    "UpgradableOritechScreenMixin"
   ],
   "injectors": {
     "defaultRequire": 1
