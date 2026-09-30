@@ -44,6 +44,12 @@ import io.github.xiao232ming.oritechaddonsone.wireless.WirelessLinks;
  * A "warehouse addon" adds {@link AddonStorageBonus#SLOTS_PER_WAREHOUSE_ADDON} to <b>every</b> item slot
  * of the machine and a "tank addon" adds {@link AddonStorageBonus#CAPACITY_PER_TANK_ADDON} mB to
  * <b>every</b> tank; stacked plugins count once per item.
+ * <p>
+ * Both plugins count from two places and those two totals add up: every plugin stored inside one of this
+ * mod's addons (through {@link AddonBonusSource}) and every <b>placed</b> plugin block that the machine's
+ * own scan found next to it (see {@link #placedPluginAt}). A position is never both, so no plugin is
+ * counted twice, and a placed plugin needs no block entity of this mod - Oritech's plain
+ * {@code AddonBlockEntity} is enough, which is exactly why it is matched by block identity.
  */
 public final class MachineStorageBonuses {
 
@@ -118,12 +124,12 @@ public final class MachineStorageBonuses {
         var counted = new HashSet<BlockPos>();
 
         for (var pos : controller.getConnectedAddons()) {
-            var source = bonusSourceAt(level, pos);
-            if (source == null) continue;
+            var bonus = bonusAt(level, pos);
+            if (bonus == null) continue;
 
+            slots += bonus.slots();
+            capacity += bonus.capacity();
             counted.add(pos);
-            slots += source.oritechaddonsone$itemSlotBonus();
-            capacity += source.oritechaddonsone$fluidCapacityBonus();
         }
 
         // The wireless docks are not always part of the addon list yet when this runs (the runtime index
@@ -132,11 +138,11 @@ public final class MachineStorageBonuses {
         // instead of counted twice.
         for (var pos : WirelessLinks.docksOf(level, controller.getPosForAddon())) {
             if (!counted.add(pos)) continue;
-            var source = bonusSourceAt(level, pos);
-            if (source == null) continue;
+            var bonus = bonusAt(level, pos);
+            if (bonus == null) continue;
 
-            slots += source.oritechaddonsone$itemSlotBonus();
-            capacity += source.oritechaddonsone$fluidCapacityBonus();
+            slots += bonus.slots();
+            capacity += bonus.capacity();
         }
 
         return new Bonus(slots, capacity);
@@ -145,6 +151,47 @@ public final class MachineStorageBonuses {
     /** The bonus source of a connected addon, or {@code null} while that addon is unloaded or not ours. */
     private static AddonBonusSource bonusSourceAt(Level level, BlockPos pos) {
         if (level.getBlockEntity(pos) instanceof AddonBonusSource source) return source;
+        return null;
+    }
+
+    /**
+     * The bonus of one connected addon position, or {@code null} if that position holds nothing of this
+     * mod. Two sources are asked, in this order:
+     * <ol>
+     *     <li>one of this mod's addon block entities ({@link AddonBonusSource}), which reports what is
+     *     stored in its plugin slots,</li>
+     *     <li>one of this mod's plugin blocks standing there as a real block, which counts as one plugin
+     *     each (see {@link #placedPluginAt}).</li>
+     * </ol>
+     * A position can only ever be one of the two, so a plugin is counted exactly once.
+     */
+    private static Bonus bonusAt(Level level, BlockPos pos) {
+        var source = bonusSourceAt(level, pos);
+        if (source != null) {
+            return new Bonus(source.oritechaddonsone$itemSlotBonus(), source.oritechaddonsone$fluidCapacityBonus());
+        }
+        return placedPluginAt(level, pos);
+    }
+
+    /**
+     * The bonus of the <b>placed</b> plugin block at that position, or {@code null} if there is none.
+     * <p>
+     * A warehouse or tank addon that stands in an addon slot of the machine instead of lying inside one
+     * of this mod's addons is a plain Oritech {@code AddonBlockEntity} and therefore invisible to
+     * {@link AddonBonusSource}; it is recognised by block identity instead. A position whose block entity
+     * is one of our addons is never a placed plugin, which is what keeps the two sources from being
+     * counted twice.
+     */
+    private static Bonus placedPluginAt(Level level, BlockPos pos) {
+        if (level.getBlockEntity(pos) instanceof AddonBonusSource) return null;
+
+        var block = level.getBlockState(pos).getBlock();
+        if (block == OritechAddonsOne.WAREHOUSE_ADDON.get()) {
+            return new Bonus(AddonStorageBonus.SLOTS_PER_WAREHOUSE_ADDON, 0L);
+        }
+        if (block == OritechAddonsOne.TANK_ADDON.get()) {
+            return new Bonus(0, AddonStorageBonus.CAPACITY_PER_TANK_ADDON);
+        }
         return null;
     }
 
