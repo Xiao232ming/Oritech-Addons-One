@@ -69,10 +69,10 @@ public final class MachineStorageBonuses {
     private static final Map<Class<?>, List<Field>> FLUID_FIELDS = new WeakHashMap<>();
 
     /**
-     * Tanks this mod has enlarged, per machine. Needed because a tank that is handed out but not found
-     * again (a broken multiblock, a machine that swapped its tank object) must get its bonus back, and
-     * because the previous reference has to be reset before a new total is applied - otherwise the
-     * results of several scans would accumulate. Both maps are weak, so nothing is kept alive.
+     * Tanks this mod has enlarged, per machine. Needed because a tank that was enlarged by the previous
+     * pass but is not part of the machine any more (a broken multiblock, a machine that swapped its tank
+     * object, a removed tank addon) has to lose the bonus again - and with it the content above the
+     * capacity it then has. The map is weak, so nothing is kept alive.
      */
     private static final Map<BlockEntity, Set<AddonStorageBonus>> KNOWN_TANKS = new WeakHashMap<>();
 
@@ -231,19 +231,21 @@ public final class MachineStorageBonuses {
      * {@code DelegatingFluidStorage}. Every tank class this mod can enlarge implements the interface, so
      * a new machine with a known tank class is covered without touching this method.
      * <p>
-     * The tanks of the previous pass are reset first, so this is a full recomputation and not an
-     * accumulation. A tank that is no longer found gets its bonus taken back as well, which matters when
-     * a machine drops a tank addon: the excess fluid is then clamped to the shrunken capacity instead of
-     * staying above it. The excess is deleted, never spilled (see
-     * {@link AddonStorageBonus#oritechaddonsone$clampToCapacity()}).
+     * The new total is written to every tank the machine reports, and only a tank that the previous pass
+     * enlarged but that is <b>not</b> part of the machine any more gets its bonus taken back (a broken
+     * multiblock, a tank addon that was removed) - together with
+     * {@link AddonStorageBonus#oritechaddonsone$clampToCapacity()}, which deletes whatever the shrunken
+     * capacity no longer holds.
+     * <p>
+     * The order matters and is the whole point of the map: dropping every known tank to "no bonus" first
+     * and only then applying the new total would run the clamp with a capacity of zero in between.
+     * {@code setCapacityBonus} is an <b>absolute</b> write, so the new total does not need the old one to
+     * be reset first, and any content a tank addon made room for would be cut down to the capacity
+     * Oritech built the tank with on every addon scan - which is exactly what a UI open is
+     * ({@code UpgradableMachineBlock#useWithoutItem} -> {@code initAddons}).
      */
     private static void applyToFluidStorages(MachineAddonController controller, long capacity) {
         if (!(controller instanceof BlockEntity entity)) return;
-
-        var previous = KNOWN_TANKS.remove(entity);
-        if (previous != null) {
-            for (var holder : previous) clear(holder);
-        }
 
         // Identity based on purpose: two different tanks of one machine must stay two entries.
         Set<AddonStorageBonus> touched = Collections.newSetFromMap(new IdentityHashMap<>());
@@ -271,7 +273,14 @@ public final class MachineStorageBonuses {
             }
         }
 
-        KNOWN_TANKS.put(entity, touched);
+        // A tank of the previous pass that is still there was just given the new total above; only the
+        // ones the machine does not report any more have to be reset (and clamped) here.
+        var previous = KNOWN_TANKS.put(entity, touched);
+        if (previous == null) return;
+
+        for (var holder : previous) {
+            if (!touched.contains(holder)) clear(holder);
+        }
     }
 
     /**
