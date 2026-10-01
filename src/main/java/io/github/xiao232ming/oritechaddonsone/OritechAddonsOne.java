@@ -126,7 +126,7 @@ public class OritechAddonsOne {
      */
     public static final DeferredBlock<PluginAddonBlock> WAREHOUSE_ADDON = BLOCKS.registerBlock(
             "warehouse_addon",
-            properties -> new PluginAddonBlock(properties, addonSettings()),
+            properties -> new PluginAddonBlock(properties, pluginAddonSettings()),
             OritechAddonsOne::blockProperties);
 
     /**
@@ -139,7 +139,7 @@ public class OritechAddonsOne {
      */
     public static final DeferredBlock<PluginAddonBlock> TANK_ADDON = BLOCKS.registerBlock(
             "tank_addon",
-            properties -> new PluginAddonBlock(properties, addonSettings()),
+            properties -> new PluginAddonBlock(properties, pluginAddonSettings()),
             OritechAddonsOne::blockProperties);
 
     /**
@@ -244,8 +244,32 @@ public class OritechAddonsOne {
                     })
                     .build());
 
+    /**
+     * Settings of this mod's own plugin holders ({@link #EXTENSION_ADDON_1} and friends). They are
+     * deliberately placeable without support: an Extension Addon is put into a machine's addon slot and is
+     * not attached to one particular face, so it must not fall off when a neighbour changes.
+     */
     private static MachineAddonBlock.AddonSettings addonSettings() {
         return MachineAddonBlock.AddonSettings.getDefaultSettings().withNeedsSupport(false);
+    }
+
+    /**
+     * Settings of {@link #WAREHOUSE_ADDON} and {@link #TANK_ADDON}.
+     * <p>
+     * Unlike the Extension Addons these two are plain Oritech plugins the player attaches to one face of a
+     * machine, so they use Oritech's default settings and therefore {@code needsSupport = true} - exactly
+     * like Oritech's own addons. That flag is also what gives them the {@code facing} and {@code face}
+     * properties (see {@code MachineAddonBlock#createBlockStateDefinition}) and makes
+     * {@code getStateForPlacement} derive them from the clicked face: the block state stores which face
+     * the plugin hangs on, and the blockstate file rotates the model to match. Without it the blocks would
+     * only have {@code addon_used} and would always stand upright, wherever they were placed.
+     * <p>
+     * The support requirement is what makes the blocks behave like Oritech's own addons: they are attached
+     * to a solid face, they fall off when that block is removed, and the machine's addon scan looks at the
+     * face they hang on first.
+     */
+    private static MachineAddonBlock.AddonSettings pluginAddonSettings() {
+        return MachineAddonBlock.AddonSettings.getDefaultSettings();
     }
 
     /**
