@@ -58,5 +58,8 @@
   "message.oritechaddonsone.wireless.cleared": "Designator cleared",
   "gui.oritechaddonsone.wireless.linked": "Linked to %s (%s, %s, %s)",
   "gui.oritechaddonsone.wireless.unlinked": "Not linked",
-  "gui.oritechaddonsone.wireless.machine": "Machine"
+  "gui.oritechaddonsone.wireless.machine": "Machine",
+  "gui.oritechaddonsone.page.plugins": "Plugins",
+  "gui.oritechaddonsone.page.plugins.tooltip": "The plugin slots of this block",
+  "gui.oritechaddonsone.page.plugins.hint": "Click the tab to show this page"
 }
