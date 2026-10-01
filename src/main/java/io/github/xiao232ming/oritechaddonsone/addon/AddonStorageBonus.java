@@ -34,6 +34,17 @@ public interface AddonStorageBonus {
     void oritechaddonsone$setCapacityBonus(long bonus);
 
     /**
+     * The capacity this storage really has: the capacity Oritech built it with plus
+     * {@link #oritechaddonsone$capacityBonus()}.
+     * <p>
+     * It is part of the interface because a tank of a machine is not always a single object. Oritech's
+     * {@code SimpleInOutFluidStorage} hands out two per-slot containers which were built with the same
+     * capacity, and those have to report the raised number as well - they read it from the storage they
+     * belong to instead of keeping a copy of the bonus.
+     */
+    long oritechaddonsone$effectiveCapacity();
+
+    /**
      * Clamps stored content down to the current effective capacity.
      * <p>
      * Called after the bonus was lowered (a "tank addon" was removed), because Oritech's own

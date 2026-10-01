@@ -11,7 +11,11 @@
     "LaserTargetDesignatorMixin",
     "ShrinkerBlockEntityMixin",
     "SimpleFluidStorageMixin",
-    "SimpleInventoryStorageMixin"
+    "SimpleInOutFluidStorageInputMixin",
+    "SimpleInOutFluidStorageMixin",
+    "SimpleInOutFluidStorageOutputMixin",
+    "SimpleInventoryStorageMixin",
+    "SlotMixin"
   ],
   "client": [
     "OritechMachineScreenMixin",

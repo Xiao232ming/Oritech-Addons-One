@@ -49,8 +49,8 @@ public abstract class SimpleFluidStorageMixin implements AddonStorageBonus {
      * Reads the shadowed field directly and never calls {@code getCapacity()}: that method is injected
      * below, so calling it here would recurse into this method forever.
      */
-    @Unique
-    private long oritechaddonsone$effectiveCapacity() {
+    @Override
+    public long oritechaddonsone$effectiveCapacity() {
         return this.capacity + this.oritechaddonsone$capacityBonus;
     }
 
