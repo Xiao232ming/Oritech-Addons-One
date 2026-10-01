@@ -149,5 +149,6 @@
     0,
     {"name": "pedestal", "origin": [0, 0, 0], "color": 0, "children": [1, 2, 3, 4, 5, 6, 7]},
     {"name": "top", "origin": [0, 0, 0], "color": 0, "children": [8, 9, 10]}
-  ]
+  ],
+  "render_type": "minecraft:cutout"
 }
