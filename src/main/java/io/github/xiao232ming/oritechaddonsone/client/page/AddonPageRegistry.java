@@ -14,7 +14,7 @@ import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonMenu;
  * The list depends on the block the menu belongs to ({@link ExtensionAddonMenu#wireless()}), so a page
  * that only makes sense for one of the two variants is one entry away. Both variants currently show the
  * same two pages: the wireless page reads what it shows from the menu, so a wired addon shows the machine
- * it is attached to while a dock adds the link's coordinates and the chunk state.
+ * it is attached to while a dock adds the link's coordinates; both show the same chunk status badge.
  */
 public final class AddonPageRegistry {
 

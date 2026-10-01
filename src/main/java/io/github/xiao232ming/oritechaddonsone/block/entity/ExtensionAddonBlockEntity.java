@@ -201,6 +201,20 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         return state.isAir() ? null : state.getBlock().getDescriptionId();
     }
 
+    /**
+     * True while the chunk of the connected machine is loaded, i.e. while this addon can really hand its
+     * plugins over.
+     * <p>
+     * This holds for a wired addon too - it is claimed by a machine in a loaded chunk, so the answer is
+     * normally "yes" - and it is the one value the GUI's status badge shows for both variants. False while
+     * there is no machine at all (nothing is loaded then) and while the machine sits in an unloaded chunk.
+     * Read on the server, see {@code ExtensionAddonMenu#targetChunkLoaded()}.
+     */
+    public boolean isTargetChunkLoaded() {
+        var machine = connectedMachinePos();
+        return machine != null && level != null && level.isLoaded(machine);
+    }
+
     // ------------------------------------------------------------------ storage bonuses
 
     /**

@@ -37,12 +37,12 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
     private final ExtensionAddonLayout layout;
     /** Position of the addon this menu belongs to, used to re-resolve the machine name on the client. */
     private final BlockPos position;
-    /** True for a wireless dock: only the dock shows coordinates and the chunk state of its target. */
+    /** True for a wireless dock: only the dock shows the coordinates of the machine it is linked to. */
     private final boolean wireless;
     /**
      * True when this menu was built by the client constructor. On the server the machine name and the
-     * chunk state are resolved from the block entities; on the client they come from what the server sent
-     * (the addons are plain block entities, so their data is not synced by itself).
+     * chunk state are resolved from the blocks; on the client they come from what the server sent (the
+     * addons are plain block entities, so their data is not synced by itself).
      */
     private final boolean clientSide;
 
@@ -59,7 +59,9 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
     private boolean targetChunkLoaded;
 
     /**
-     * Container data slot 0: whether the chunk of the connected machine is loaded.
+     * Container data slot 0: whether the chunk of the connected machine is loaded. Both variants answer
+     * it - a wired addon is claimed by a machine in a loaded chunk, a dock by the machine it is linked to -
+     * see {@link ExtensionAddonBlockEntity#isTargetChunkLoaded()}.
      * <p>
      * Oritech's synced fields would need a networked block entity, and the addons are plain ones, so the
      * value is published through vanilla's container data instead: the server polls it on every menu tick
@@ -70,7 +72,7 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
         @Override
         public int get() {
             if (clientSide) return targetChunkLoaded ? 1 : 0;
-            return container instanceof WirelessExtensionAddonBlockEntity dock && dock.isTargetChunkLoaded() ? 1 : 0;
+            return container instanceof ExtensionAddonBlockEntity addon && addon.isTargetChunkLoaded() ? 1 : 0;
         }
 
         @Override
