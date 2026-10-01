@@ -49,4 +49,14 @@ public interface AddonPage {
     default boolean mouseClicked(AddonPageContext context, double mouseX, double mouseY, int button) {
         return false;
     }
+
+    /**
+     * Tooltip lines for this page's own controls at the given position (panel relative), or an empty list
+     * while nothing of this page is hovered. The screen draws them after the item tooltip, so a page can
+     * explain a control of its own - for example a slot that is still empty and therefore has no item
+     * tooltip of its own.
+     */
+    default List<Component> tooltipAt(AddonPageContext context, double mouseX, double mouseY) {
+        return List.of();
+    }
 }

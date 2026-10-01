@@ -7,6 +7,7 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonLayout;
+import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonMenu;
 
 /**
  * The tab strip on the right edge of the panel: one tab per registered page.
@@ -22,8 +23,12 @@ public final class AddonTabStrip {
     private final List<AddonTabWidget> tabs;
     private int selected;
 
-    public AddonTabStrip() {
-        this(AddonPageRegistry.pages());
+    /** Called after the selection changed, so the screen can follow it (e.g. enable the page's slots). */
+    private Runnable selectionListener = () -> {
+    };
+
+    public AddonTabStrip(ExtensionAddonMenu menu) {
+        this(AddonPageRegistry.pages(menu));
     }
 
     public AddonTabStrip(List<AddonPage> pages) {
@@ -34,6 +39,16 @@ public final class AddonTabStrip {
         }
         this.tabs = List.copyOf(widgets);
         select(0);
+    }
+
+    /** All tabs, in tab order (the first one is the page a freshly opened GUI shows). */
+    public List<AddonTabWidget> tabs() {
+        return tabs;
+    }
+
+    /** Sets what runs after {@link #select(int)} changed the visible page. */
+    public void setSelectionListener(Runnable selectionListener) {
+        this.selectionListener = selectionListener;
     }
 
     /**
@@ -71,6 +86,7 @@ public final class AddonTabStrip {
         for (var tab : tabs) {
             tab.setActive(tab.getIndex() == this.selected);
         }
+        this.selectionListener.run();
     }
 
     /** Draws all tabs in screen coordinates, in tab order. */

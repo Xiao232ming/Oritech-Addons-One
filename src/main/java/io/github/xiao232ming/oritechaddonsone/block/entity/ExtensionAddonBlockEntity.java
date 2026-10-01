@@ -15,6 +15,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -69,11 +70,20 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
 
     private final ExtensionAddonType type;
     /**
-     * Storage is always {@link ExtensionAddonLayout#MAX_SLOTS} large, the config only decides how many
-     * of these slots are usable. That way lowering the configured amount never destroys stored plugins.
+     * Index of the reserved single item slot of the wireless page, right behind the plugin storage. The
+     * plugin slots keep their indices {@code 0 .. getContainerSize() - 1}, and the reserved item rides
+     * along in the normal container and save format, so nothing about the plugin storage changes.
      */
-    private final NonNullList<ItemStack> items =
-            NonNullList.withSize(ExtensionAddonLayout.MAX_SLOTS, ItemStack.EMPTY);
+    public static final int RESERVED_SLOT = ExtensionAddonLayout.MAX_SLOTS;
+    /** Size of the backing storage: the plugin storage plus the reserved single item slot. */
+    public static final int STORAGE_SIZE = RESERVED_SLOT + 1;
+
+    /**
+     * Storage is always {@link ExtensionAddonLayout#MAX_SLOTS} plugin slots (plus
+     * {@linkplain #RESERVED_SLOT one} for the wireless page), the config only decides how many of these
+     * slots are usable. That way lowering the configured amount never destroys stored plugins.
+     */
+    private final NonNullList<ItemStack> items = NonNullList.withSize(STORAGE_SIZE, ItemStack.EMPTY);
 
     /** Feeds the connected machine while an acceptor plugin is inserted. */
     private final DelegatingEnergyStorage delegatedStorage =
@@ -152,6 +162,43 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
             if (blockItem.getBlock() == BlockContent.MACHINE_REDSTONE_ADDON) return true;
         }
         return false;
+    }
+
+    // ------------------------------------------------------------------ connected machine (wireless page)
+
+    /**
+     * Position of the machine this addon works on, or {@code null} while it is not connected to one.
+     * <p>
+     * A wired addon is claimed by a machine, which writes its position as the controller position; while
+     * that never happened the controller position is this block's own position, which means "nothing".
+     * The wireless dock overrides this with the position it was linked to.
+     */
+    @Nullable
+    public BlockPos connectedMachinePos() {
+        var controller = getControllerPos();
+        return controller == null || controller.equals(worldPosition) ? null : controller;
+    }
+
+    /**
+     * Translation key of the connected machine's display name, or {@code null} while it is unknown: the
+     * addon is not connected, the machine's chunk is not loaded or nothing but air stands there.
+     * <p>
+     * The name is resolved on the server - where the machine's chunk is loaded whenever the machine is -
+     * and sent to the client with the menu, so the GUI shows the right name even when the client has the
+     * machine's chunk unloaded and therefore cannot look the block up itself.
+     */
+    @Nullable
+    public String connectedMachineNameKey() {
+        return nameKeyAt(level, connectedMachinePos());
+    }
+
+    /** Translation key of the block at the given position, or {@code null} while it cannot be resolved. */
+    @Nullable
+    public static String nameKeyAt(@Nullable Level level, @Nullable BlockPos pos) {
+        if (level == null || pos == null || !level.isLoaded(pos)) return null;
+
+        var state = level.getBlockState(pos);
+        return state.isAir() ? null : state.getBlock().getDescriptionId();
     }
 
     // ------------------------------------------------------------------ storage bonuses
@@ -584,21 +631,44 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
     @Override
     public ItemStack removeItem(int slot, int amount) {
         var removed = ContainerHelper.removeItem(items, slot, amount);
-        if (!removed.isEmpty()) contentsChanged();
+        if (!removed.isEmpty()) {
+            if (isReservedSlot(slot)) {
+                setChanged();
+            } else {
+                contentsChanged();
+            }
+        }
         return removed;
     }
 
     @Override
     public ItemStack removeItemNoUpdate(int slot) {
         var removed = ContainerHelper.takeItem(items, slot);
-        if (!removed.isEmpty()) contentsChanged();
+        if (!removed.isEmpty()) {
+            if (isReservedSlot(slot)) {
+                setChanged();
+            } else {
+                contentsChanged();
+            }
+        }
         return removed;
     }
 
     @Override
     public void setItem(int slot, ItemStack stack) {
         items.set(slot, stack);
+        if (isReservedSlot(slot)) {
+            // The reserved item is not a plugin: it changes neither the machine's stats nor its storage,
+            // so the machine must not be asked to recompute its addons because of it.
+            setChanged();
+            return;
+        }
         contentsChanged();
+    }
+
+    /** True for the index of the reserved single item slot of the wireless page. */
+    public static boolean isReservedSlot(int slot) {
+        return slot == RESERVED_SLOT;
     }
 
     @Override

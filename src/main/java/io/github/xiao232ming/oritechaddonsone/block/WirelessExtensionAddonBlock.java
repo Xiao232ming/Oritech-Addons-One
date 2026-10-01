@@ -35,8 +35,8 @@ import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 import io.github.xiao232ming.oritechaddonsone.Config;
+import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.WirelessExtensionAddonBlockEntity;
-import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonLayout;
 
 /**
  * The Wireless Extension Addon: a full block that stores the same plugins as the wired Extension Addon
@@ -174,9 +174,11 @@ public class WirelessExtensionAddonBlock extends Block implements EntityBlock, A
                 buffer.writeBoolean(machine != null);
                 if (machine != null) {
                     buffer.writeBlockPos(machine);
-                    var nameKey = dock.linkedMachineNameKey();
-                    buffer.writeUtf(nameKey == null ? "" : nameKey);
                 }
+                // and its name, resolved here on the server: a client that has the machine's chunk
+                // unloaded cannot look the block up itself (see connectedMachineNameKey)
+                var nameKey = dock.connectedMachineNameKey();
+                buffer.writeUtf(nameKey == null ? "" : nameKey);
             });
         }
         return InteractionResult.SUCCESS;
@@ -185,15 +187,15 @@ public class WirelessExtensionAddonBlock extends Block implements EntityBlock, A
 
     @Override
     public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
-        // Drop everything stored inside (including slots that are currently disabled by the config),
-        // so nothing is lost when the block is mined.
+        // Drop everything stored inside (including slots that are currently disabled by the config, and
+        // the reserved single item slot of the wireless page), so nothing is lost when the block is mined.
         if (!level.isClientSide() && level.getBlockEntity(pos) instanceof WirelessExtensionAddonBlockEntity dock) {
             // release the linked machine first if this dock was the one holding it switched off, and
             // forget the link so the machine stops expecting plugins from here
             dock.releaseRedstoneOnRemoval();
             dock.clearLink();
 
-            for (int slot = 0; slot < ExtensionAddonLayout.MAX_SLOTS; slot++) {
+            for (int slot = 0; slot < ExtensionAddonBlockEntity.STORAGE_SIZE; slot++) {
                 var stack = dock.getItem(slot);
                 while (!stack.isEmpty()) {
                     Block.popResource(level, pos, stack.split(Math.min(stack.getCount(), stack.getMaxStackSize())));

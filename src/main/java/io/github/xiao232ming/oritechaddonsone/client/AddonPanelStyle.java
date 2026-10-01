@@ -40,10 +40,19 @@ public final class AddonPanelStyle {
     /** z of the veil: in front of the hint icons, behind real items and item decorations. */
     public static final int HINT_VEIL_Z = 60;
 
-    /** Colour of the link line under the panel (bright green, no drop shadow). */
-    public static final int LINK_COLOR = 0xFF55FF55;
-    /** Colour of that line while the addon is not linked to a machine. */
-    public static final int UNLINKED_COLOR = 0xFFAAAAAA;
+    /**
+     * Colours of the info text the wireless page writes <em>on</em> the panel body. The panel is light
+     * grey, so this text has to be dark - the green and grey the binding line under the panel used are
+     * unreadable on it.
+     */
+    /** Plain info text (machine name, coordinates). */
+    public static final int PANEL_TEXT = 0xFF404040;
+    /** Secondary info text: a value that could not be resolved, or "not linked". */
+    public static final int PANEL_TEXT_DIM = 0xFF6B6B6B;
+    /** Info text of a positive state, e.g. "chunk loaded: yes". */
+    public static final int PANEL_TEXT_GOOD = 0xFF22702A;
+    /** Info text of a negative state, e.g. "chunk loaded: no". */
+    public static final int PANEL_TEXT_BAD = 0xFF8C2F22;
 
     private AddonPanelStyle() {
     }
