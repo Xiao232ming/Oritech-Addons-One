@@ -87,9 +87,11 @@ public class WirelessExtensionAddonBlockEntity extends ExtensionAddonBlockEntity
 
     /**
      * True while the chunk of the linked machine is loaded, i.e. while this dock can really hand its
-     * plugins over. The wireless page shows this as "chunk loaded: yes / no"; the value is read on the
-     * server (see {@code ExtensionAddonMenu#targetChunkLoaded()}).
+     * plugins over. A dock that is not linked at all has no target, so there is nothing loaded either; the
+     * value is read on the server (see {@code ExtensionAddonMenu#targetChunkLoaded()}) and shown by the
+     * status badge in the panel's top strip.
      */
+    @Override
     public boolean isTargetChunkLoaded() {
         return linkedMachine != null && level != null && level.isLoaded(linkedMachine);
     }
