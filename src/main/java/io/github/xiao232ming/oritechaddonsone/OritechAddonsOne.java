@@ -267,9 +267,13 @@ public class OritechAddonsOne {
      * The support requirement is what makes the blocks behave like Oritech's own addons: they are attached
      * to a solid face, they fall off when that block is removed, and the machine's addon scan looks at the
      * face they hang on first.
+     * <p>
+     * The bounding shape is the tight box of the models, see {@link PluginAddonBlock#PLUGIN_ADDON_SHAPE}:
+     * without it the outline and the collision box of a placed plugin would be a full block.
      */
     private static MachineAddonBlock.AddonSettings pluginAddonSettings() {
-        return MachineAddonBlock.AddonSettings.getDefaultSettings();
+        return MachineAddonBlock.AddonSettings.getDefaultSettings()
+                .withBoundingShape(PluginAddonBlock.PLUGIN_ADDON_SHAPE);
     }
 
     /**
