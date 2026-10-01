@@ -17,10 +17,12 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.neoforged.neoforge.transfer.StacksResourceHandler;
+import net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler;
 import net.neoforged.neoforge.transfer.item.ItemResource;
 
+import org.jetbrains.annotations.Nullable;
+
 import rearth.oritech.api.transfer.fluid.FluidProvider;
-import rearth.oritech.api.transfer.fluid.SimpleFluidStorage;
 import rearth.oritech.util.MachineAddonController;
 
 import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
@@ -216,8 +218,16 @@ public final class MachineStorageBonuses {
     }
 
     /**
-     * Sets the fluid capacity bonus of every tank of the machine: the {@code SimpleFluidStorage}
+     * Sets the fluid capacity bonus of every tank of the machine: the {@code FluidStacksResourceHandler}
      * instances found in its fields and everything its {@code FluidProvider} reports.
+     * <p>
+     * The tanks are matched through {@link StorageBonusHolder} rather than through a concrete Oritech
+     * class, because a machine can keep its fluid in any of Oritech's tank classes - the refinery nodes,
+     * the fertilizer, the pump and the portable tank use {@code SimpleFluidStorage}, the centrifuge, the
+     * industrial chiller, the refinery's own storage, the tainted refinery and the boilers of the
+     * generators use {@code InOutFluidStorage}, and a module reports a {@code DelegatingFluidStorage}.
+     * Every tank class this mod can enlarge implements the interface, so a new machine with a known tank
+     * class is covered without touching this method.
      * <p>
      * The tanks of the previous pass are reset first, so this is a full recomputation and not an
      * accumulation. A tank that is no longer found gets its bonus taken back as well, which matters when
@@ -238,9 +248,8 @@ public final class MachineStorageBonuses {
 
         for (var field : fluidFields(entity.getClass())) {
             try {
-                if (field.get(entity) instanceof SimpleFluidStorage storage) {
-                    touched.add(apply(storage, capacity));
-                }
+                var storage = apply(field.get(entity), capacity);
+                if (storage != null) touched.add(storage);
             } catch (IllegalAccessException | RuntimeException inaccessible) {
                 // An inaccessible field must not break the machine; the other tanks still get their bonus.
                 OritechAddonsOne.LOGGER.debug("Could not read fluid storage field {} of {}",
@@ -252,9 +261,8 @@ public final class MachineStorageBonuses {
             // The provider is asked for every side plus null, which is the full set a machine can report.
             for (var direction : DIRECTIONS) {
                 try {
-                    if (provider.getFluidLookup(direction) instanceof SimpleFluidStorage storage) {
-                        touched.add(apply(storage, capacity));
-                    }
+                    var storage = apply(provider.getFluidLookup(direction), capacity);
+                    if (storage != null) touched.add(storage);
                 } catch (RuntimeException refused) {
                     // A machine may refuse a direction; that is not an error for us.
                 }
@@ -264,9 +272,16 @@ public final class MachineStorageBonuses {
         KNOWN_TANKS.put(entity, touched);
     }
 
-    /** Applies the bonus to one tank and clamps its content to the new capacity. */
-    private static StorageBonusHolder apply(SimpleFluidStorage storage, long capacity) {
-        var holder = (StorageBonusHolder) storage;
+    /**
+     * Applies the bonus to one tank and clamps its content to the new capacity.
+     *
+     * @return the tank that was enlarged, or {@code null} for everything this mod cannot enlarge: a
+     * machine that reports no tank for a side, a delegating wrapper, an item-side handler, ...
+     */
+    @Nullable
+    private static StorageBonusHolder apply(@Nullable Object tank, long capacity) {
+        if (!(tank instanceof StorageBonusHolder holder)) return null;
+
         holder.oritechaddonsone$setCapacityBonus(capacity);
         holder.oritechaddonsone$clampToCapacity();
         return holder;
@@ -283,6 +298,10 @@ public final class MachineStorageBonuses {
     /**
      * All fluid storage fields of a machine class, inherited ones included. The result is cached per
      * class, because the scan runs on every addon change and on every refresh of a wireless dock.
+     * <p>
+     * The filter asks for NeoForge's fluid handler base class, not for one concrete tank, so a machine
+     * whose tank is an input/output pair or a wrapper is found as well; whether the object can actually
+     * be enlarged is decided by {@link StorageBonusHolder} when the bonus is applied.
      */
     private static List<Field> fluidFields(Class<?> type) {
         var cached = FLUID_FIELDS.get(type);
@@ -292,7 +311,7 @@ public final class MachineStorageBonuses {
         for (var current = type; current != null && current != Object.class; current = current.getSuperclass()) {
             for (var field : current.getDeclaredFields()) {
                 if (Modifier.isStatic(field.getModifiers())) continue;
-                if (!SimpleFluidStorage.class.isAssignableFrom(field.getType())) continue;
+                if (!FluidStacksResourceHandler.class.isAssignableFrom(field.getType())) continue;
 
                 try {
                     field.setAccessible(true);

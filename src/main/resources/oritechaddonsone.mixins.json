@@ -6,6 +6,7 @@
     "AddonSplicerBlockEntityMixin",
     "AtomicForgeBlockEntityMixin",
     "FluidStacksResourceHandlerMixin",
+    "InOutFluidStorageMixin",
     "ItemStacksResourceHandlerMixin",
     "ItemUseMixin",
     "MachineAddonControllerMixin",
