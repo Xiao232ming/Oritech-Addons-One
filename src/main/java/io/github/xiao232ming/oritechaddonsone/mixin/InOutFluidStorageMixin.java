@@ -1,5 +1,10 @@
 package io.github.xiao232ming.oritechaddonsone.mixin;
 
+import java.util.List;
+
+import io.netty.buffer.ByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
 
 import org.spongepowered.asm.mixin.Mixin;
@@ -13,6 +18,7 @@ import rearth.oritech.api.transfer.fluid.InOutFluidStorage;
 import rearth.oritech.util.ContainerSlotAssignment;
 
 import io.github.xiao232ming.oritechaddonsone.addon.StorageBonusHolder;
+import io.github.xiao232ming.oritechaddonsone.network.TankSyncCodec;
 
 /**
  * Raises the capacity of Oritech's {@code InOutFluidStorage} - the tank of the machines that keep an
@@ -30,8 +36,9 @@ import io.github.xiao232ming.oritechaddonsone.addon.StorageBonusHolder;
  * ({@code FluidStacksResourceHandler#getCapacity(int, FluidResource)}), which is covered by
  * {@code FluidStacksResourceHandlerMixin} through the shared {@link StorageBonusHolder}.
  * <p>
- * The bonus lives in the storage instance and is set by {@code MachineStorageBonuses}; it is neither
- * synced nor saved, because the machine recomputes it from its plugins on every addon scan.
+ * The bonus lives in the storage instance and is set by {@code MachineStorageBonuses}; it is not saved,
+ * because the machine recomputes it from its plugins on every addon scan, but it is sent to the client
+ * inside the tank's own sync payload so the client's tank reports the same capacity.
  */
 @Mixin(value = InOutFluidStorage.class, priority = 1500)
 public abstract class InOutFluidStorageMixin implements StorageBonusHolder {
@@ -106,5 +113,24 @@ public abstract class InOutFluidStorageMixin implements StorageBonusHolder {
     @Inject(method = "getCapacity", at = @At("HEAD"), cancellable = true)
     private void oritechaddonsone$addCapacityBonus(CallbackInfoReturnable<Integer> callback) {
         callback.setReturnValue((int) Math.min(Integer.MAX_VALUE, oritechaddonsone$effectiveCapacity()));
+    }
+
+    /**
+     * Sends the bonus with the contents and reads it back on the client, so the client's tank reports the
+     * same capacity the server applied instead of the one Oritech's constructor built.
+     * <p>
+     * The bonus is not synced anywhere else, because the machine recomputes it from its addons and the
+     * client cannot: the addon inventories live in block entities of this mod whose contents are not part
+     * of any Oritech sync payload. Riding on the tank's own payload also means the number can never arrive
+     * in a different packet than the amount in it.
+     * <p>
+     * See {@link TankSyncCodec} for why the client needs it at all: Oritech's world renderers draw the
+     * stored fluid with a height of {@code amount / getCapacity()}.
+     */
+    @Inject(method = "getDeltaCodec", at = @At("RETURN"), cancellable = true)
+    private void oritechaddonsone$carryCapacityBonus(
+            CallbackInfoReturnable<StreamCodec<? extends ByteBuf, List<FluidStack>>> callback) {
+        callback.setReturnValue(TankSyncCodec.withCapacityBonus(callback.getReturnValue(),
+                this::oritechaddonsone$capacityBonus, this::oritechaddonsone$setCapacityBonus));
     }
 }
