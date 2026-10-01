@@ -48,6 +48,24 @@ public record ExtensionAddonLayout(int slots, int columns, int rows, int firstSl
         return firstSlotY + (index / columns) * SLOT_SIZE;
     }
 
+    // ------------------------------------------------------------------ wireless page
+
+    /**
+     * X of the reserved single item slot of the wireless page, in GUI space.
+     * <p>
+     * It is the top right cell of a full nine column grid: level with the first plugin row and as far
+     * right as a slot frame may go, because the tab strip starts {@value #TAB_OVERLAP} pixels further
+     * right (the frame ends at {@code RESERVED_SLOT_X + 17 = 169}, the strip at {@code 176 - 4 = 172}).
+     * A narrower grid is centred, so the slot then stands next to it in the free part of the panel.
+     */
+    public static final int RESERVED_SLOT_X = 8 + 8 * SLOT_SIZE;
+
+    /**
+     * Y of the reserved single item slot: level with the first plugin row
+     * ({@code firstSlotY} of every layout is {@code 18}).
+     */
+    public static final int RESERVED_SLOT_Y = 18;
+
     // ------------------------------------------------------------------ tab strip
 
     /**

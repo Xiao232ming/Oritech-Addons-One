@@ -56,10 +56,19 @@
   "tooltip.oritechaddonsone.wireless_extension_addon_2.chunkload": "Requires the chunk to be loaded to work",
   "tooltip.oritechaddonsone.wireless_extension_addon_3.chunkload": "Requires the chunk to be loaded to work",
   "message.oritechaddonsone.wireless.cleared": "Designator cleared",
-  "gui.oritechaddonsone.wireless.linked": "Linked to %s (%s, %s, %s)",
   "gui.oritechaddonsone.wireless.unlinked": "Not linked",
   "gui.oritechaddonsone.wireless.machine": "Machine",
+  "gui.oritechaddonsone.wireless.unknown": "unknown",
+  "gui.oritechaddonsone.wireless.machine_name": "Machine: %s",
+  "gui.oritechaddonsone.wireless.coords": "Bound to: %s, %s, %s",
+  "gui.oritechaddonsone.wireless.chunk_loaded.yes": "Chunk loaded: yes",
+  "gui.oritechaddonsone.wireless.chunk_loaded.no": "Chunk loaded: no",
+  "gui.oritechaddonsone.wireless.reserved_slot": "Reserved slot",
+  "gui.oritechaddonsone.wireless.reserved_slot.hint": "Holds a single item; it is saved with this block",
   "gui.oritechaddonsone.page.plugins": "Plugins",
   "gui.oritechaddonsone.page.plugins.tooltip": "The plugin slots of this block",
-  "gui.oritechaddonsone.page.plugins.hint": "Click the tab to show this page"
+  "gui.oritechaddonsone.page.plugins.hint": "Click the tab to show this page",
+  "gui.oritechaddonsone.page.wireless": "Wireless",
+  "gui.oritechaddonsone.page.wireless.tooltip": "The machine this block is connected to",
+  "gui.oritechaddonsone.page.wireless.hint": "Click the tab to show this page; it also holds the reserved slot"
 }

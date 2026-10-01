@@ -56,10 +56,19 @@
   "tooltip.oritechaddonsone.wireless_extension_addon_2.chunkload": "需要区块加载以生效",
   "tooltip.oritechaddonsone.wireless_extension_addon_3.chunkload": "需要区块加载以生效",
   "message.oritechaddonsone.wireless.cleared": "已清空标识器储存的坐标",
-  "gui.oritechaddonsone.wireless.linked": "已连接 %s（%s, %s, %s）",
   "gui.oritechaddonsone.wireless.unlinked": "未连接",
   "gui.oritechaddonsone.wireless.machine": "机器",
+  "gui.oritechaddonsone.wireless.unknown": "未知方块",
+  "gui.oritechaddonsone.wireless.machine_name": "机器：%s",
+  "gui.oritechaddonsone.wireless.coords": "绑定坐标：%s, %s, %s",
+  "gui.oritechaddonsone.wireless.chunk_loaded.yes": "区块已加载：是",
+  "gui.oritechaddonsone.wireless.chunk_loaded.no": "区块已加载：否",
+  "gui.oritechaddonsone.wireless.reserved_slot": "预留物品格",
+  "gui.oritechaddonsone.wireless.reserved_slot.hint": "只能放一个物品，会随本方块一起保存",
   "gui.oritechaddonsone.page.plugins": "插件",
   "gui.oritechaddonsone.page.plugins.tooltip": "此方块的插件槽位",
-  "gui.oritechaddonsone.page.plugins.hint": "点击标签页切换到该页面"
+  "gui.oritechaddonsone.page.plugins.hint": "点击标签页切换到该页面",
+  "gui.oritechaddonsone.page.wireless": "无线",
+  "gui.oritechaddonsone.page.wireless.tooltip": "此方块连接的机器信息",
+  "gui.oritechaddonsone.page.wireless.hint": "点击标签页切换到该页面，内含预留物品格"
 }

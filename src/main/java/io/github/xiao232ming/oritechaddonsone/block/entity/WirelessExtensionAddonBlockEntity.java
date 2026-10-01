@@ -70,14 +70,30 @@ public class WirelessExtensionAddonBlockEntity extends ExtensionAddonBlockEntity
     /**
      * Translation key of the linked machine's display name, used by the GUI. Returns null while the dock
      * is not linked or the machine is in an unloaded chunk (in that case the GUI shows the coordinates
-     * only).
+     * only). See {@link #connectedMachineNameKey()} for why the name is resolved here and not on the
+     * client.
      */
     @Nullable
     public String linkedMachineNameKey() {
-        if (linkedMachine == null || level == null || !level.isLoaded(linkedMachine)) return null;
-        var state = level.getBlockState(linkedMachine);
-        return state.isAir() ? null : state.getBlock().getDescriptionId();
+        return connectedMachineNameKey();
     }
+
+    /** The link is what this dock works on, so that is its connected machine. */
+    @Override
+    @Nullable
+    public BlockPos connectedMachinePos() {
+        return linkedMachine;
+    }
+
+    /**
+     * True while the chunk of the linked machine is loaded, i.e. while this dock can really hand its
+     * plugins over. The wireless page shows this as "chunk loaded: yes / no"; the value is read on the
+     * server (see {@code ExtensionAddonMenu#targetChunkLoaded()}).
+     */
+    public boolean isTargetChunkLoaded() {
+        return linkedMachine != null && level != null && level.isLoaded(linkedMachine);
+    }
+
     public boolean isLinkedTo(BlockPos machine) {
         return linkedMachine != null && linkedMachine.equals(machine);
     }

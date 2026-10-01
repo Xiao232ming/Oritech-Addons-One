@@ -41,7 +41,6 @@ import rearth.oritech.block.blocks.addons.MachineAddonBlock;
 
 import io.github.xiao232ming.oritechaddonsone.Config;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEntity;
-import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonLayout;
 
 /**
  * The Extension Addon block: an Oritech machine plugin that looks like a slab (half block)
@@ -226,6 +225,10 @@ public class ExtensionAddonBlock extends MachineAddonBlock {
                 buffer.writeVarInt(slots);
                 // wired addons are never linked, but the menu reads this field for both variants
                 buffer.writeBoolean(false);
+                // name of the machine this addon is attached to, resolved here on the server (see
+                // ExtensionAddonBlockEntity#connectedMachineNameKey)
+                var nameKey = blockEntity.connectedMachineNameKey();
+                buffer.writeUtf(nameKey == null ? "" : nameKey);
             });
         }
         return InteractionResult.SUCCESS;
@@ -233,14 +236,14 @@ public class ExtensionAddonBlock extends MachineAddonBlock {
 
     @Override
     public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
-        // Drop everything stored inside (including slots that are currently disabled by the config),
-        // so nothing is lost when the block is mined.
+        // Drop everything stored inside (including slots that are currently disabled by the config, and
+        // the reserved single item slot of the wireless page), so nothing is lost when the block is mined.
         if (!level.isClientSide() && level.getBlockEntity(pos) instanceof ExtensionAddonBlockEntity blockEntity) {
             // If this addon disabled the machine through a stored control unit, hand the machine back
             // first - the block entity is gone afterwards and nothing else would release it.
             blockEntity.releaseRedstoneOnRemoval();
 
-            for (int slot = 0; slot < ExtensionAddonLayout.MAX_SLOTS; slot++) {
+            for (int slot = 0; slot < ExtensionAddonBlockEntity.STORAGE_SIZE; slot++) {
                 var stack = blockEntity.getItem(slot);
                 // Type III slots can hold far more than one stack, drop it in valid chunks.
                 while (!stack.isEmpty()) {

@@ -7,6 +7,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 
 import io.github.xiao232ming.oritechaddonsone.client.page.AddonPageContext;
+import io.github.xiao232ming.oritechaddonsone.client.page.AddonPageRegistry;
 import io.github.xiao232ming.oritechaddonsone.client.page.AddonTabStrip;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonLayout;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonMenu;
@@ -30,7 +31,7 @@ import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonMenu;
 public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddonMenu> {
 
     private final ExtensionAddonLayout layout;
-    private final AddonTabStrip tabs = new AddonTabStrip();
+    private final AddonTabStrip tabs;
 
     /** Where the panel currently is; rebuilt in {@link #init()} because the screen can be resized. */
     private AddonPageContext context;
@@ -40,6 +41,8 @@ public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddon
         // as a click inside the GUI, and no tab can leave the window
         super(menu, inventory, title, ExtensionAddonLayout.TOTAL_WIDTH, menu.layout().imageHeight());
         this.layout = menu.layout();
+        // the pages depend on the block this menu belongs to (wired addon or wireless dock)
+        this.tabs = new AddonTabStrip(AddonPageRegistry.pages(menu));
         this.inventoryLabelY = this.imageHeight - ExtensionAddonLayout.LABEL_OFFSET;
     }
 
@@ -49,10 +52,24 @@ public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddon
         // the panel origin is only known once super.init() has centred the screen
         this.context = new AddonPageContext(this.menu, this.layout, this.leftPos, this.topPos);
         this.tabs.layout(this.leftPos, this.topPos, this.width);
+        this.tabs.setSelectionListener(this::syncVisiblePage);
+        this.syncVisiblePage();
     }
 
     /**
-     * Adds the tooltip of the hovered tab.
+     * Tells the menu which page the screen shows.
+     * <p>
+     * The pages own their slots: the plugin slots belong to the plugin page and the reserved single item
+     * slot to the wireless page, so only the visible page's slots are active. That is a client side
+     * display and clicking decision - the server never sees it and the slots exist either way - and it is
+     * what keeps the plugin items from being drawn over the wireless page's info text.
+     */
+    private void syncVisiblePage() {
+        this.menu.setWirelessPageActive(this.tabs.selectedPage() == AddonPageRegistry.wirelessPage());
+    }
+
+    /**
+     * Adds the tooltip of the hovered tab and of whatever the visible page put under the mouse.
      * <p>
      * On 26.1.2 tooltips are collected while the frame is extracted and shown afterwards, so this runs
      * after {@code super.extractRenderState} - which collects the hovered item tooltip - exactly like
@@ -63,6 +80,22 @@ public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddon
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
         this.tabs.renderTooltip(graphics, this.font, mouseX, mouseY);
+        extractPageTooltip(graphics, mouseX, mouseY);
+    }
+
+    /**
+     * Hands the tooltip a page offers for its own controls to the frame, unless the mouse is over an item
+     * - an item's own tooltip is the more interesting one, and the page only has to explain a control that
+     * is empty anyway (the reserved slot of the wireless page).
+     */
+    private void extractPageTooltip(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+        if (this.context == null) return;
+        if (this.hoveredSlot != null && this.hoveredSlot.hasItem()) return;
+
+        var lines = this.tabs.selectedPage().tooltipAt(this.context, mouseX - this.leftPos, mouseY - this.topPos);
+        if (!lines.isEmpty()) {
+            graphics.setComponentTooltipForNextFrame(this.font, lines, mouseX, mouseY);
+        }
     }
 
     /**
@@ -82,39 +115,6 @@ public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddon
         }
 
         return super.mouseClicked(event, doubleClick);
-    }
-
-    /**
-     * Adds the link line of the wireless addons: which machine this dock is linked to and where it
-     * stands. It is centred right below the panel, so it cannot overlap any other text. The wired addons simply show that they are not
-     * linked, so both variants keep the same layout.
-     */
-    @Override
-    protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
-        super.extractLabels(graphics, mouseX, mouseY);
-
-        var text = linkText().getString();
-        // centred under the panel body (not under the panel plus the tab strip), as it was before
-        var x = (ExtensionAddonLayout.WIDTH - this.font.width(text)) / 2;
-        // drawn under the panel, so it can never overlap the title or the inventory label; the String
-        // overload is used because it takes the drop shadow flag (the Component one always adds one)
-        graphics.text(this.font, text, x, this.imageHeight + 4,
-                this.menu.linkedMachine() == null ? AddonPanelStyle.UNLINKED_COLOR : AddonPanelStyle.LINK_COLOR, false);
-    }
-
-    /** Text of the link line, either the linked machine with its coordinates or "not linked". */
-    private Component linkText() {
-        var machine = this.menu.linkedMachine();
-        if (machine == null) {
-            return Component.translatable("gui.oritechaddonsone.wireless.unlinked");
-        }
-
-        var nameKey = this.menu.linkedMachineNameKey();
-        var name = nameKey == null
-                ? Component.translatable("gui.oritechaddonsone.wireless.machine")
-                : Component.translatable(nameKey);
-        return Component.translatable("gui.oritechaddonsone.wireless.linked", name,
-                machine.getX(), machine.getY(), machine.getZ());
     }
 
     /**
