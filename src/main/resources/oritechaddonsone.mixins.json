@@ -10,6 +10,7 @@
     "MachineBlockEntityOutputLimitMixin",
     "LaserAimIndexMixin",
     "LaserTargetDesignatorMixin",
+    "NetworkedBlockEntityStorageBonusMixin",
     "ShrinkerBlockEntityMixin",
     "SimpleFluidStorageMixin",
     "SimpleInOutFluidStorageInputMixin",

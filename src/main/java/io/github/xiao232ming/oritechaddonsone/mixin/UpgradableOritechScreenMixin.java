@@ -6,12 +6,15 @@ import java.util.List;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.ItemStack;
 
+import rearth.oritech.api.screen.UIComponent;
 import rearth.oritech.api.screen.widgets.BoxWidget;
 import rearth.oritech.api.screen.widgets.ItemWidget;
 import rearth.oritech.api.screen.widgets.LabelWidget;
@@ -24,6 +27,7 @@ import rearth.oritech.client.ui.UpgradableOritechScreenHandler;
 
 import io.github.xiao232ming.oritechaddonsone.Config;
 import io.github.xiao232ming.oritechaddonsone.block.WirelessExtensionAddonBlock;
+import io.github.xiao232ming.oritechaddonsone.client.StorageBonusPanel;
 
 /**
  * Lists the machine's wireless extension addons in the stock addon page (the "addons" button), where they
@@ -91,6 +95,22 @@ public abstract class UpgradableOritechScreenMixin {
             if (level.getBlockState(addonPos).getBlock() instanceof MachineAddonBlock) rows++;
         }
         return rows * oritechaddonsone$ROW_HEIGHT;
+    }
+
+    /**
+     * Appends this mod's storage lines to Oritech's own addon panel: the item slot capacity the
+     * warehouse addons add and the fluid capacity the tank addons add, each only while it is not zero.
+     * <p>
+     * Oritech builds that panel in this very method (speed, efficiency, chambers, ...), so the lines
+     * belong here as well - they simply follow it. The values are the machine's synced display fields,
+     * see {@link StorageBonusPanel}.
+     */
+    @Inject(method = "addExtensionContent", at = @At("TAIL"))
+    private void oritechaddonsone$addStorageLines(List<UIComponent> content, CallbackInfo callback) {
+        var menu = ((AbstractContainerScreen<?>) (Object) this).getMenu();
+        if (!(menu instanceof UpgradableOritechScreenHandler handler)) return;
+
+        StorageBonusPanel.addLines(content, handler.blockEntity);
     }
 
     /** Grows the inset background of the list by the rows this mixin appends. */

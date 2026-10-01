@@ -20,6 +20,8 @@ import org.jetbrains.annotations.Nullable;
 
 import rearth.oritech.api.fluid.FluidApi;
 import rearth.oritech.api.item.ItemApi;
+import rearth.oritech.api.networking.NetworkedBlockEntity;
+import rearth.oritech.api.networking.SyncType;
 import rearth.oritech.util.MachineAddonController;
 
 import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
@@ -116,6 +118,28 @@ public final class MachineStorageBonuses {
         var bonus = sum(controller, level);
         CACHED.put(controller, bonus);
         apply(controller, bonus);
+        publish(controller, bonus);
+    }
+
+    /**
+     * Hands the recomputed bonus to the machine's synced display fields, so the addon panel can show it
+     * on the client (see {@link StorageBonusDisplay}). The value is only written when it really changed,
+     * and only then is a GUI update sent: the machines that carry addons send one whenever their menu is
+     * opened, which covers the normal case, but a plugin that is added or removed while the panel is open
+     * would otherwise leave the old number on screen.
+     */
+    private static void publish(MachineAddonController controller, Bonus bonus) {
+        if (!(controller instanceof StorageBonusDisplay display)) return;
+        if (display.oritechaddonsone$shownItemSlotBonus() == bonus.slots()
+                && display.oritechaddonsone$shownFluidCapacityBonus() == bonus.capacity()) {
+            return;
+        }
+
+        display.oritechaddonsone$publishStorageBonus(bonus.slots(), bonus.capacity());
+
+        if (controller instanceof NetworkedBlockEntity networked) {
+            networked.sendUpdate(SyncType.GUI_OPEN);
+        }
     }
 
     /** Sums the bonuses of every addon attached to the machine. */
