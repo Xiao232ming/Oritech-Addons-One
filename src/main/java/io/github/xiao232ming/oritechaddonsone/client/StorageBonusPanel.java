@@ -1,11 +1,13 @@
 package io.github.xiao232ming.oritechaddonsone.client;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
 import rearth.oritech.api.screen.UIComponent;
+import rearth.oritech.api.screen.widgets.ButtonWidget;
 import rearth.oritech.api.screen.widgets.LabelWidget;
 
 import io.github.xiao232ming.oritechaddonsone.addon.StorageBonusDisplay;
@@ -37,22 +39,54 @@ public final class StorageBonusPanel {
     public static final String FLUID_CAPACITY_TITLE = "title.oritechaddonsone.machine.storage_fluid_capacity";
     public static final String FLUID_CAPACITY_TOOLTIP = "tooltip.oritechaddonsone.machine.storage_fluid_capacity";
 
+    /** Language key of the addons button of both panel paths, used to find that button in the content. */
+    private static final String ADDONS_BUTTON_KEY = "button.oritech.machine.addons";
+
     private StorageBonusPanel() {
     }
 
-    /** Appends the lines of the given machine to the panel content, skipping everything that is zero. */
+    /**
+     * Adds the lines of the given machine to the panel content, skipping everything that is zero.
+     * <p>
+     * They belong with the other stat lines and therefore go directly in front of the panel's addons
+     * button: Oritech's upgradable screen adds that button as the last entry of the content list, after
+     * all of its own stats, so lines appended to the end of the list would end up below the button
+     * ({@code UpgradableOritechScreen#addExtensionContent}, both versions). The button is recognised by
+     * its label - {@link #ADDONS_BUTTON_KEY} is the key Oritech and {@code OritechMachineScreenMixin}
+     * both use - and a panel that does not hold it yet is simply handed the lines at the end, which is
+     * what the plain panel path ({@code OritechMachineScreenMixin}) wants: it adds its own button after
+     * these lines.
+     */
     public static void addLines(List<UIComponent> content, BlockEntity blockEntity) {
         if (!(blockEntity instanceof StorageBonusDisplay display)) return;
 
+        var lines = new ArrayList<UIComponent>();
+
         int slots = display.oritechaddonsone$shownItemSlotBonus();
         if (slots > 0) {
-            content.add(line(ITEM_SLOTS_TITLE, ITEM_SLOTS_TOOLTIP, slots));
+            lines.add(line(ITEM_SLOTS_TITLE, ITEM_SLOTS_TOOLTIP, slots));
         }
 
         long capacity = display.oritechaddonsone$shownFluidCapacityBonus();
         if (capacity > 0L) {
-            content.add(line(FLUID_CAPACITY_TITLE, FLUID_CAPACITY_TOOLTIP, capacity));
+            lines.add(line(FLUID_CAPACITY_TITLE, FLUID_CAPACITY_TOOLTIP, capacity));
         }
+
+        content.addAll(indexOfAddonsButton(content), lines);
+    }
+
+    /**
+     * Index of the addons button in the panel content, or {@code content.size()} while the content holds
+     * no such button. Searched from the end because that button is the last one such a panel adds.
+     */
+    private static int indexOfAddonsButton(List<UIComponent> content) {
+        var label = Component.translatable(ADDONS_BUTTON_KEY).getString();
+        for (int i = content.size() - 1; i >= 0; i--) {
+            if (content.get(i) instanceof ButtonWidget button && button.getLabel().getString().equals(label)) {
+                return i;
+            }
+        }
+        return content.size();
     }
 
     /** One stat line, built exactly like Oritech's own addon panel lines. */

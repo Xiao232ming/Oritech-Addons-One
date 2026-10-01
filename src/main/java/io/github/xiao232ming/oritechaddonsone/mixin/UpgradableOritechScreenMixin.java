@@ -98,12 +98,12 @@ public abstract class UpgradableOritechScreenMixin {
     }
 
     /**
-     * Appends this mod's storage lines to Oritech's own addon panel: the item slot capacity the
+     * Adds this mod's storage lines to Oritech's own addon panel: the item slot capacity the
      * warehouse addons add and the fluid capacity the tank addons add, each only while it is not zero.
      * <p>
-     * Oritech builds that panel in this very method (speed, efficiency, chambers, ...), so the lines
-     * belong here as well - they simply follow it. The values are the machine's synced display fields,
-     * see {@link StorageBonusPanel}.
+     * Oritech builds that panel in this very method (speed, efficiency, chambers, ...) and adds its addons
+     * button as the last entry, so the lines are handed over as the last stat lines, directly above that
+     * button - see {@link StorageBonusPanel}. The values are the machine's synced display fields.
      */
     @Inject(method = "addExtensionContent", at = @At("TAIL"))
     private void oritechaddonsone$addStorageLines(List<UIComponent> content, CallbackInfo callback) {

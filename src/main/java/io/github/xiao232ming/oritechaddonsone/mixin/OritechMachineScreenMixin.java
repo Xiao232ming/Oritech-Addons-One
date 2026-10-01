@@ -152,7 +152,9 @@ public abstract class OritechMachineScreenMixin {
             content.add(chambersLabel);
         }
 
-        // The warehouse / tank bonuses of this machine, each only while it really has such a plugin.
+        // The warehouse / tank bonuses of this machine, each only while it really has such a plugin. The
+        // helper puts them above the addons button; here that button is added right below, so they end up
+        // with the stats above it either way.
         StorageBonusPanel.addLines(content, handler.blockEntity);
 
         ButtonWidget addonButton = ButtonWidget.panel(
