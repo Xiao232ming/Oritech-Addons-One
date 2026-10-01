@@ -25,11 +25,26 @@ import net.neoforged.fml.loading.FMLEnvironment;
  * prints the description lines of the plugin while Ctrl is held and otherwise only its
  * "hold Ctrl for more information" hint - so the base call alone is the whole gate, and the one line of
  * this mod is appended next to it while Ctrl is held.
+ * <p>
+ * The value of that line is an argument of the language key and is coloured here, not in the language
+ * file: Oritech prints the changed stat of its own plugins as a green component
+ * ({@code TooltipHelper#getFormattedValueChangeTooltip} builds the green literal appended by
+ * {@code MachineAddonBlock#appendHoverText} on 1.21.1 and by {@code #addToTooltip} on 26.1.2), and
+ * {@code TooltipHelper#addMachineTooltip} colours the amount of a stat line by passing it as a styled
+ * translation argument - the same way this line does it.
  */
 public class PluginAddonItem extends BlockItem {
 
-    public PluginAddonItem(Block block, Properties properties) {
+    /**
+     * The value the description line shows, e.g. {@code +16} or {@code +8000 mB}. The registration passes
+     * it in, built from the very constant the machine effect uses, so the tooltip cannot drift away from
+     * what the plugin really adds.
+     */
+    private final String bonus;
+
+    public PluginAddonItem(Block block, Properties properties, String bonus) {
         super(block, properties);
+        this.bonus = bonus;
     }
 
     @Override
@@ -42,7 +57,10 @@ public class PluginAddonItem extends BlockItem {
         if (!isControlDown()) return;
 
         var key = "tooltip.oritechaddonsone." + BuiltInRegistries.BLOCK.getKey(getBlock()).getPath();
-        tooltipComponents.add(Component.translatable(key + ".desc").withStyle(ChatFormatting.GRAY));
+        // The number is the %s of the language key and stays green: a styled argument keeps its own
+        // colour over the grey of the surrounding line, exactly like Oritech's own coloured numbers.
+        tooltipComponents.add(Component.translatable(key + ".desc",
+                Component.literal(bonus).withStyle(ChatFormatting.GREEN)).withStyle(ChatFormatting.GRAY));
     }
 
     /** True while the player holds Ctrl, like Oritech's own addon items check. */
