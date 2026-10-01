@@ -58,5 +58,8 @@
   "message.oritechaddonsone.wireless.cleared": "已清空标识器储存的坐标",
   "gui.oritechaddonsone.wireless.linked": "已连接 %s（%s, %s, %s）",
   "gui.oritechaddonsone.wireless.unlinked": "未连接",
-  "gui.oritechaddonsone.wireless.machine": "机器"
+  "gui.oritechaddonsone.wireless.machine": "机器",
+  "gui.oritechaddonsone.page.plugins": "插件",
+  "gui.oritechaddonsone.page.plugins.tooltip": "此方块的插件槽位",
+  "gui.oritechaddonsone.page.plugins.hint": "点击标签页切换到该页面"
 }
