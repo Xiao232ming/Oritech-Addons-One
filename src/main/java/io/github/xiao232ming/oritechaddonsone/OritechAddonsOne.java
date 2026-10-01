@@ -33,6 +33,7 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import io.github.xiao232ming.oritechaddonsone.item.ExtensionAddonItem;
+import io.github.xiao232ming.oritechaddonsone.item.PluginAddonItem;
 import rearth.oritech.block.blocks.addons.MachineAddonBlock;
 import rearth.oritech.block.entity.addons.AddonBlockEntity;
 
@@ -177,18 +178,19 @@ public class OritechAddonsOne {
             () -> new Item.Properties().useBlockDescriptionPrefix());
 
     /**
-     * Block items of the warehouse and tank addons. They are plain block items: the blocks are ordinary
-     * Oritech plugins whose stats Oritech's own tooltip already describes, and both are neutral.
+     * Block items of the warehouse and tank addons. They use {@link PluginAddonItem} because these two
+     * plugins are neutral Oritech addons: Oritech's own tooltip describes nothing about them, so the item
+     * states the effect this mod gives them (see the {@code tooltip.oritechaddonsone.*.desc} keys).
      */
     public static final DeferredItem<BlockItem> WAREHOUSE_ADDON_ITEM = ITEMS.registerItem(
             "warehouse_addon",
-            properties -> new BlockItem(WAREHOUSE_ADDON.get(), properties),
+            properties -> new PluginAddonItem(WAREHOUSE_ADDON.get(), properties),
             () -> new Item.Properties().useBlockDescriptionPrefix());
 
     /** Block item of the tank addon, see {@link #WAREHOUSE_ADDON_ITEM}. */
     public static final DeferredItem<BlockItem> TANK_ADDON_ITEM = ITEMS.registerItem(
             "tank_addon",
-            properties -> new BlockItem(TANK_ADDON.get(), properties),
+            properties -> new PluginAddonItem(TANK_ADDON.get(), properties),
             () -> new Item.Properties().useBlockDescriptionPrefix());
 
     /** All plugin types share one block entity type, the type is read from the owning block. */

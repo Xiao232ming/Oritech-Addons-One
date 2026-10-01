@@ -12,6 +12,7 @@
     "MachineAddonControllerMixin",
     "LaserAimIndexMixin",
     "LaserTargetDesignatorMixin",
+    "NetworkedBlockEntityStorageBonusMixin",
     "SimpleFluidStorageMixin"
   ],
   "client": [

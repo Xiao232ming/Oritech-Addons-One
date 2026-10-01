@@ -44,6 +44,7 @@ import rearth.oritech.util.TooltipHelper;
 import io.github.xiao232ming.oritechaddonsone.Config;
 import io.github.xiao232ming.oritechaddonsone.block.WirelessExtensionAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.client.AddonOverlayHost;
+import io.github.xiao232ming.oritechaddonsone.client.StorageBonusPanel;
 import io.github.xiao232ming.oritechaddonsone.forge.ForgeLaserSpeedupHost;
 
 /**
@@ -150,6 +151,9 @@ public abstract class OritechMachineScreenMixin {
             chambersLabel.withAlignment(LabelWidget.Alignment.CENTER);
             content.add(chambersLabel);
         }
+
+        // The warehouse / tank bonuses of this machine, each only while it really has such a plugin.
+        StorageBonusPanel.addLines(content, handler.blockEntity);
 
         ButtonWidget addonButton = ButtonWidget.panel(
                 5, 0, 50, 14,
