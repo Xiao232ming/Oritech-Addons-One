@@ -1,6 +1,6 @@
 package io.github.xiao232ming.oritechaddonsone.mixin;
 
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Item;
 import net.neoforged.neoforge.transfer.item.ItemResource;
 import net.neoforged.neoforge.transfer.item.ItemStacksResourceHandler;
 
@@ -33,6 +33,12 @@ import io.github.xiao232ming.oritechaddonsone.addon.StorageBonusHolder;
  * and not saved - the limits of a machine are recomputed from its plugins on every addon scan. Because
  * the bonus is a field of the storage, this mixin cannot change any inventory that was not explicitly
  * given one: a handler without a bonus reports the NeoForge capacity untouched.
+ * <p>
+ * The raised limit is only half of the feature: the transfer API limits what is inserted and never looks
+ * at what is already stored, so a stack that was filled while the bonus was active would stay above the
+ * item's own maximum forever once the addon is removed. {@link #oritechaddonsone$clampToCapacity()}
+ * closes that, exactly like the 1.21.1 branch does, and it is called by {@code MachineStorageBonuses}
+ * right after the bonus was set.
  */
 @Mixin(value = ItemStacksResourceHandler.class, priority = 1500)
 public abstract class ItemStacksResourceHandlerMixin implements StorageBonusHolder {
@@ -64,9 +70,38 @@ public abstract class ItemStacksResourceHandlerMixin implements StorageBonusHold
         // no-op: an item storage has no fluid capacity
     }
 
+    /**
+     * Brings every stored stack back down to the limit this storage currently reports: with a bonus a
+     * slot may hold more than one stack of the item, without one the item's own maximum is the limit
+     * again. Called after the bonus was lowered (a warehouse addon was removed), because the transfer API
+     * only limits what is inserted - a stack that was written while the bonus was active keeps its count
+     * above the item's own maximum until something rewrites the slot, which on 26.1.2 may never happen on
+     * its own. The excess is deleted, never dropped, which is the same rule the fluid side follows.
+     * <p>
+     * The limit is the same number {@code getCapacity} reports: {@code 64 + bonus} while a bonus is
+     * active, otherwise {@code min(item maximum, Item.ABSOLUTE_MAX_STACK_SIZE)}. Writing through
+     * {@code set} rebuilds the stack from its {@link ItemResource} and so keeps its components, and it
+     * reports the change to the machine like any other write.
+     */
     @Override
     public void oritechaddonsone$clampToCapacity() {
-        // no-op: an item storage is clamped by the capacity it reports the next time it is written to
+        var handler = (ItemStacksResourceHandler) (Object) this;
+
+        for (var index = 0; index < handler.size(); index++) {
+            var resource = handler.getResource(index);
+            if (resource.isEmpty()) continue;
+
+            var limit = oritechaddonsone$limitFor(resource);
+            if (handler.getAmountAsInt(index) > limit) handler.set(index, resource, limit);
+        }
+    }
+
+    /** The limit one slot of this storage has for that resource, see {@link #oritechaddonsone$clampToCapacity}. */
+    @Unique
+    private int oritechaddonsone$limitFor(ItemResource resource) {
+        if (this.oritechaddonsone$slotBonus > 0) return 64 + this.oritechaddonsone$slotBonus;
+
+        return Math.min(resource.getMaxStackSize(), Item.ABSOLUTE_MAX_STACK_SIZE);
     }
 
     /**

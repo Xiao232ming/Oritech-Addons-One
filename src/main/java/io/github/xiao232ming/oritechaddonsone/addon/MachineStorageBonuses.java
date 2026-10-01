@@ -205,15 +205,22 @@ public final class MachineStorageBonuses {
     }
 
     /**
-     * Sets the item slot bonus of the machine's inventory. The machine inventory is Oritech's
-     * {@code FilteringInventory}, a {@code SimpleInventoryStorage} and therefore an
-     * {@code ItemStacksResourceHandler}, whose capacity the item mixin raises; a machine that keeps its
-     * items somewhere else simply stays at the vanilla limit.
+     * Sets the item slot bonus of the machine's inventory and clamps what it holds to the new limit. The
+     * machine inventory is Oritech's {@code FilteringInventory}, a {@code SimpleInventoryStorage} and
+     * therefore an {@code ItemStacksResourceHandler}, whose capacity the item mixin raises; a machine that
+     * keeps its items somewhere else simply stays at the vanilla limit.
+     * <p>
+     * The clamp is the item counterpart of the one the tanks get: the transfer API only limits what is
+     * inserted, so a stack that was filled while the bonus was active keeps its count above the item's own
+     * maximum until something rewrites the slot - without the clamp a slot that held 80 items of a 64
+     * stack would keep all 80 after the warehouse addon was removed. This mirrors the 1.21.1 branch, where
+     * the item storage implements the same clamp.
      */
     private static void applyToInventory(MachineAddonController controller, int slots) {
         StacksResourceHandler<ItemStack, ItemResource> inventory = controller.getInventoryForAddon();
         if (inventory instanceof StorageBonusHolder storage) {
             storage.oritechaddonsone$setSlotBonus(slots);
+            storage.oritechaddonsone$clampToCapacity();
         }
     }
 

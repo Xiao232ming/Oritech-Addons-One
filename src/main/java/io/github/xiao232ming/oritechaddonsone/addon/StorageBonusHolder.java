@@ -36,16 +36,14 @@ public interface StorageBonusHolder {
     long oritechaddonsone$effectiveCapacity();
 
     /**
-     * Clamps stored fluid down to the current effective capacity.
+     * Clamps stored content down to the current capacity.
      * <p>
-     * Called after the bonus was lowered (a tank addon was removed), because the transfer API only limits
-     * what is inserted - it never checks the stored amount afterwards. The excess is deleted instead of
-     * spilled, which keeps the tank in a valid state and is deterministic: the player always loses
-     * exactly the amount above the new capacity.
-     * <p>
-     * An item storage has nothing to do here: overwriting a stack with a smaller amount is what Oritech
-     * does anyway when it writes into a slot, and item stacks above the limit are simply clamped the next
-     * time the machine touches that slot.
+     * Called after the bonus was lowered, because the transfer API only limits what is inserted - it never
+     * checks the stored amount afterwards. On the fluid side that is a tank addon being removed and on the
+     * item side a warehouse addon: a slot that was filled to 64 + bonus keeps that count until something
+     * rewrites it, so it has to be brought back to the item's own maximum here. The excess is deleted
+     * instead of spilled, which keeps the storage in a valid state and is deterministic: the player always
+     * loses exactly the amount above the new limit.
      */
     void oritechaddonsone$clampToCapacity();
 
