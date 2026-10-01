@@ -10,19 +10,21 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.block.Block;
+import net.neoforged.fml.loading.FMLEnvironment;
 
 /**
  * Block item of the warehouse addon and the tank addon.
  * <p>
  * Both plugins are neutral Oritech addons: Oritech's own tooltip therefore has nothing to say about
- * them, and the effect they have is implemented by this mod ({@code MachineStorageBonuses}). The two
- * lines that describe that effect are added here, in the same way and with the same language keys the
- * other items of this mod use: {@code tooltip.oritechaddonsone.<block>.desc} for the effect of one
- * plugin and {@code ...<block>.stack} for the note that several of them add up.
+ * them, and the effect they have is implemented by this mod ({@code MachineStorageBonuses}). The one
+ * line that describes that effect is added here, with the language key the other items of this mod use:
+ * {@code tooltip.oritechaddonsone.<block>.desc}.
  * <p>
- * The description is deliberately shown without holding Ctrl - it is the only place that states what
- * these two blocks do - and the block's own (empty) tooltip is not asked for, because it would only add
- * Oritech's "hold Ctrl" hint for information that is not there.
+ * The item is Ctrl gated exactly like every other Oritech plugin. NeoForge's {@code BlockItem}
+ * forwards {@link #appendHoverText} to the block, and Oritech's {@code MachineAddonBlock#appendHoverText}
+ * prints the description lines of the plugin while Ctrl is held and otherwise only its
+ * "hold Ctrl for more information" hint - so the base call alone is the whole gate, and the one line of
+ * this mod is appended next to it while Ctrl is held.
  */
 public class PluginAddonItem extends BlockItem {
 
@@ -33,9 +35,21 @@ public class PluginAddonItem extends BlockItem {
     @Override
     public void appendHoverText(ItemStack stack, Item.TooltipContext context, List<Component> tooltipComponents,
             TooltipFlag tooltipFlag) {
-        var key = "tooltip.oritechaddonsone." + BuiltInRegistries.BLOCK.getKey(getBlock()).getPath();
+        // Oritech's own plugin tooltip: the description while Ctrl is held, the "hold Ctrl" hint
+        // otherwise. The hint is not repeated here, the block already prints it.
+        super.appendHoverText(stack, context, tooltipComponents, tooltipFlag);
 
+        if (!isControlDown()) return;
+
+        var key = "tooltip.oritechaddonsone." + BuiltInRegistries.BLOCK.getKey(getBlock()).getPath();
         tooltipComponents.add(Component.translatable(key + ".desc").withStyle(ChatFormatting.GRAY));
-        tooltipComponents.add(Component.translatable(key + ".stack").withStyle(ChatFormatting.DARK_GRAY));
+    }
+
+    /** True while the player holds Ctrl, like Oritech's own addon items check. */
+    private static boolean isControlDown() {
+        // Tooltips are only built on the client; the guard keeps dedicated servers from touching
+        // client only classes.
+        if (!FMLEnvironment.dist.isClient()) return false;
+        return net.minecraft.client.gui.screens.Screen.hasControlDown();
     }
 }
