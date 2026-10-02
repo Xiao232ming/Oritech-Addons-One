@@ -14,19 +14,20 @@ import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonLayout;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonMenu;
 
 /**
- * The wireless page: which machine this addon works on, whether that machine's chunk is loaded, and the
- * reserved single item slot.
+ * The wireless page: which machine this addon works on, whether that machine's chunk is force loaded, and
+ * the reserved single item slot.
  * <p>
  * A wireless extension dock shows the whole binding - the machine's name and the coordinates it is bound
  * to - while a wired extension addon shows the name of the machine it is attached to and nothing else,
  * because it has no link of its own. The binding used to be a single line under the panel, drawn for every
  * page; it now lives here only.
  * <p>
- * Both variants carry the second line of this page's state, the chunk status of that machine, as a badge
- * in the top right corner of the panel (see {@link #drawChunkStatus}) - it is the same value for both, and
- * it is kept out of the info lines so it does not repeat what they say. A dock only works while its
- * target's chunk is loaded, a wired addon is claimed by a machine in a loaded chunk, so the badge normally
- * reads "loaded" there and turns red as soon as the target is gone or its chunk is unloaded.
+ * Both variants carry the second line of this page's state, the force load state of that machine's chunk,
+ * as a badge in the top right corner of the panel (see {@link #drawForceLoadStatus}) - it is the same value
+ * for both, and it is kept out of the info lines so it does not repeat what they say. The badge is green
+ * only while something keeps that chunk loaded on purpose (vanilla {@code /forceload}, the spawn area or
+ * another mod's force load) and red while the chunk is unloaded or only loaded because a player is nearby,
+ * because only a chunk that is kept loaded works while nobody is around.
  * <p>
  * Everything the page shows is read from {@link ExtensionAddonMenu}, which resolved it on the server, so
  * the name is right even while the client has the machine's chunk unloaded.
@@ -41,11 +42,11 @@ public final class WirelessAddonPage implements AddonPage {
     private static final String TOOLTIP_KEY = LABEL_KEY + ".tooltip";
     private static final String HINT_KEY = LABEL_KEY + ".hint";
 
-    /** Language keys of the info lines and of the chunk status badge. */
+    /** Language keys of the info lines and of the force load badge. */
     private static final String MACHINE_KEY = "gui.oritechaddonsone.wireless.machine_name";
     private static final String COORDS_KEY = "gui.oritechaddonsone.wireless.coords";
-    private static final String CHUNK_LOADED_YES_KEY = "gui.oritechaddonsone.wireless.chunk_loaded.yes";
-    private static final String CHUNK_LOADED_NO_KEY = "gui.oritechaddonsone.wireless.chunk_loaded.no";
+    private static final String CHUNK_FORCE_LOADED_YES_KEY = "gui.oritechaddonsone.wireless.chunk_force_loaded.yes";
+    private static final String CHUNK_FORCE_LOADED_NO_KEY = "gui.oritechaddonsone.wireless.chunk_force_loaded.no";
     private static final String UNLINKED_KEY = "gui.oritechaddonsone.wireless.unlinked";
     private static final String UNKNOWN_KEY = "gui.oritechaddonsone.wireless.unknown";
     private static final String SLOT_KEY = "gui.oritechaddonsone.wireless.reserved_slot";
@@ -74,7 +75,7 @@ public final class WirelessAddonPage implements AddonPage {
     private static final String ELLIPSIS = "...";
 
     /**
-     * X the chunk status badge's text ends at, in panel space.
+     * X the force load badge's text ends at, in panel space.
      * <p>
      * The badge lives in the top right corner of this page, i.e. in the free strip above the first line of
      * content and right of where the machine name starts. That strip ends where the reserved slot's frame
@@ -87,7 +88,7 @@ public final class WirelessAddonPage implements AddonPage {
     private static final int CHUNK_BADGE_RIGHT = ExtensionAddonLayout.RESERVED_SLOT_X + 16;
 
     /**
-     * Y of the chunk status badge's text, in panel space: the first row inside the panel's two pixel light
+     * Y of the force load badge's text, in panel space: the first row inside the panel's two pixel light
      * bevel, so the text covers {@code y = 5 .. 14} - below the bevel, above the first slot frame (drawn
      * from {@code y = 17}) and level with the first tab, which only starts four pixels further right.
      */
@@ -114,7 +115,7 @@ public final class WirelessAddonPage implements AddonPage {
     }
 
     /**
-     * Draws the chunk status badge, the info lines and the frame of the reserved slot. The slot's item is
+     * Draws the force load badge, the info lines and the frame of the reserved slot. The slot's item is
      * drawn by the screen like every other slot's item; the frame is painted here, one pixel above and left
      * of the slot, exactly like the plugin page does it for its fields.
      */
@@ -124,7 +125,7 @@ public final class WirelessAddonPage implements AddonPage {
         var menu = context.menu();
         var lines = infoLines(menu);
 
-        drawChunkStatus(graphics, font, context, menu);
+        drawForceLoadStatus(graphics, font, context, menu);
 
         for (int line = 0; line < lines.size(); line++) {
             var text = fit(font, lines.get(line).text().getString());
@@ -137,32 +138,34 @@ public final class WirelessAddonPage implements AddonPage {
     }
 
     /**
-     * The line of the badge: "chunk loaded" while the connected machine's chunk is loaded, "not loaded"
-     * otherwise. Both variants answer it, see {@link ExtensionAddonMenu#targetChunkLoaded()}.
+     * The line of the badge. Its wording is still the plain "chunk loaded / not loaded" pair, but the value
+     * behind it is the force load state of the connected machine's chunk - see
+     * {@link ExtensionAddonMenu#targetChunkForceLoaded()}.
      */
-    public static Component chunkStatus(ExtensionAddonMenu menu) {
-        return Component.translatable(menu.targetChunkLoaded() ? CHUNK_LOADED_YES_KEY : CHUNK_LOADED_NO_KEY);
+    public static Component forceLoadStatus(ExtensionAddonMenu menu) {
+        return Component.translatable(menu.targetChunkForceLoaded() ? CHUNK_FORCE_LOADED_YES_KEY : CHUNK_FORCE_LOADED_NO_KEY);
     }
 
     /**
-     * Draws the chunk status of the connected machine as one right aligned line in the panel's top right
-     * corner - for the wired addon and the dock alike, because both work on a machine.
+     * Draws the force load state of the connected machine's chunk as one right aligned line in the panel's
+     * top right corner - for the wired addon and the dock alike, because both work on a machine.
      * <p>
-     * The value comes from {@link ExtensionAddonMenu#targetChunkLoaded()}, which the server resolves and
+     * The value comes from {@link ExtensionAddonMenu#targetChunkForceLoaded()}, which the server resolves and
      * pushes over a container data slot whenever it changes, so the badge is live without the client
-     * looking anything up. Green means the machine's chunk is loaded, red means it is not (nothing is
-     * linked or claimed, or the target's chunk is unloaded). The colours and the plain (no shadow) text
-     * are the panel's usual info text style; the text is right aligned to a fixed edge, so both states end
-     * in the same place whatever their width.
+     * looking anything up. Green means the machine's chunk is kept loaded (vanilla {@code /forceload}, the
+     * spawn area or another mod's force load), red means it is not (nothing is linked or claimed, or the
+     * chunk is only loaded because a player is nearby). The colours and the plain (no shadow) text are the
+     * panel's usual info text style; the text is right aligned to a fixed edge, so both states end in the
+     * same place whatever their width.
      */
-    private static void drawChunkStatus(GuiGraphics graphics, Font font, AddonPageContext context,
+    private static void drawForceLoadStatus(GuiGraphics graphics, Font font, AddonPageContext context,
             ExtensionAddonMenu menu) {
-        var loaded = menu.targetChunkLoaded();
-        var text = chunkStatus(menu).getString();
+        var forceLoaded = menu.targetChunkForceLoaded();
+        var text = forceLoadStatus(menu).getString();
 
         graphics.drawString(font, text, context.left() + CHUNK_BADGE_RIGHT - font.width(text),
                 context.top() + CHUNK_BADGE_Y,
-                loaded ? AddonPanelStyle.PANEL_TEXT_GOOD : AddonPanelStyle.PANEL_TEXT_BAD, false);
+                forceLoaded ? AddonPanelStyle.PANEL_TEXT_GOOD : AddonPanelStyle.PANEL_TEXT_BAD, false);
     }
 
     /** Tooltip of the reserved slot: what it is for, shown while the slot is empty (or hovered) too. */
@@ -184,8 +187,8 @@ public final class WirelessAddonPage implements AddonPage {
      * <p>
      * A wired addon has one line - the machine it is attached to - while a dock reports its whole binding.
      * A dock that is not linked, and a wired addon no machine ever claimed, show the same "not linked"
-     * line the under-panel line used to show. The chunk status is not one of these lines: it is drawn as
-     * the badge in the panel's top right corner, so it stays out of the reading order of the text block.
+     * line the under-panel line used to show. The force load state is not one of these lines: it is drawn
+     * as the badge in the panel's top right corner, so it stays out of the reading order of the text block.
      */
     private static List<Line> infoLines(ExtensionAddonMenu menu) {
         var nameKey = menu.linkedMachineNameKey();

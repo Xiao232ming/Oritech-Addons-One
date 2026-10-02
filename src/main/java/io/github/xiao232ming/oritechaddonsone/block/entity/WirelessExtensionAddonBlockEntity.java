@@ -85,16 +85,8 @@ public class WirelessExtensionAddonBlockEntity extends ExtensionAddonBlockEntity
         return linkedMachine;
     }
 
-    /**
-     * True while the chunk of the linked machine is loaded, i.e. while this dock can really hand its
-     * plugins over. A dock that is not linked at all has no target, so there is nothing loaded either; the
-     * value is read on the server (see {@code ExtensionAddonMenu#targetChunkLoaded()}) and shown by the
-     * status badge in the panel's top strip.
-     */
-    @Override
-    public boolean isTargetChunkLoaded() {
-        return linkedMachine != null && level != null && level.isLoaded(linkedMachine);
-    }
+    // The inherited isTargetChunkForceLoaded() answers for the link as well, because it follows
+    // connectedMachinePos() - a dock that is not linked has no target and therefore nothing kept loaded.
 
     public boolean isLinkedTo(BlockPos machine) {
         return linkedMachine != null && linkedMachine.equals(machine);
