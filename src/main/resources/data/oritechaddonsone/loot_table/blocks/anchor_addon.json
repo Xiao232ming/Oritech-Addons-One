@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "bonus_rolls": 0,
+      "conditions": [
+        {"condition": "minecraft:survives_explosion"}
+      ],
+      "entries": [
+        {"type": "minecraft:item", "name": "oritechaddonsone:anchor_addon"}
+      ],
+      "rolls": 1
+    }
+  ],
+  "random_sequence": "oritechaddonsone:blocks/anchor_addon"
+}

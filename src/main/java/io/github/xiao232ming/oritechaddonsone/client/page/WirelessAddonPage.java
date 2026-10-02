@@ -6,9 +6,12 @@ import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
 
+import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 import io.github.xiao232ming.oritechaddonsone.client.AddonPanelStyle;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonLayout;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonMenu;
@@ -118,6 +121,10 @@ public final class WirelessAddonPage implements AddonPage {
      * Draws the force load badge, the info lines and the frame of the reserved slot. The slot's item is
      * drawn by the screen like every other slot's item; the frame is painted here, one pixel above and left
      * of the slot, exactly like the plugin page does it for its fields.
+     * <p>
+     * While the slot is empty the chunk anchor's own icon is drawn into it, dimmed and behind a veil,
+     * exactly like the plugin page draws the type III reference plugins - so the cell reads as "this is
+     * where the anchor goes" instead of being an unexplained empty field.
      */
     @Override
     public void render(AddonPageContext context, GuiGraphics graphics, float partialTick) {
@@ -135,6 +142,35 @@ public final class WirelessAddonPage implements AddonPage {
 
         AddonPanelStyle.drawSlot(graphics, context.left() + ExtensionAddonLayout.RESERVED_SLOT_X - 1,
                 context.top() + ExtensionAddonLayout.RESERVED_SLOT_Y - 1);
+
+        drawReservedSlotHint(menu, graphics, context);
+    }
+
+    /**
+     * Draws the anchor icon of the empty reserved slot.
+     * <p>
+     * Same layering as the type III hints of {@link PluginAddonPage}: the icon is pushed back to
+     * {@link AddonPanelStyle#HINT_ICON_Z} so the veil drawn at {@link AddonPanelStyle#HINT_VEIL_Z} covers
+     * it, while an anchor that is really inserted is drawn by the screen at the usual item depth
+     * ({@link AddonPanelStyle#ITEM_Z}) and covers the veil. Nothing is drawn while the slot holds
+     * something: the frame and the item are the cell then.
+     */
+    private static void drawReservedSlotHint(ExtensionAddonMenu menu, GuiGraphics graphics, AddonPageContext context) {
+        if (!menu.getSlot(menu.reservedSlot()).getItem().isEmpty()) return;
+
+        int slotX = context.left() + ExtensionAddonLayout.RESERVED_SLOT_X;
+        int slotY = context.top() + ExtensionAddonLayout.RESERVED_SLOT_Y;
+
+        graphics.pose().pushPose();
+        graphics.pose().translate(0.0F, 0.0F, AddonPanelStyle.HINT_ICON_Z - AddonPanelStyle.ITEM_Z);
+        graphics.renderItem(new ItemStack(OritechAddonsOne.ANCHOR_ADDON_ITEM.get()), slotX, slotY);
+        graphics.pose().popPose();
+
+        // renderItem flushes its own batch, so the veil lands on top of the icon and everything drawn
+        // afterwards - the real item included - lands on top of the veil.
+        graphics.fill(RenderType.guiOverlay(), slotX, slotY, slotX + 16, slotY + 16, AddonPanelStyle.HINT_VEIL_Z,
+                AddonPanelStyle.HINT_VEIL);
+        graphics.flush();
     }
 
     /**

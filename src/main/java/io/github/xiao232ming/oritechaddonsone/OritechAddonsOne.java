@@ -35,10 +35,12 @@ import rearth.oritech.block.blocks.addons.MachineAddonBlock;
 import rearth.oritech.block.entity.addons.AddonBlockEntity;
 
 import io.github.xiao232ming.oritechaddonsone.addon.AddonStorageBonus;
+import io.github.xiao232ming.oritechaddonsone.block.AnchorAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonType;
 import io.github.xiao232ming.oritechaddonsone.block.PluginAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.block.WirelessExtensionAddonBlock;
+import io.github.xiao232ming.oritechaddonsone.block.entity.AnchorAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.WirelessExtensionAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonLayout;
@@ -141,6 +143,24 @@ public class OritechAddonsOne {
             blockProperties());
 
     /**
+     * 锚点插件 - the chunk anchor: while it is attached to a machine, the chunk containing that machine is
+     * force loaded, so the machine keeps working while no player is nearby.
+     * <p>
+     * It has no stats at all (neutral like the other two plugins of this mod), the effect is applied by
+     * {@code AnchorForceLoad}. The same item can also be put into the reserved slot of an Extension Addon
+     * or a Wireless Extension Dock, where it force loads the chunk of the machine that addon is connected
+     * to.
+     * <p>
+     * Unlike the warehouse and tank addons this block uses its own block class and block entity
+     * ({@link AnchorAddonBlock} / {@code AnchorAddonBlockEntity}), because the anchor has to learn which
+     * machine claimed it - the warehouse and tank addons never need to know.
+     */
+    public static final DeferredBlock<AnchorAddonBlock> ANCHOR_ADDON = BLOCKS.registerBlock(
+            "anchor_addon",
+            properties -> new AnchorAddonBlock(properties, pluginAddonSettings()),
+            blockProperties());
+
+    /**
      * Block items of all three types. They forward the block's tooltip to the item (the bridge Oritech
      * uses for its own blocks) and use the block name as their item name.
      * <p>
@@ -196,6 +216,16 @@ public class OritechAddonsOne {
                     "+" + AddonStorageBonus.CAPACITY_PER_TANK_ADDON + " mB"),
             new Item.Properties());
 
+    /**
+     * Block item of the anchor plugin. Its description line has no number of its own - the plugin forces a
+     * chunk, it does not change a stat - so the item is registered without a green bonus argument and the
+     * language key has no placeholder, see {@link PluginAddonItem#PluginAddonItem}.
+     */
+    public static final DeferredItem<BlockItem> ANCHOR_ADDON_ITEM = ITEMS.registerItem(
+            "anchor_addon",
+            properties -> new PluginAddonItem(ANCHOR_ADDON.get(), properties),
+            new Item.Properties());
+
     /** All plugin types share one block entity type, the type is read from the owning block. */
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<ExtensionAddonBlockEntity>> EXTENSION_ADDON_ENTITY =
             BLOCK_ENTITIES.register("extension_addon",
@@ -210,24 +240,29 @@ public class OritechAddonsOne {
                             WIRELESS_EXTENSION_ADDON_3.get()).build(null));
 
     /**
-     * Block entity type of the warehouse and tank addons.
+     * Block entity type of the warehouse, tank and anchor addons.
      * <p>
-     * The block entities are Oritech's ordinary {@link AddonBlockEntity}; the type exists because
-     * Minecraft validates the block state against the block entity's type when the block entity is
-     * created ({@code BlockEntity#validateBlockState}). Oritech's shared {@code oritech:addon_entity}
-     * type only lists Oritech's own addon blocks, so this type lists the two plugin blocks instead and
-     * is used by {@link PluginAddonBlock#newBlockEntity} as well as by the factory below (which is what
+     * The block entities are Oritech's ordinary {@link AddonBlockEntity} - the anchor uses
+     * {@link AnchorAddonBlockEntity}, a subclass of it; the type exists because Minecraft validates the
+     * block state against the block entity's type when the block entity is created
+     * ({@code BlockEntity#validateBlockState}). Oritech's shared {@code oritech:addon_entity} type only
+     * lists Oritech's own addon blocks, so this type lists the plugin blocks of this mod instead and is
+     * used by {@link PluginAddonBlock#newBlockEntity} as well as by the factory below (which is what
      * creates the block entities when a saved chunk is loaded again).
      * <p>
-     * The factory cannot be {@code AddonBlockEntity::new}: that two argument constructor passes
-     * Oritech's shared type, which would fail the very same validation on load. The three argument
-     * constructor takes the type explicitly, which is why the factory is a method of this class
-     * ({@link #pluginAddonEntity}).
+     * <b>Every new plugin block has to be listed here.</b> A block that is missing from this list throws
+     * {@code IllegalStateException: Invalid block entity} as soon as it is placed.
+     * <p>
+     * The factory cannot be {@code AddonBlockEntity::new}: that two argument constructor passes Oritech's
+     * shared type, which would fail the very same validation on load. The three argument constructor
+     * takes the type explicitly, which is why the factory is a method of this class
+     * ({@link #pluginAddonEntity}) - for the same reason the anchor block entity cannot be created by a
+     * plain constructor reference either.
      */
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<AddonBlockEntity>> PLUGIN_ADDON_ENTITY =
             BLOCK_ENTITIES.register("plugin_addon",
                     () -> BlockEntityType.Builder.<AddonBlockEntity>of(OritechAddonsOne::pluginAddonEntity,
-                            WAREHOUSE_ADDON.get(), TANK_ADDON.get()).build(null));
+                            WAREHOUSE_ADDON.get(), TANK_ADDON.get(), ANCHOR_ADDON.get()).build(null));
 
     public static final DeferredHolder<MenuType<?>, MenuType<ExtensionAddonMenu>> EXTENSION_ADDON_MENU =
             MENUS.register("extension_addon", () -> IMenuTypeExtension.create(ExtensionAddonMenu::new));
@@ -246,6 +281,7 @@ public class OritechAddonsOne {
                         output.accept(WIRELESS_EXTENSION_ADDON_3_ITEM.get());
                         output.accept(WAREHOUSE_ADDON_ITEM.get());
                         output.accept(TANK_ADDON_ITEM.get());
+                        output.accept(ANCHOR_ADDON_ITEM.get());
                     })
                     .build());
 
@@ -282,13 +318,17 @@ public class OritechAddonsOne {
     }
 
     /**
-     * Factory of {@link #PLUGIN_ADDON_ENTITY}: Oritech's ordinary {@link AddonBlockEntity}, created with
-     * this mod's own block entity type (see there why the two argument constructor is not usable).
+     * Factory of {@link #PLUGIN_ADDON_ENTITY}, used when a saved chunk is loaded again: Oritech's ordinary
+     * {@link AddonBlockEntity}, or the anchor's own subclass for the anchor block, both created with this
+     * mod's own block entity type (see there why the two argument constructor is not usable).
      * <p>
      * It is a method instead of an inline lambda only because a static field cannot refer to itself by
      * simple name inside its own initializer.
      */
     private static AddonBlockEntity pluginAddonEntity(BlockPos pos, BlockState state) {
+        if (state.getBlock() instanceof AnchorAddonBlock) {
+            return new AnchorAddonBlockEntity(pos, state);
+        }
         return new AddonBlockEntity(PLUGIN_ADDON_ENTITY.get(), pos, state);
     }
 
