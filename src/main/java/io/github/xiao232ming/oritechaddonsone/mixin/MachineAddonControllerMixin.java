@@ -16,6 +16,7 @@ import rearth.oritech.util.MachineAddonController;
 import rearth.oritech.util.MachineAddonController.AddonBlock;
 
 import io.github.xiao232ming.oritechaddonsone.addon.MachineStorageBonuses;
+import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.WirelessExtensionAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.wireless.AddonEnergyGuard;
 import io.github.xiao232ming.oritechaddonsone.wireless.WirelessLinks;
@@ -146,5 +147,23 @@ public interface MachineAddonControllerMixin {
         if (changed && controller instanceof NetworkedBlockEntity networked) {
             networked.sendUpdate(SyncType.GUI_OPEN);
         }
+    }
+
+    /**
+     * Re-applies the "a control unit is stored" flag of this mod's addons once the scan is complete.
+     * <p>
+     * The flag lives in the addon's synced block state (see
+     * {@code ExtensionAddonBlockEntity#refreshControlUnitStates}): {@code writeAddons} writes the state it
+     * captured when the scan started back onto the addon after letting it merge its plugins, so the value
+     * written during that merge does not survive and the flag has to be restored here - the one point
+     * after which nothing overwrites it again.
+     */
+    @Inject(method = "initAddons(Lnet/minecraft/core/BlockPos;)V", at = @At("RETURN"))
+    private void oritechaddonsone$refreshControlUnitStates(CallbackInfo callback) {
+        var controller = (MachineAddonController) (Object) this;
+        var level = controller.getWorldForAddon();
+        if (level == null || level.isClientSide()) return;
+
+        ExtensionAddonBlockEntity.refreshControlUnitStates(level, controller.getConnectedAddons());
     }
 }

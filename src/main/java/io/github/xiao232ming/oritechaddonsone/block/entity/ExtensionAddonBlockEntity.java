@@ -624,6 +624,26 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         }
     }
 
+    /**
+     * Mirrors the stored control unit into the synced block state of every extension addon of a machine,
+     * once that machine's addon scan is complete.
+     * <p>
+     * The flag cannot be left to {@link #updateControlUnitState()} alone: Oritech's
+     * {@code MachineAddonController#writeAddons} captures the addon's block state when the scan starts and
+     * writes it back <em>after</em> calling {@code setControllerPos} - i.e. after
+     * {@link #applyCombinedStats()} wrote the flag - so that write is thrown away and the state the block
+     * had before the scan survives. Re-applying the flag at the end of the scan is therefore the only
+     * point where it holds; it also repairs addons whose state was saved by an older version of this mod,
+     * where the block still carried the property's default {@code true}.
+     */
+    public static void refreshControlUnitStates(Level level, Iterable<BlockPos> addons) {
+        for (var pos : addons) {
+            if (level.getBlockEntity(pos) instanceof ExtensionAddonBlockEntity addon) {
+                addon.updateControlUnitState();
+            }
+        }
+    }
+
     // ------------------------------------------------------------------ inventory
 
     @Override

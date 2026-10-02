@@ -97,6 +97,12 @@ public class ExtensionAddonBlock extends MachineAddonBlock implements AddonDetai
     public ExtensionAddonBlock(Properties properties, AddonSettings addonSettings, ExtensionAddonType type) {
         super(properties, addonSettings);
         this.type = type;
+
+        // The flag has to be defaulted explicitly: an unregistered boolean property defaults to true (its
+        // first possible value), so without this every freshly placed or loaded addon claims a stored
+        // control unit and the machine shows its redstone panel without one. Same reason
+        // WirelessExtensionAddonBlock registers its own control unit flag as false.
+        registerDefaultState(defaultBlockState().setValue(HAS_CONTROL_UNIT, false));
     }
 
     /** Which Extension Addon this block is (decides slot count, accepted plugins and GUI). */
