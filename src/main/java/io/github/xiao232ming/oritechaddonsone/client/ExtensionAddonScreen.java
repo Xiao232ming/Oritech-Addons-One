@@ -8,6 +8,7 @@ import net.minecraft.world.entity.player.Inventory;
 import io.github.xiao232ming.oritechaddonsone.client.page.AddonPageContext;
 import io.github.xiao232ming.oritechaddonsone.client.page.AddonPageRegistry;
 import io.github.xiao232ming.oritechaddonsone.client.page.AddonTabStrip;
+import io.github.xiao232ming.oritechaddonsone.client.page.ProxyPickerState;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonLayout;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonMenu;
 
@@ -67,6 +68,20 @@ public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddon
      */
     private void syncVisiblePage() {
         this.menu.setWirelessPageActive(this.tabs.selectedPage() == AddonPageRegistry.wirelessPage());
+        // leaving the Item Proxy page closes whatever picker was open on it, so coming back starts fresh
+        if (this.tabs.selectedPage() != AddonPageRegistry.proxyPage()) {
+            ProxyPickerState.close();
+        }
+    }
+
+    /**
+     * Forgets the slot layouts the Item Proxy page asked the server for. They describe one machine, so
+     * keeping them past the GUI would only leak memory (and show a stale machine after a relink).
+     */
+    @Override
+    public void removed() {
+        super.removed();
+        ProxyPickerState.clear();
     }
 
     /**

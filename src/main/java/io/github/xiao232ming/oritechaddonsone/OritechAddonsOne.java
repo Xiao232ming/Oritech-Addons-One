@@ -31,6 +31,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 import io.github.xiao232ming.oritechaddonsone.item.ExtensionAddonItem;
 import io.github.xiao232ming.oritechaddonsone.item.PluginAddonItem;
 import rearth.oritech.api.energy.EnergyApi;
+import rearth.oritech.api.item.ItemApi;
 import rearth.oritech.block.blocks.addons.MachineAddonBlock;
 import rearth.oritech.block.entity.addons.AddonBlockEntity;
 
@@ -45,6 +46,7 @@ import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEn
 import io.github.xiao232ming.oritechaddonsone.block.entity.WirelessExtensionAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonLayout;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonMenu;
+import io.github.xiao232ming.oritechaddonsone.network.ProxyNetworking;
 
 /**
  * An addon for Oritech (1.21.1) that adds the "Extension Addon" block.
@@ -354,6 +356,8 @@ public class OritechAddonsOne {
         TABS.register(modEventBus);
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
         modEventBus.addListener(this::onCommonSetup);
+        // the two packets of the Item Proxy page (see ProxyNetworking)
+        modEventBus.addListener(ProxyNetworking::register);
 
         // Tells Oritech to expose this block entity's energy storage (see
         // ExtensionAddonBlockEntity#getEnergyStorage) to Oritech's own energy network *and* to
@@ -362,6 +366,14 @@ public class OritechAddonsOne {
         // usable as an energy input while a machine acceptor plugin is inserted.
         EnergyApi.BLOCK.registerBlockEntity(() -> (BlockEntityType<?>) EXTENSION_ADDON_ENTITY.get());
         EnergyApi.BLOCK.registerBlockEntity(() -> (BlockEntityType<?>) WIRELESS_EXTENSION_ADDON_ENTITY.get());
+
+        // Same bridge for items: this is what makes the Item Proxy page work. Oritech's
+        // NeoforgeItemApiImpl wraps our block entity's ItemApi.BlockProvider (see
+        // ExtensionAddonBlockEntity#getInventoryStorage) in a NeoForge IItemHandler, so Oritech's own item
+        // pipes - which look the neighbouring inventory up through ItemApi - as well as hoppers and other
+        // mods see the machine inventory slot a face was bound to.
+        ItemApi.BLOCK.registerBlockEntity(() -> (BlockEntityType<?>) EXTENSION_ADDON_ENTITY.get());
+        ItemApi.BLOCK.registerBlockEntity(() -> (BlockEntityType<?>) WIRELESS_EXTENSION_ADDON_ENTITY.get());
 
         LOGGER.info("Oritech Addons One loaded: {}, {}, {} and the wireless variants {} registered",
                 EXTENSION_ADDON_1.getId(), EXTENSION_ADDON_2.getId(), EXTENSION_ADDON_3.getId(),

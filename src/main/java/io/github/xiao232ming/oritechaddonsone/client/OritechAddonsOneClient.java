@@ -10,6 +10,8 @@ import net.neoforged.neoforge.client.gui.ConfigurationScreen;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 
 import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
+import io.github.xiao232ming.oritechaddonsone.client.page.ProxyPickerState;
+import io.github.xiao232ming.oritechaddonsone.network.ProxyNetworking;
 
 /**
  * Client only setup: registers the screen for the Extension Addon menu and the in-game config screen
@@ -22,6 +24,9 @@ public class OritechAddonsOneClient {
     public OritechAddonsOneClient(ModContainer container) {
         // NeoForge's standard config screen with editable values for both plugin types.
         container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
+        // the Item Proxy page asks the server for the machine's slot layout; the answer is routed here, so
+        // that no client class is ever touched on a dedicated server (see ProxyNetworking.ClientHandler)
+        ProxyNetworking.setClientHandler(ProxyPickerState::putLayout);
         OritechAddonsOne.LOGGER.debug("In-game config screen registered for {}", OritechAddonsOne.MODID);
     }
 

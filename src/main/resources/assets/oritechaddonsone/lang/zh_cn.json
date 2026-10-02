@@ -66,5 +66,21 @@
   "gui.oritechaddonsone.wireless.chunk_force_loaded.yes": "区块：已强制加载",
   "gui.oritechaddonsone.wireless.chunk_force_loaded.no": "区块：未强制加载",
   "gui.oritechaddonsone.page.plugins": "插件",
-  "gui.oritechaddonsone.page.wireless": "无线"
+  "gui.oritechaddonsone.page.wireless": "无线",
+  "gui.oritechaddonsone.page.proxy": "物品代理",
+  "gui.oritechaddonsone.page.proxy.tooltip": "本方块六个面的展开图：点击某个面，让该面代理机器库存中的一个槽位",
+  "gui.oritechaddonsone.proxy.counter": "可配置数：%s/%s",
+  "gui.oritechaddonsone.proxy.face": "面：%s",
+  "gui.oritechaddonsone.proxy.face.configured": "代理机器槽位 %s（右键取消）",
+  "gui.oritechaddonsone.proxy.face.unconfigured": "未代理——点击以选择机器槽位",
+  "gui.oritechaddonsone.proxy.picker.loading": "正在读取机器库存……",
+  "gui.oritechaddonsone.proxy.picker.no_machine": "未连接机器",
+  "gui.oritechaddonsone.proxy.picker.hint": "点击 %s 面要代理的机器槽位（右键取消）",
+  "gui.oritechaddonsone.proxy.picker.slot": "机器槽位 %s",
+  "gui.oritechaddonsone.proxy.side.north": "前",
+  "gui.oritechaddonsone.proxy.side.south": "后",
+  "gui.oritechaddonsone.proxy.side.east": "右",
+  "gui.oritechaddonsone.proxy.side.west": "左",
+  "gui.oritechaddonsone.proxy.side.up": "上",
+  "gui.oritechaddonsone.proxy.side.down": "下"
 }

@@ -1,5 +1,8 @@
 package io.github.xiao232ming.oritechaddonsone.block.entity;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
@@ -25,6 +28,7 @@ import org.jetbrains.annotations.Nullable;
 
 import rearth.oritech.api.energy.EnergyApi;
 import rearth.oritech.api.energy.containers.DelegatingEnergyStorage;
+import rearth.oritech.api.item.ItemApi;
 import rearth.oritech.block.blocks.addons.MachineAddonBlock;
 import rearth.oritech.api.networking.NetworkedBlockEntity;
 import rearth.oritech.api.networking.SyncType;
@@ -35,6 +39,7 @@ import rearth.oritech.init.BlockContent;
 import rearth.oritech.init.OritechConfig;
 import rearth.oritech.util.MachineAddonController;
 import rearth.oritech.util.MachineAddonController.BaseAddonData;
+import rearth.oritech.util.ScreenProvider;
 
 import io.github.xiao232ming.oritechaddonsone.Config;
 import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
@@ -66,9 +71,15 @@ import io.github.xiao232ming.oritechaddonsone.wireless.WirelessLinks;
  * by replaying the machine's {@code getAdditionalStatFromAddon} hook for every stored plugin, so they
  * work as if they were attached directly. While a machine acceptor plugin is stored, this block also
  * offers an energy input that feeds the machine.
+ * <p>
+ * Since type II also accepts Oritech's inventory proxy addon, this block can additionally proxy the
+ * machine's item inventory to the outside world: see {@link #getInventoryStorage(Direction)},
+ * {@link MachineProxyStorage} and {@link ProxyFaceBindings}. Which face proxies which machine slot is
+ * configured on the GUI's Item Proxy page and stored here, so it survives a save and is server
+ * authoritative.
  */
 public class ExtensionAddonBlockEntity extends AddonBlockEntity
-        implements Container, MenuProvider, EnergyApi.BlockProvider, AddonBonusSource {
+        implements Container, MenuProvider, EnergyApi.BlockProvider, AddonBonusSource, ItemApi.BlockProvider {
 
     private final ExtensionAddonType type;
     /**
@@ -384,6 +395,147 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         return false;
     }
 
+    // ------------------------------------------------------------------ inventory proxy (item proxy page)
+
+    /**
+     * Which face of this block proxies which slot of the machine inventory. Empty while no inventory
+     * proxy addon is stored, which is what turns every face into "not proxying".
+     */
+    private final ProxyFaceBindings proxyFaces = new ProxyFaceBindings();
+
+    /**
+     * One storage per face, created on demand and kept so the capability wrapper Oritech builds for us
+     * ({@code NeoforgeItemApiImpl.ContainerStorageWrapper}) always sees the same object. The storages do
+     * not cache anything themselves - they resolve the machine inventory on every call - so keeping them
+     * is only about identity, not about staleness.
+     */
+    private final java.util.EnumMap<Direction, MachineProxyStorage> proxyStorages =
+            new java.util.EnumMap<>(Direction.class);
+
+    /** Number of inventory proxy addons stored in this block (a stack of them counts per item). */
+    public int inventoryProxyCount() {
+        return countPlugins(BlockContent.MACHINE_INVENTORY_PROXY_ADDON);
+    }
+
+    /**
+     * True while this block holds at least one inventory proxy addon, i.e. while it may proxy items to the
+     * outside at all. Type II accepts that addon, so this is what gates every part of the feature.
+     */
+    public boolean hasInventoryProxy() {
+        return inventoryProxyCount() > 0;
+    }
+
+    /** True while the Item Proxy page has anything to offer: an inventory proxy addon is stored. */
+    public boolean canProxyItems() {
+        return hasInventoryProxy();
+    }
+
+    /** The per-face bindings of this block; never {@code null}, empty while nothing is configured. */
+    public ProxyFaceBindings proxyFaces() {
+        return proxyFaces;
+    }
+
+    /** Maximum number of configurable faces: one per stored inventory proxy addon. */
+    public int maxProxyFaces() {
+        return inventoryProxyCount();
+    }
+
+    /**
+     * Slot count of the machine inventory one face would proxy, or {@code 0} while there is no machine
+     * (not connected, chunk unloaded, block entity gone). Used to refuse a binding the server cannot honour.
+     */
+    public int proxySlotCount() {
+        var storage = MachineProxyStorage.machineStorage(this);
+        return storage == null ? 0 : storage.getSlotCount();
+    }
+
+    /**
+     * The slot layout of the machine inventory, as used by the picker of the Item Proxy page: one
+     * {@code int[]} of {@code {container index, x, y}} per visible slot, exactly like Oritech's own
+     * inventory proxy screen reads them. Empty while the machine cannot be resolved, which the page shows
+     * as "no machine".
+     */
+    public List<int[]> proxyPickerSlots() {
+        var machine = connectedMachinePos();
+        if (machine == null || level == null || !level.isLoaded(machine)) return List.of();
+
+        if (!(level.getBlockEntity(machine) instanceof ScreenProvider screen)) return List.of();
+
+        var slots = new ArrayList<int[]>(screen.getGuiSlots().size());
+        for (var slot : screen.getGuiSlots()) {
+            slots.add(new int[]{slot.index(), slot.x(), slot.y()});
+        }
+        return List.copyOf(slots);
+    }
+
+    /**
+     * Points one face at one slot of the machine inventory. Refused while the face is not configurable:
+     * there has to be a free inventory proxy addon for it, or the face was already configured before.
+     */
+    public boolean bindProxyFace(Direction face, int slot) {
+        if (level == null || level.isClientSide() || face == null || slot < 0) return false;
+        if (!canProxyItems()) return false;
+        if (!proxyFaces.isConfigured(face) && proxyFaces.configuredFaces() >= maxProxyFaces()) {
+            OritechAddonsOne.LOGGER.debug("[proxy] {} refused face {}: all {} slot(s) configured",
+                    worldPosition, face, maxProxyFaces());
+            return false;
+        }
+
+        proxyFaces.bind(face, slot);
+        setChanged();
+        syncProxyToClient();
+        return true;
+    }
+
+    /** Removes the binding of one face, so that face stops proxying anything. */
+    public boolean unbindProxyFace(Direction face) {
+        if (level == null || level.isClientSide() || face == null) return false;
+        if (!proxyFaces.isConfigured(face)) return false;
+
+        proxyFaces.unbind(face);
+        setChanged();
+        syncProxyToClient();
+        return true;
+    }
+
+    /**
+     * Drops every binding while the block no longer holds an inventory proxy addon. Called from
+     * {@link #contentsChanged}: a block that lost its last proxy addon must not keep offering the faces of
+     * a machine it can no longer be configured for.
+     */
+    private void reconcileProxyBindings() {
+        if (level == null || level.isClientSide()) return;
+        if (proxyFaces.isEmpty()) return;
+        if (hasInventoryProxy()) return;
+
+        proxyFaces.clear();
+        setChanged();
+        syncProxyToClient();
+    }
+
+    /** Tells the client that the bindings changed, so an open GUI redraws the net right away. */
+    private void syncProxyToClient() {
+        if (level == null) return;
+        level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), net.minecraft.world.level.block.Block.UPDATE_CLIENTS);
+    }
+
+    /** Polled while a pipe or hopper reads/writes through one of our faces; today only persists the state. */
+    public void onProxyUsed() {
+        if (level != null && !level.isClientSide()) setChanged();
+    }
+
+    /**
+     * Inventory a face of this block offers to the outside world (Oritech's {@code ItemApi.BlockProvider}
+     * contract). The returned storage reports the machine's slots and only lets the bound one be used; with
+     * no binding, no machine or no inventory proxy addon it reports an empty inventory, so a pipe simply
+     * sees "nothing here" instead of an error.
+     */
+    @Override
+    public ItemApi.InventoryStorage getInventoryStorage(Direction direction) {
+        var face = direction == null ? Direction.NORTH : direction;
+        return proxyStorages.computeIfAbsent(face, key -> new MachineProxyStorage(this, key));
+    }
+
     // ------------------------------------------------------------------ energy input (acceptor plugin)
 
     protected boolean isEnergyInputActive() {
@@ -615,6 +767,8 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
     private void contentsChanged() {
         OritechAddonsOne.LOGGER.debug("[diag] contents changed on {} (slot 0 = {})", worldPosition, items.get(0));
         setChanged();
+        // a block that lost its last inventory proxy addon must not keep any face configured
+        reconcileProxyBindings();
         // keep the synced "has a control unit" state (and the machine) up to date right away
         updateControlUnitState();
         serverTickRedstone();
@@ -791,6 +945,9 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
 
         ContainerHelper.saveAllItems(nbt, singles, registries);
         nbt.putIntArray("counts", counts);
+
+        // the per-face inventory proxy bindings of the Item Proxy page
+        proxyFaces.save(nbt);
     }
 
     @Override
@@ -798,6 +955,9 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         super.loadAdditional(nbt, registries);
 
         ContainerHelper.loadAllItems(nbt, items, registries);
+
+        // a stale binding is harmless: it only resolves to an inventory while the machine is there
+        proxyFaces.load(nbt);
 
         var counts = nbt.getIntArray("counts");
         if (counts.length == 0) return;

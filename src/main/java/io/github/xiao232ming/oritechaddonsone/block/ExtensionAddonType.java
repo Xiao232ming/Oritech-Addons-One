@@ -27,8 +27,9 @@ import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonLayout;
  * The three known Extension Addon types.
  * <p>
  * Type I takes the stat plugins and aggregates their numbers.
- * Type II takes every other Oritech addon (except the inventory proxy) and additionally forwards its
- * special, block-type based behaviour to the machine.
+ * Type II takes every other Oritech addon - including the inventory proxy, which gives the block the
+ * "Item Proxy" page of its GUI - and additionally forwards its special, block-type based behaviour to the
+ * machine.
  * Type III takes the same stat plugins, but gives every plugin tier its own slot.
  * <p>
  * Besides the six Oritech stat plugins this mod adds two plugins of its own, the warehouse addon
@@ -313,9 +314,13 @@ public enum ExtensionAddonType {
     }
 
     /**
-     * Every Oritech addon that is not one of the stat plugins, except the inventory proxy (it
-     * provides its own inventory, which cannot be forwarded). Discovered from the block registry so
+     * Every Oritech addon that is not one of the stat plugins. Discovered from the block registry so
      * addons from other mods are included as well.
+     * <p>
+     * The inventory proxy is one of them since the Item Proxy page exists: the page lets a face of this
+     * block proxy one slot of the machine inventory, which is exactly what the proxy would do if it were
+     * attached to the machine directly (see {@code MachineProxyStorage}). Type I and III still refuse it,
+     * because proxying is not a stat the aggregated numbers could carry.
      */
     public static Set<Block> type2Plugins() {
         if (type2 == null) {
@@ -323,7 +328,6 @@ public enum ExtensionAddonType {
             // own category, and their effect (a bigger inventory / bigger tanks) is implemented by this
             // mod instead of by Oritech, so they belong in the stat categories and not in type II.
             var excluded = new HashSet<>(type1Plugins());
-            excluded.add(BlockContent.MACHINE_INVENTORY_PROXY_ADDON);
             excluded.add(OritechAddonsOne.WAREHOUSE_ADDON.get());
             excluded.add(OritechAddonsOne.TANK_ADDON.get());
             // The chunk anchor has no effect at all inside a plugin slot: it works while it is attached to
@@ -340,5 +344,25 @@ public enum ExtensionAddonType {
             type2 = Set.copyOf(result);
         }
         return type2;
+    }
+
+    // ------------------------------------------------------------------ blocks of a type
+
+    /** The wired Extension Addon block of this type. */
+    public Block wiredBlock() {
+        return switch (this) {
+            case TYPE_1 -> OritechAddonsOne.EXTENSION_ADDON_1.get();
+            case TYPE_2 -> OritechAddonsOne.EXTENSION_ADDON_2.get();
+            case TYPE_3 -> OritechAddonsOne.EXTENSION_ADDON_3.get();
+        };
+    }
+
+    /** The Wireless Extension Dock block of this type. */
+    public Block wirelessBlock() {
+        return switch (this) {
+            case TYPE_1 -> OritechAddonsOne.WIRELESS_EXTENSION_ADDON_1.get();
+            case TYPE_2 -> OritechAddonsOne.WIRELESS_EXTENSION_ADDON_2.get();
+            case TYPE_3 -> OritechAddonsOne.WIRELESS_EXTENSION_ADDON_3.get();
+        };
     }
 }
