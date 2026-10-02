@@ -21,10 +21,12 @@ import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonMenu;
  * <p>
  * The panel carries a {@linkplain AddonTabStrip tab strip} on its right edge, one tab per registered
  * {@link io.github.xiao232ming.oritechaddonsone.client.page.AddonPage}. The strip is part of the GUI width
- * ({@link ExtensionAddonLayout#TOTAL_WIDTH}) so the panel and its tabs stay centred together, but the
- * panel body itself keeps its original width and layout - only the page that is drawn inside it changes
- * when a tab is clicked. Pages are a presentation detail: the menu slots, their positions and the sync are
- * the same as before, and the tab strip holds no state that the server ever sees.
+ * ({@link ExtensionAddonLayout#TOTAL_WIDTH}) so the panel and its tabs stay centred together; the panel
+ * body itself is sized by the layout (vanilla width plus the layout's free strip, and tall enough for the
+ * Item Proxy page's net). Only the page that is drawn inside it changes when a tab is clicked, and the
+ * page list itself is refreshed while the GUI is open when the block's contents change. Pages are a
+ * presentation detail: the menu slots, their positions and the sync are the same as before, and the tab
+ * strip holds no state that the server ever sees.
  * <p>
  * This class lives in a client only package and is only referenced from
  * {@link OritechAddonsOneClient}, so it is never loaded on a dedicated server.
@@ -60,17 +62,44 @@ public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddon
     /**
      * Tells the menu which page the screen shows.
      * <p>
-     * The pages own their slots: the plugin slots belong to the plugin page and the reserved single item
-     * slot to the wireless page, so only the visible page's slots are active. That is a client side
-     * display and clicking decision - the server never sees it and the slots exist either way - and it is
-     * what keeps the plugin items from being drawn over the wireless page's info text.
+     * A page owns its slots: the plugin slots are the plugin page's and the reserved single item slot the
+     * wireless page's, so exactly one group is active - the Item Proxy page owns no menu slot at all, so
+     * neither group is. The screen asks a slot for its activity before it draws it and before it hands a
+     * click to it, which is why this single flag per group is what keeps the pages apart: no plugin item
+     * can appear on the proxy page's net and no reserved item on the plugin grid. That is a client side
+     * display and clicking decision - the server never sees it and the slots exist either way.
      */
     private void syncVisiblePage() {
-        this.menu.setWirelessPageActive(this.tabs.selectedPage() == AddonPageRegistry.wirelessPage());
+        var page = this.tabs.selectedPage();
+        this.menu.setPluginPageActive(page == AddonPageRegistry.pluginPage());
+        this.menu.setWirelessPageActive(page == AddonPageRegistry.wirelessPage());
         // leaving the Item Proxy page closes whatever picker was open on it, so coming back starts fresh
-        if (this.tabs.selectedPage() != AddonPageRegistry.proxyPage()) {
+        if (page != AddonPageRegistry.proxyPage()) {
             ProxyPickerState.close();
         }
+    }
+
+    /**
+     * Rebuilds the strip whenever the pages the menu offers changed, so the Item Proxy tab appears as soon
+     * as an inventory proxy addon is put in and disappears as soon as the last one is taken out - without
+     * reopening the GUI.
+     * <p>
+     * The page list is a function of the block's contents ({@link AddonPageRegistry#pages}), and the
+     * contents are menu slots, which the client sees as soon as the server syncs them; the cheap check
+     * runs once per container tick. It never runs on the server: the menu has no idea which page is open.
+     * {@link AddonTabStrip#setPages} keeps the selection while the selected page survives and falls back
+     * to the plugin page - the first page - when it does not.
+     */
+    @Override
+    protected void containerTick() {
+        super.containerTick();
+
+        var pages = AddonPageRegistry.pages(this.menu);
+        if (this.tabs.shows(pages)) return;
+
+        this.tabs.setPages(pages);
+        // the rebuilt tabs are at (0, 0) until they are placed at the panel again
+        this.tabs.layout(this.leftPos, this.topPos, this.width);
     }
 
     /**
@@ -134,11 +163,21 @@ public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddon
     }
 
     /**
-     * Draws the panel and its chrome: the panel body, the page that is currently selected, the player
-     * inventory frames and the tab strip.
+     * Draws the panel and its chrome: the panel body, the one selected page, the player inventory frames
+     * and the tab strip.
      * <p>
-     * The panel body keeps its original width ({@link ExtensionAddonLayout#WIDTH}); the tab strip is
-     * painted over its right border, which is what makes the selected tab look connected to the panel.
+     * The page gate: exactly one page is drawn per frame, and it is the one the strip selected
+     * ({@code this.tabs.selectedPage()}), so no page's text, counter, frame or modal overlay can leak into
+     * another page. The other half of the gate is the slot activity
+     * ({@link #syncVisiblePage}): a slot's item is extracted only while the slot is active, and only the
+     * selected page's slots are active, so no page shows another page's items either.
+     * <p>
+     * This runs before the slots themselves are extracted, so the dim plugin hints of type III end up
+     * behind any plugin that is actually inserted.
+     * <p>
+     * The panel body is {@link ExtensionAddonLayout#WIDTH} wide and {@code imageHeight} tall, both from
+     * the layout; the tab strip is painted over its right border, which is what makes the selected tab
+     * look connected to the panel.
      */
     @Override
     public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
@@ -155,9 +194,11 @@ public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddon
         graphics.fill(xo, yo + this.imageHeight - 2, right, yo + this.imageHeight, AddonPanelStyle.PANEL_DARK);
         graphics.fill(right - 2, yo, right, yo + this.imageHeight, AddonPanelStyle.PANEL_DARK);
 
-        // the content of the visible page (the plugin page draws the plugin slots and the type III hints)
+        // the content of the selected page only (the plugin page draws the plugin slots and the type III
+        // hints, the wireless page its info text and the Item Proxy page the net, counter and picker)
+        var page = this.tabs.selectedPage();
         if (this.context != null) {
-            this.tabs.selectedPage().render(this.context, graphics, partialTick);
+            page.render(this.context, graphics, partialTick);
         }
 
         // player inventory (3 rows of 9) and the hotbar - these frames came from the background

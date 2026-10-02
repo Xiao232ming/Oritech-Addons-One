@@ -46,8 +46,11 @@ import io.github.xiao232ming.oritechaddonsone.network.ProxyNetworking;
  *     <li>a left click on an unconfigured face opens the slot picker of that face (the machine's GUI slots,
  *     exactly like Oritech's proxy screen draws them),</li>
  *     <li>a right click on any face - or a left click on a configured one - removes the binding again,</li>
- *     <li>the bottom right corner shows the counter {@code 可配置数: x/x} / {@code Configurable: x/x}:
- *     configured faces out of the number of stored inventory proxy addons, which is the maximum.</li>
+ *     <li>the panel's bottom right shows the counter {@code 可配置数: x/x} / {@code Configurable: x/x}:
+ *     configured faces out of the number of stored inventory proxy addons, which is the maximum. It sits in
+ *     the free band the layout keeps below the hotbar, right aligned to
+ *     {@link ExtensionAddonLayout#counterRight()}, so it is off the inventory slots and off the tab
+ *     strip.</li>
  * </ul>
  * The binding itself is stored on the block entity and applied by the server, so a configured face really
  * proxies the machine's inventory to pipes, hoppers and other mods.
@@ -73,17 +76,18 @@ public final class ItemProxyAddonPage implements AddonPage {
     private static final Identifier ICON =
             Identifier.fromNamespaceAndPath("oritechaddonsone", "textures/gui/item_proxy_tab.png");
 
-    /** Size of one face of the net, in pixels. 18 keeps the whole net inside the free part of the panel. */
-    private static final int FACE = 18;
-    /** Left edge of the net, in panel space. */
-    private static final int NET_X = 6;
-    /** Top edge of the net, in panel space. */
-    private static final int NET_Y = 6;
-
-    /** X the counter's text ends at, in panel space (the reserved slot's frame ends at 168). */
-    private static final int COUNTER_RIGHT = ExtensionAddonLayout.RESERVED_SLOT_X + 16;
-    /** Y of the counter line, in panel space: the panel's top right corner. */
-    private static final int COUNTER_Y = 5;
+    /**
+     * Size of one face of the net, in pixels ({@link ExtensionAddonLayout#PROXY_FACE}). 18 keeps the whole
+     * net inside the free part of the panel.
+     */
+    private static final int FACE = ExtensionAddonLayout.PROXY_FACE;
+    /** Left edge of the net, in panel space, from the layout so panel and page cannot drift apart. */
+    private static final int NET_X = ExtensionAddonLayout.PROXY_NET_X;
+    /**
+     * Top edge of the net, in panel space, from the layout: below the panel's title label, and the layout
+     * keeps the player inventory below {@link ExtensionAddonLayout#PROXY_CONTENT_BOTTOM} for it.
+     */
+    private static final int NET_Y = ExtensionAddonLayout.PROXY_NET_Y;
 
     /**
      * Cell of every face inside the net for a block whose port faces north, in face units. The net is the
@@ -171,13 +175,23 @@ public final class ItemProxyAddonPage implements AddonPage {
         graphics.fill(x + FACE - 1, y, x + FACE, y + FACE, AddonPanelStyle.SLOT_DARK);
     }
 
-    /** Draws the "Configurable: x/x" counter in the bottom right corner of the panel. */
+    /**
+     * Draws the "Configurable: x/x" counter in the panel's bottom right corner.
+     * <p>
+     * The panel keeps a free band below the hotbar row for exactly this line
+     * ({@link ExtensionAddonLayout#counterY()}), so the counter sits off the player inventory slots, and it
+     * is right aligned to {@link ExtensionAddonLayout#counterRight()} - the free strip right of the
+     * inventory and {@value ExtensionAddonLayout#COUNTER_MARGIN} pixels left of the panel's border, hence
+     * clear of the tab strip, which only overlaps the panel by
+     * {@link ExtensionAddonLayout#TAB_OVERLAP} pixels.
+     */
     private void drawCounter(AddonPageContext context, GuiGraphicsExtractor graphics, int configured, int maximum) {
         var font = Minecraft.getInstance().font;
         var text = Component.translatable("gui.oritechaddonsone.proxy.counter", configured, maximum).getString();
+        var layout = context.layout();
 
-        graphics.text(font, text, context.left() + COUNTER_RIGHT - font.width(text),
-                context.top() + context.panelHeight() - 12, AddonPanelStyle.PANEL_TEXT, false);
+        graphics.text(font, text, context.left() + layout.counterRight() - font.width(text),
+                context.top() + layout.counterY(), AddonPanelStyle.PANEL_TEXT, false);
     }
 
     /**
@@ -206,7 +220,7 @@ public final class ItemProxyAddonPage implements AddonPage {
             return;
         }
 
-        var origin = pickerOrigin(slots, panelWidth, panelHeight);
+        var origin = pickerOrigin(context, slots);
         var selected = menu.proxySlotOf(face);
         var inventory = displayedInventory(menu);
 
@@ -280,7 +294,7 @@ public final class ItemProxyAddonPage implements AddonPage {
 
         var slots = ProxyPickerState.layout(menu.position(), face);
         if (slots != null && !slots.isEmpty()) {
-            var origin = pickerOrigin(slots, context.panelWidth(), context.panelHeight());
+            var origin = pickerOrigin(context, slots);
             for (var slot : slots) {
                 if (mouseX >= origin[0] + slot[1] && mouseX < origin[0] + slot[1] + 16
                         && mouseY >= origin[1] + slot[2] && mouseY < origin[1] + slot[2] + 16) {
@@ -305,7 +319,7 @@ public final class ItemProxyAddonPage implements AddonPage {
             var slots = ProxyPickerState.layout(menu.position(), openFace);
             if (slots == null || slots.isEmpty()) return List.of();
 
-            var origin = pickerOrigin(slots, context.panelWidth(), context.panelHeight());
+            var origin = pickerOrigin(context, slots);
             for (var slot : slots) {
                 if (mouseX >= origin[0] + slot[1] && mouseX < origin[0] + slot[1] + 16
                         && mouseY >= origin[1] + slot[2] && mouseY < origin[1] + slot[2] + 16) {
@@ -421,8 +435,19 @@ public final class ItemProxyAddonPage implements AddonPage {
      * Panel relative origin of the picker: the machine's GUI slots keep their own layout, but the whole
      * group is centred inside the panel (Oritech's proxy screen uses them at their original position, which
      * fits its own 176x100 panel - ours is placed so it never covers a plugin slot frame).
+     * <p>
+     * The group is centred in the panel's content band, i.e. between the panel's top bevel and
+     * {@link ExtensionAddonLayout#contentBottom()}, so the machine inventory preview stays above the
+     * player's own inventory slots and cannot cover them. A machine whose GUI slot group is taller than
+     * that band (which the panel sizes for the usual Oritech machine screens) is drawn from the top of the
+     * band downwards instead of being scaled - the preview is a copy of Oritech's own slot positions and
+     * is never resized.
      */
-    private static int[] pickerOrigin(List<int[]> slots, int panelWidth, int panelHeight) {
+    private static int[] pickerOrigin(AddonPageContext context, List<int[]> slots) {
+        int panelWidth = context.panelWidth();
+        int top = 4;
+        int bottom = context.layout().contentBottom();
+
         int minX = Integer.MAX_VALUE;
         int minY = Integer.MAX_VALUE;
         int maxX = Integer.MIN_VALUE;
@@ -438,7 +463,7 @@ public final class ItemProxyAddonPage implements AddonPage {
         var width = maxX - minX;
         var height = maxY - minY;
         return new int[]{Math.max(4, (panelWidth - width) / 2) - minX,
-                Math.max(4, (panelHeight - 16 - height) / 2) - minY};
+                Math.max(top, top + (bottom - top - height) / 2) - minY};
     }
 
     /**
