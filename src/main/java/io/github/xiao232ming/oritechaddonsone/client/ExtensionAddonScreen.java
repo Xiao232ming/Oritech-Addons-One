@@ -152,6 +152,23 @@ public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddon
     }
 
     /**
+     * Draws the panel's title, and the player inventory's label only while the inventory is really shown.
+     * <p>
+     * Vanilla's {@link AbstractContainerScreen#extractLabels} always draws both labels and it runs after the
+     * background, so the inventory label ("物品栏") used to stay visible in the middle of the Item Proxy
+     * page's configuration panel - a light grey box floating next to Oritech's page, over an inventory the
+     * modal step hides anyway. The title stays: it belongs to the panel itself.
+     */
+    @Override
+    protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+        if (this.menu.playerSlotsActive()) {
+            super.extractLabels(graphics, mouseX, mouseY);
+            return;
+        }
+        graphics.text(this.font, this.title, this.titleLabelX, this.titleLabelY, -12566464, false);
+    }
+
+    /**
      * Tabs are handled before the slot logic, and a click on a tab is consumed by the strip: vanilla
      * treats a click next to the panel as a click outside the GUI, which would start a quick craft or
      * throw the carried item into the world. A click that is not on a tab goes to the visible page first

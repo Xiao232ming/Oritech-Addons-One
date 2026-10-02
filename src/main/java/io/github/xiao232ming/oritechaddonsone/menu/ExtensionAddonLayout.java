@@ -47,17 +47,22 @@ public record ExtensionAddonLayout(int slots, int columns, int rows, int firstSl
 
     /** Size of one face of the six face net of the Item Proxy page, in pixels. */
     public static final int PROXY_FACE = 18;
-    /** Left edge of the net, in panel space. */
-    public static final int PROXY_NET_X = 6;
-    /**
-     * Top edge of the net, in panel space: the first row below the panel's title label, so the vanilla
-     * title and the net cannot overlap.
-     */
-    public static final int PROXY_NET_Y = 18;
     /** Width of the net: the four side faces in a row. */
     public static final int PROXY_NET_WIDTH = 4 * PROXY_FACE;
     /** Height of the net: top, front and bottom face. */
     public static final int PROXY_NET_HEIGHT = 3 * PROXY_FACE;
+    /**
+     * Left edge of the net, in panel space: the net is centred in the panel body, so it keeps the same
+     * margin to the left and to the right border ({@code (WIDTH - PROXY_NET_WIDTH) / 2 = 64}) instead of
+     * hugging the left one. The page draws the faces at {@code left + PROXY_NET_X} - the panel's own
+     * origin, the same one the panel body and the player slots use - so the net can never leave the panel.
+     */
+    public static final int PROXY_NET_X = (WIDTH - PROXY_NET_WIDTH) / 2;
+    /**
+     * Top edge of the net, in panel space: below the light bevel and the panel's own title label, and
+     * clear of the first player inventory row, which starts at {@link #PROXY_CONTENT_BOTTOM}.
+     */
+    public static final int PROXY_NET_Y = 28;
     /** Gap the panel keeps between the net and the first player inventory row. */
     public static final int CONTENT_GAP = 8;
     /**
