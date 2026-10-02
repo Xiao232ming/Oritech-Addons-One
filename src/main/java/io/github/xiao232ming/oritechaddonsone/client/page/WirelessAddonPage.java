@@ -39,10 +39,8 @@ public final class WirelessAddonPage implements AddonPage {
     /** Id of this page, also the suffix of its language keys. */
     public static final String ID = "wireless";
 
-    /** Language keys of the tab label, its tooltip and the hint line every tab carries. */
+    /** Language key of the tab label, which is all the tab shows. */
     private static final String LABEL_KEY = "gui.oritechaddonsone.page." + ID;
-    private static final String TOOLTIP_KEY = LABEL_KEY + ".tooltip";
-    private static final String HINT_KEY = LABEL_KEY + ".hint";
 
     /** Language keys of the info lines and of the force load badge. */
     private static final String MACHINE_KEY = "gui.oritechaddonsone.wireless.machine_name";
@@ -51,8 +49,6 @@ public final class WirelessAddonPage implements AddonPage {
     private static final String CHUNK_FORCE_LOADED_NO_KEY = "gui.oritechaddonsone.wireless.chunk_force_loaded.no";
     private static final String UNLINKED_KEY = "gui.oritechaddonsone.wireless.unlinked";
     private static final String UNKNOWN_KEY = "gui.oritechaddonsone.wireless.unknown";
-    private static final String SLOT_KEY = "gui.oritechaddonsone.wireless.reserved_slot";
-    private static final String SLOT_HINT_KEY = SLOT_KEY + ".hint";
 
     /**
      * Icon of the tab: this mod's own blue wifi symbol
@@ -109,11 +105,6 @@ public final class WirelessAddonPage implements AddonPage {
     @Override
     public Identifier icon() {
         return ICON;
-    }
-
-    @Override
-    public List<Component> tooltip() {
-        return List.of(label(), Component.translatable(TOOLTIP_KEY), Component.translatable(HINT_KEY));
     }
 
     /**
@@ -189,20 +180,6 @@ public final class WirelessAddonPage implements AddonPage {
         graphics.text(font, text, context.left() + CHUNK_BADGE_RIGHT - font.width(text),
                 context.top() + CHUNK_BADGE_Y,
                 forceLoaded ? AddonPanelStyle.PANEL_TEXT_GOOD : AddonPanelStyle.PANEL_TEXT_BAD, false);
-    }
-
-    /** Tooltip of the reserved slot: what it is for, shown while the slot is empty (or hovered) too. */
-    @Override
-    public List<Component> tooltipAt(AddonPageContext context, double mouseX, double mouseY) {
-        if (!isOverReservedSlot(mouseX, mouseY)) return List.of();
-
-        return List.of(Component.translatable(SLOT_KEY), Component.translatable(SLOT_HINT_KEY));
-    }
-
-    /** True while the given panel relative position is inside the reserved slot's 16x16 item area. */
-    private static boolean isOverReservedSlot(double mouseX, double mouseY) {
-        return mouseX >= ExtensionAddonLayout.RESERVED_SLOT_X && mouseX < ExtensionAddonLayout.RESERVED_SLOT_X + 16
-                && mouseY >= ExtensionAddonLayout.RESERVED_SLOT_Y && mouseY < ExtensionAddonLayout.RESERVED_SLOT_Y + 16;
     }
 
     /**

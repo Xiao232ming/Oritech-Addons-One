@@ -65,12 +65,6 @@
   "gui.oritechaddonsone.wireless.coords": "Bound to: %s, %s, %s",
   "gui.oritechaddonsone.wireless.chunk_force_loaded.yes": "Chunk: force-loaded",
   "gui.oritechaddonsone.wireless.chunk_force_loaded.no": "Chunk: not force-loaded",
-  "gui.oritechaddonsone.wireless.reserved_slot": "Reserved slot",
-  "gui.oritechaddonsone.wireless.reserved_slot.hint": "Holds the chunk anchor plugin, which force-loads the connected machine's chunk; it is saved with this block",
   "gui.oritechaddonsone.page.plugins": "Plugins",
-  "gui.oritechaddonsone.page.plugins.tooltip": "The plugin slots of this block",
-  "gui.oritechaddonsone.page.plugins.hint": "Click the tab to show this page",
-  "gui.oritechaddonsone.page.wireless": "Wireless",
-  "gui.oritechaddonsone.page.wireless.tooltip": "The machine this block is connected to",
-  "gui.oritechaddonsone.page.wireless.hint": "Click the tab to show this page; it also holds the reserved slot"
+  "gui.oritechaddonsone.page.wireless": "Wireless"
 }

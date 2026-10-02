@@ -65,12 +65,6 @@
   "gui.oritechaddonsone.wireless.coords": "绑定坐标：%s, %s, %s",
   "gui.oritechaddonsone.wireless.chunk_force_loaded.yes": "区块：已强制加载",
   "gui.oritechaddonsone.wireless.chunk_force_loaded.no": "区块：未强制加载",
-  "gui.oritechaddonsone.wireless.reserved_slot": "预留物品格",
-  "gui.oritechaddonsone.wireless.reserved_slot.hint": "用于放置锚点插件，强制加载所连接机器所在的区块；会随本方块一起保存",
   "gui.oritechaddonsone.page.plugins": "插件",
-  "gui.oritechaddonsone.page.plugins.tooltip": "此方块的插件槽位",
-  "gui.oritechaddonsone.page.plugins.hint": "点击标签页切换到该页面",
-  "gui.oritechaddonsone.page.wireless": "无线",
-  "gui.oritechaddonsone.page.wireless.tooltip": "此方块连接的机器信息",
-  "gui.oritechaddonsone.page.wireless.hint": "点击标签页切换到该页面，内含预留物品格"
+  "gui.oritechaddonsone.page.wireless": "无线"
 }
