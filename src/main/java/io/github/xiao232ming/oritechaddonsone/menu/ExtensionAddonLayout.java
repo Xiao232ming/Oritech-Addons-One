@@ -13,10 +13,19 @@ import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonType;
  * <p>
  * The panel is sized for every page it can show, not only for the plugin grid: it is
  * {@value #RIGHT_GUTTER} pixels wider than vanilla's 176 columns (a free strip on the right, which the
- * Item Proxy page right aligns its counter in and which gives the slot picker room) and it keeps the
- * {@linkplain #PROXY_CONTENT_BOTTOM net} of that page clear of the player inventory, plus a
+ * Item Proxy page right aligns its counter in and which gives the slot picker room) and it reserves the
+ * {@linkplain #PROXY_CONTENT_BOTTOM net} of that page above the player inventory, plus a
  * {@linkplain #BOTTOM_BAND band} below the hotbar for the counter. All three numbers are defined here,
  * so screen, menu and pages always agree on them.
+ * <p>
+ * That reservation is what makes one geometry serve every page, but it is also 46 pixels taller than the
+ * plugin page (and the wireless page) needs, which used to show as a large empty band between the plugin
+ * grid and the player inventory. The menu therefore keeps the one {@code imageHeight} height
+ * - the slot coordinates a client and the server derive from it have to agree - while a page may draw a
+ * {@linkplain #pageHeight shorter panel} that ends just below its own content: an empty band is then
+ * simply not part of the panel. The page framework asks each page for its
+ * {@link io.github.xiao232ming.oritechaddonsone.client.page.AddonPage#drawnHeight(ExtensionAddonLayout)
+ * drawn height}, so the screen paints the shorter border without touching a single slot. See {@link #pageHeight}.
  * <p>
  * The right edge of the panel also carries the {@linkplain #TAB_WIDTH tab strip} of the page framework.
  * It is a client side presentation detail - the menu slots are the same on both sides - but its size is
@@ -82,6 +91,19 @@ public record ExtensionAddonLayout(int slots, int columns, int rows, int firstSl
      * is drawn in it, which is what keeps the counter clear of the hotbar slots it used to sit on.
      */
     public static final int BOTTOM_BAND = 16;
+    /**
+     * Height of the band a page <em>without</em> a counter needs below the hotbar row: the two pixels of
+     * the panel's dark bottom bevel plus four pixels of panel, so the drawn panel ends with a normal
+     * looking border instead of the taller {@link #BOTTOM_BAND} the counter needs.
+     */
+    public static final int PAGE_BOTTOM_BAND = 6;
+    /**
+     * Height the drawn panel does <em>not</em> need above the first content row: the panel's two pixel
+     * light bevel plus the gap to a row of content. A page measures itself as
+     * {@code TOP_BAND + content}, which is why the Item Proxy page's net (drawn from
+     * {@link #PROXY_NET_Y}) is measured from {@code TOP_BAND} as well.
+     */
+    public static final int TOP_BAND = 2;
     /** Vertical inset of the counter's text inside {@link #BOTTOM_BAND}. */
     public static final int COUNTER_INSET = 4;
     /**
@@ -90,9 +112,6 @@ public record ExtensionAddonLayout(int slots, int columns, int rows, int firstSl
      * of panel - left of it.
      */
     public static final int COUNTER_MARGIN = 8;
-
-    /** Y of the player inventory label, matching vanilla container screens. */
-    public static final int LABEL_OFFSET = 98;
 
     // ------------------------------------------------------------------ wireless page
 
@@ -249,6 +268,49 @@ public record ExtensionAddonLayout(int slots, int columns, int rows, int firstSl
      */
     public int contentBottom() {
         return playerRowsY - 2;
+    }
+
+    // ------------------------------------------------------------------ drawn panel per page
+
+    /**
+     * Bottom edge of the Item Proxy page's reservation, i.e. the lowest Y the panel ever has to reach:
+     * the counter's own line (see {@link #counterY()}) plus the panel's bottom bevel and margin. It is
+     * exactly {@link #imageHeight()} of every layout, which is what makes the full height the height of
+     * that one page.
+     */
+    public int proxyPageHeight() {
+        return counterY() + 9 + PAGE_BOTTOM_BAND;
+    }
+
+    /**
+     * Height the drawn panel of a page needs whose own content ends at {@code contentBottom}: the two
+     * pixel light bevel plus that content, and at least the whole player inventory - the three inventory
+     * rows and the hotbar - plus the bottom border. A page passes the bottom of its own content here, so
+     * the dark bottom border lands just below that content instead of leaving the band the Item Proxy page
+     * reserved, which is the large empty area the plugin page used to show.
+     * <p>
+     * The menu keeps {@link #imageHeight() its own height} (which is
+     * {@code pageHeight(imageHeight() - 2 - PAGE_BOTTOM_BAND)} for every layout), because the slot
+     * coordinates of the client and of the server are derived from it; only the panel border and the
+     * player inventory label follow the page.
+     */
+    public int pageHeight(int contentBottom) {
+        return Math.max(TOP_BAND + contentBottom + PAGE_BOTTOM_BAND,
+                hotbarY + SLOT_SIZE + PAGE_BOTTOM_BAND);
+    }
+
+    /**
+     * Y of the player inventory label, matching vanilla container screens. The label belongs to the
+     * player inventory, not to a page: it is anchored to the first inventory row (twelve pixels above
+     * it, the vanilla gap), so it cannot move with the plugin grid or with a page's own content.
+     */
+    public int inventoryLabelY() {
+        return playerRowsY - inventoryLabelGap();
+    }
+
+    /** Vanilla's gap between the first player inventory row and the label above it. */
+    public static int inventoryLabelGap() {
+        return 12;
     }
 
     /** X of the plugin slot with the given index (in GUI space). */

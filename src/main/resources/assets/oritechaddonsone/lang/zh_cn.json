@@ -75,7 +75,7 @@
   "gui.oritechaddonsone.proxy.face.unconfigured": "未代理——点击以选择机器槽位",
   "gui.oritechaddonsone.proxy.picker.loading": "正在读取机器库存……",
   "gui.oritechaddonsone.proxy.picker.no_machine": "未连接机器",
-  "gui.oritechaddonsone.proxy.picker.hint": "点击 %s 面要代理的机器槽位（右键取消）",
+  "gui.oritechaddonsone.proxy.picker.cancel": "取消",
   "gui.oritechaddonsone.proxy.picker.slot": "机器槽位 %s",
   "gui.oritechaddonsone.proxy.side.north": "前",
   "gui.oritechaddonsone.proxy.side.south": "后",

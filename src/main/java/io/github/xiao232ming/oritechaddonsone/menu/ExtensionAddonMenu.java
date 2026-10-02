@@ -62,6 +62,15 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
     private boolean pluginPageActive = true;
     /** Client side: true while the screen shows the wireless page, which is what enables its own slot. */
     private boolean wirelessPageActive;
+    /**
+     * Client side: true while the player's own inventory is usable. It is turned off only while the Item
+     * Proxy page shows its configuration panel, which is an opaque modal step over the whole panel - the
+     * panel is painted in the background layer, so the inventory's frames and items would otherwise be
+     * drawn over it. The slot positions are untouched; this is the same display only switch the page groups
+     * use, and it is what a full screen configuration page like Oritech's own inventory proxy screen shows:
+     * the slots of the machine, nothing of the player's.
+     */
+    private boolean playerSlotsActive = true;
     /** Client side copy of {@link #targetChunkForceLoadedSlot} (the server computes the value itself). */
     private boolean targetChunkForceLoaded;
 
@@ -169,6 +178,14 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
         return wirelessPageActive;
     }
 
+    /**
+     * Whether the player's own inventory slots are usable. Only ever set on the client, and only off while
+     * the Item Proxy page's configuration panel is open over the whole panel; see {@link #playerSlotsActive}.
+     */
+    public boolean playerSlotsActive() {
+        return playerSlotsActive;
+    }
+
     /** Called by the screen whenever the selected page changes, so the pages' slots become active. */
     public void setPluginPageActive(boolean active) {
         this.pluginPageActive = active;
@@ -177,6 +194,15 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
     /** Called by the screen whenever the selected page changes, so the pages' slots become active. */
     public void setWirelessPageActive(boolean active) {
         this.wirelessPageActive = active;
+    }
+
+    /**
+     * Called by the screen whenever the Item Proxy page's configuration panel opens or closes: the panel is
+     * an opaque modal step over the whole panel, so the player's inventory is drawn - and clickable - only
+     * while it is closed.
+     */
+    public void setPlayerSlotsActive(boolean active) {
+        this.playerSlotsActive = active;
     }
 
     private ExtensionAddonMenu(int containerId, Inventory inventory, Container container, BlockPos position,
@@ -227,16 +253,30 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
         addSlot(new ReservedItemSlot(container, ExtensionAddonBlockEntity.RESERVED_SLOT,
                 ExtensionAddonLayout.RESERVED_SLOT_X, ExtensionAddonLayout.RESERVED_SLOT_Y, this::wirelessPageActive));
 
+        // The player's own inventory: three rows and the hotbar. They are hidden - only drawn and clicked
+        // while active - while the Item Proxy page's configuration panel covers the panel; their positions
+        // never change.
         for (int row = 0; row < 3; row++) {
             for (int column = 0; column < 9; column++) {
-                addSlot(new Slot(inventory, column + row * 9 + 9, 8 + column * 18, layout.playerRowsY() + row * 18));
+                addSlot(playerSlot(inventory, column + row * 9 + 9, 8 + column * 18,
+                        layout.playerRowsY() + row * 18));
             }
         }
         for (int column = 0; column < 9; column++) {
-            addSlot(new Slot(inventory, column, 8 + column * 18, layout.hotbarY()));
+            addSlot(playerSlot(inventory, column, 8 + column * 18, layout.hotbarY()));
         }
 
         addDataSlot(targetChunkForceLoadedSlot);
+    }
+
+    /** One slot of the player's own inventory; see {@link #playerSlotsActive}. */
+    private Slot playerSlot(Container inventory, int index, int x, int y) {
+        return new Slot(inventory, index, x, y) {
+            @Override
+            public boolean isActive() {
+                return playerSlotsActive;
+            }
+        };
     }
 
     /** Client side constructor; block position and slot count are sent along when the menu is opened. */

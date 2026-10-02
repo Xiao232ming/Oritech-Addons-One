@@ -75,7 +75,7 @@
   "gui.oritechaddonsone.proxy.face.unconfigured": "Not proxying - click to pick a machine slot",
   "gui.oritechaddonsone.proxy.picker.loading": "Reading the machine inventory...",
   "gui.oritechaddonsone.proxy.picker.no_machine": "No machine connected",
-  "gui.oritechaddonsone.proxy.picker.hint": "Click the machine slot face %s should proxy (right click to cancel)",
+  "gui.oritechaddonsone.proxy.picker.cancel": "Cancel",
   "gui.oritechaddonsone.proxy.picker.slot": "Machine slot %s",
   "gui.oritechaddonsone.proxy.side.north": "front",
   "gui.oritechaddonsone.proxy.side.south": "back",

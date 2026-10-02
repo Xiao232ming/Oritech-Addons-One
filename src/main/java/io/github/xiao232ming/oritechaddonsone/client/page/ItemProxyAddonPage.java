@@ -12,6 +12,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.Container;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.Property;
 
@@ -19,6 +20,10 @@ import net.neoforged.neoforge.network.PacketDistributor;
 
 import org.jetbrains.annotations.Nullable;
 
+import rearth.oritech.api.screen.Insets;
+import rearth.oritech.api.screen.OritechSurface;
+import rearth.oritech.api.screen.widgets.ItemSlotWidget;
+import rearth.oritech.api.screen.widgets.SurfaceWidget;
 import rearth.oritech.util.ScreenProvider;
 
 import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonBlock;
@@ -40,8 +45,9 @@ import io.github.xiao232ming.oritechaddonsone.network.ProxyNetworking;
  * per <b>face</b>, so the net doubles as the face selector.
  * <ul>
  *     <li>the net is drawn from the block's own per-face textures (see {@link FaceTextures}),</li>
- *     <li>a left click on an unconfigured face opens the slot picker of that face (the machine's GUI slots,
- *     exactly like Oritech's proxy screen draws them),</li>
+ *     <li>a left click on an unconfigured face opens the configuration page of that face, which is
+ *     Oritech's own inventory proxy page: the machine's GUI slots as framed cells, the same prompt and the
+ *     same click-to-select interaction (see {@link #drawPicker}),</li>
  *     <li>a right click on any face - or a left click on a configured one - removes the binding again,</li>
  *     <li>the panel's bottom right shows the counter {@code 可配置数: x/x} / {@code Configurable: x/x}:
  *     configured faces out of the number of stored inventory proxy addons, which is the maximum. It sits in
@@ -58,6 +64,40 @@ public final class ItemProxyAddonPage implements AddonPage {
     public static final String ID = "proxy";
 
     private static final String LABEL_KEY = "gui.oritechaddonsone.page." + ID;
+
+    /**
+     * Oritech's own prompt of its inventory proxy page, reused verbatim so the configuration page says
+     * exactly what Oritech's screen says ("选择代理目标槽位" / "Select proxy target slot"). The string comes
+     * from Oritech's language files, so it is translated wherever Oritech is.
+     */
+    private static final String PROMPT_KEY = "tooltip.oritech.addon_proxy_select";
+
+    // ------------------------------------------------------------------ Oritech's configuration page
+
+    /**
+     * Size of Oritech's own inventory proxy screen, which its {@code InventoryProxyScreen} passes to
+     * {@code OritechWidgetScreen} as {@code (176, 100)}. The configuration page is that panel, so the
+     * machine's GUI slots keep the coordinates Oritech gives them.
+     */
+    private static final int PANEL_WIDTH = 176;
+    private static final int PANEL_HEIGHT = 100;
+    /**
+     * Y of Oritech's prompt line inside that panel ({@code InventoryProxyScreen} uses {@code 85}).
+     */
+    private static final int PROMPT_Y = 85;
+    /** Frame drawn around the panel, so Oritech's light panel reads against our light grey body. */
+    private static final int PANEL_FRAME = 2;
+    /**
+     * Size of Oritech's title icon ({@code OritechWidgetScreen#addTitle()} builds a {@code 28x28} widget)
+     * and the padding it keeps inside it, which centres the 16x16 item.
+     */
+    private static final int ICON_SIZE = 28;
+    private static final int ICON_PADDING = 3;
+    /**
+     * Top of the band the configuration page may use: inside the panel's two pixel light bevel with a
+     * little room, so even the panel's own two pixel frame stays on the panel body.
+     */
+    private static final int TOP_BAND = ExtensionAddonLayout.TOP_BAND + 2;
 
     /**
      * Icon of the tab: a chest front with a latch and a keyhole
@@ -118,6 +158,17 @@ public final class ItemProxyAddonPage implements AddonPage {
     @Override
     public List<Component> tooltip() {
         return List.of(label(), Component.translatable(LABEL_KEY + ".tooltip"));
+    }
+
+    /**
+     * The panel has to reach past the counter, which is the lowest thing this page draws: the counter sits
+     * in the free band below the hotbar and the panel's bottom border ends
+     * {@link ExtensionAddonLayout#PAGE_BOTTOM_BAND} pixels under it. Every other page draws less and asks
+     * for a shorter panel, which is what removes the empty band they used to show.
+     */
+    @Override
+    public int drawnHeight(ExtensionAddonLayout layout) {
+        return layout.proxyPageHeight();
     }
 
     // ------------------------------------------------------------------ drawing
@@ -193,60 +244,114 @@ public final class ItemProxyAddonPage implements AddonPage {
     }
 
     /**
-     * Draws the slot picker of the open face: the machine's GUI slots, where Oritech's own inventory proxy
-     * screen puts them, plus the item that is currently in each of them.
+     * Draws the slot picker of the open face.
+     * <p>
+     * This is Oritech's own inventory proxy configuration page, painted where its own screen would be: a
+     * 176x100 {@linkplain OritechSurface#PANEL bedrock panel} (the nine patch Oritech itself fills its
+     * widgets with - see {@link SurfaceWidget}), a framed cell per
+     * {@linkplain ScreenProvider#getGuiSlots() GUI slot} of the machine ({@link ItemSlotWidget}, again
+     * Oritech's own widget, so the frames are pixel for pixel the same), the same prompt
+     * {@code tooltip.oritech.addon_proxy_select} in Oritech's dark label colour, and the block's item
+     * above the panel as its title icon - the same three elements, in the same places and sizes, that
+     * {@code rearth.oritech.client.ui.InventoryProxyScreen} builds for its own menu.
+     * <p>
+     * The one thing that cannot be reused is Oritech's {@code InventoryProxyScreenHandler}: it holds the
+     * screen provider and the position of <em>one</em> proxy addon block and sends that block's
+     * {@code target_slot} on a click, while this page configures <em>one face per click</em> of our own
+     * block and must keep our binding packets, cap and fail-safe. The page therefore repaints Oritech's
+     * page with Oritech's classes and handles the click itself, which is what makes a face bind the slot
+     * the player clicked.
+     * <p>
+     * While this is open it covers the net and the counter of the page: a modal step, closed by a click on
+     * a slot that binds it, and by a click anywhere else (or the right mouse button) - the same "the slots
+     * are the only controls" interaction Oritech's own screen has. The panel is centred in the drawn panel
+     * and never resized, so the machine's slot layout stays Oritech's own.
      */
     private void drawPicker(AddonPageContext context, GuiGraphics graphics, ExtensionAddonMenu menu, Direction face) {
         var slots = ProxyPickerState.layout(menu.position(), face);
         var font = Minecraft.getInstance().font;
-        int panelWidth = context.panelWidth();
-        int panelHeight = context.panelHeight();
+        var placed = place(context, slots == null ? List.of() : slots);
 
-        // a dark backdrop over the page, so the picker reads as a modal step
-        graphics.fill(context.left() + 2, context.top() + 2, context.left() + panelWidth - 2,
-                context.top() + panelHeight - 2, 0xD0000000);
+        // a dark backdrop over the drawn panel, so the picker reads as a modal step and neither the net
+        // nor the counter behind it shows through
+        graphics.fill(context.left(), context.top(), context.left() + context.panelWidth(),
+                context.top() + placed.backdropBottom(), 0xD0000000);
+
+        drawPanel(graphics, placed);
 
         if (slots == null) {
-            centered(graphics, font, panelWidth, panelHeight,
-                    Component.translatable("gui.oritechaddonsone.proxy.picker.loading"));
+            centered(graphics, font, context, placed, Component.translatable("gui.oritechaddonsone.proxy.picker.loading"));
             return;
         }
         if (slots.isEmpty()) {
-            centered(graphics, font, panelWidth, panelHeight,
-                    Component.translatable("gui.oritechaddonsone.proxy.picker.no_machine"));
+            centered(graphics, font, context, placed, Component.translatable("gui.oritechaddonsone.proxy.picker.no_machine"));
             return;
         }
 
-        var origin = pickerOrigin(context, slots);
-        var selected = menu.proxySlotOf(face);
         var inventory = displayedInventory(menu);
+        var selected = menu.proxySlotOf(face);
+
+        // the whole panel is drawn in Oritech's coordinate system: one translate, then every child at the
+        // position InventoryProxyScreen uses for it
+        graphics.pose().pushPose();
+        graphics.pose().translate(context.left() + placed.innerX(), context.top() + placed.innerY(), 0f);
 
         for (var slot : slots) {
-            int x = context.left() + origin[0] + slot[1];
-            int y = context.top() + origin[1] + slot[2];
-            AddonPanelStyle.drawSlot(graphics, x - 1, y - 1);
+            int x = slot[1];
+            int y = slot[2];
+
+            // Oritech's own slot widget paints the frame at the slot's position
+            var frame = new ItemSlotWidget(x, y);
+            frame.render(graphics, x, y, 0f);
 
             if (inventory != null && slot[0] >= 0 && slot[0] < inventory.getContainerSize()) {
                 var stack = inventory.getItem(slot[0]);
                 if (!stack.isEmpty()) graphics.renderItem(stack, x, y);
             }
 
+            // the slot this face is bound to right now, marked like Oritech marks the selected one
             if (selected != null && selected == slot[0]) {
                 graphics.fill(x - 1, y - 1, x + 17, y + 17, 0x552ECC71);
                 graphics.fill(x - 1, y - 1, x + 17, y, 0xFF2ECC71);
             }
         }
 
-        centered(graphics, font, panelWidth, panelHeight - 10,
-                Component.translatable("gui.oritechaddonsone.proxy.picker.hint", faceName(face)));
+        graphics.pose().popPose();
+
+        // Oritech's own prompt, its own dark label colour, and the block's item above the panel
+        prompt(graphics, font, context, placed, Component.translatable(PROMPT_KEY), placed.promptY());
+        header(graphics, context, placed, face, font);
     }
 
-    /** One centred line of text. */
-    private static void centered(GuiGraphics graphics, net.minecraft.client.gui.Font font, int panelWidth,
-            int panelHeight, Component text) {
+    /** One centred line of text at the given Y inside the panel (Oritech's dark label colour). */
+    private static void prompt(GuiGraphics graphics, net.minecraft.client.gui.Font font, AddonPageContext context,
+            Placed placed, Component text, int y) {
         var string = text.getString();
-        graphics.drawString(font, string, (panelWidth - font.width(string)) / 2, panelHeight / 2,
-                AddonPanelStyle.PANEL_LIGHT, false);
+        graphics.drawString(font, string, context.left() + placed.innerX() + (PANEL_WIDTH - font.width(string)) / 2,
+                context.top() + y, AddonPanelStyle.PANEL_TEXT, false);
+    }
+
+    /**
+     * The header of the configuration page: the addon's own item as an icon with the face it is being
+     * configured for next to it. Oritech puts the same icon in the same place - {@code 28x28}, with three
+     * pixels of padding, centred above the panel by {@code OritechWidgetScreen#addTitle()}.
+     */
+    private static void header(GuiGraphics graphics, AddonPageContext context, Placed placed, Direction face,
+            net.minecraft.client.gui.Font font) {
+        int left = context.left() + placed.iconX();
+        int top = context.top() + placed.iconY();
+
+        // Oritech's title icon is drawn on a 28x28 PANEL surface with three pixels of padding, so the 16x16
+        // item ends up centred in it and the surface is the widget's own nine patch
+        new SurfaceWidget(left, top, ICON_SIZE, ICON_SIZE, OritechSurface.PANEL)
+                .withPadding(Insets.of(0, ICON_PADDING, ICON_PADDING, ICON_PADDING))
+                .render(graphics, 0, 0, 0f);
+
+        graphics.renderItem(icon(context.menu()), left + ICON_PADDING, top + ICON_PADDING);
+
+        var text = faceName(face);
+        graphics.drawString(font, text, left + ICON_SIZE + 4, top + (ICON_SIZE - 8) / 2,
+                AddonPanelStyle.PANEL_TEXT, false);
     }
 
     // ------------------------------------------------------------------ clicks
@@ -280,7 +385,11 @@ public final class ItemProxyAddonPage implements AddonPage {
         return true;
     }
 
-    /** A click while the picker is open: on a slot it binds the face, anywhere else it closes the picker. */
+    /**
+     * A click while the configuration page is open. A click on one of the machine's slots binds the face
+     * that is being configured to it - the same click, on the same cell, that Oritech's own proxy screen
+     * turns into {@code setTargetSlot} - and any other click closes the page without changing anything.
+     */
     private boolean handlePickerClick(AddonPageContext context, ExtensionAddonMenu menu, Direction face,
             double mouseX, double mouseY, int button) {
         if (button == 1) {
@@ -289,11 +398,13 @@ public final class ItemProxyAddonPage implements AddonPage {
         }
 
         var slots = ProxyPickerState.layout(menu.position(), face);
+        var placed = place(context, slots == null ? List.of() : slots);
+
         if (slots != null && !slots.isEmpty()) {
-            var origin = pickerOrigin(context, slots);
             for (var slot : slots) {
-                if (mouseX >= origin[0] + slot[1] && mouseX < origin[0] + slot[1] + 16
-                        && mouseY >= origin[1] + slot[2] && mouseY < origin[1] + slot[2] + 16) {
+                double x = placed.innerX() + slot[1];
+                double y = placed.innerY() + slot[2];
+                if (mouseX >= x && mouseX < x + 16 && mouseY >= y && mouseY < y + 16) {
                     ProxyPickerState.close();
                     send(new ProxyNetworking.BindFace(menu.position(), ProxyNetworking.faceIndex(face), slot[0]));
                     return true;
@@ -301,7 +412,7 @@ public final class ItemProxyAddonPage implements AddonPage {
             }
         }
 
-        // a click on the dark area behind the picker closes it
+        // any other click (also one next to the panel) closes the page, like a click outside a modal
         ProxyPickerState.close();
         return true;
     }
@@ -313,13 +424,17 @@ public final class ItemProxyAddonPage implements AddonPage {
 
         if (openFace != null) {
             var slots = ProxyPickerState.layout(menu.position(), openFace);
+            var placed = place(context, slots == null ? List.of() : slots);
+
             if (slots == null || slots.isEmpty()) return List.of();
 
-            var origin = pickerOrigin(context, slots);
             for (var slot : slots) {
-                if (mouseX >= origin[0] + slot[1] && mouseX < origin[0] + slot[1] + 16
-                        && mouseY >= origin[1] + slot[2] && mouseY < origin[1] + slot[2] + 16) {
-                    return List.of(Component.translatable("gui.oritechaddonsone.proxy.picker.slot", slot[0]));
+                double x = placed.innerX() + slot[1];
+                double y = placed.innerY() + slot[2];
+                if (mouseX >= x && mouseX < x + 16 && mouseY >= y && mouseY < y + 16) {
+                    // the slot index and the face it is about to be bound to, so the click is unambiguous
+                    return List.of(Component.translatable("gui.oritechaddonsone.proxy.picker.slot", slot[0]),
+                            Component.translatable("gui.oritechaddonsone.proxy.face", faceName(openFace)));
                 }
             }
             return List.of();
@@ -431,38 +546,66 @@ public final class ItemProxyAddonPage implements AddonPage {
     }
 
     /**
-     * Panel relative origin of the picker: the machine's GUI slots keep their own layout, but the whole
-     * group is centred inside the panel (Oritech's proxy screen uses them at their original position, which
-     * fits its own 176x100 panel - ours is placed so it never covers a plugin slot frame).
+     * Places Oritech's configuration page inside the panel of this page.
      * <p>
-     * The group is centred in the panel's content band, i.e. between the panel's top bevel and
-     * {@link ExtensionAddonLayout#contentBottom()}, so the machine inventory preview stays above the
-     * player's own inventory slots and cannot cover them. A machine whose GUI slot group is taller than
-     * that band (which the panel sizes for the usual Oritech machine screens) is drawn from the top of the
-     * band downwards instead of being scaled - the preview is a copy of Oritech's own slot positions and
-     * is never resized.
+     * Oritech's own screen is {@code 176x100}, so that is the panel reproduced here, and the machine's GUI
+     * slots are drawn at the coordinates {@link ScreenProvider#getGuiSlots()} gives - the same coordinates
+     * Oritech passes to its {@code ItemSlotWidget}s. The panel is centred horizontally in ours (which is
+     * {@link ExtensionAddonLayout#RIGHT_GUTTER} pixels wider) and vertically in the drawn panel, and it is
+     * never resized, so the machine's slot layout is exactly Oritech's.
+     * <p>
+     * Oritech's panel is taller than the room the layout keeps above the player inventory on a block with
+     * one or two plugin rows (about 89 pixels). The panel therefore reaches over the top of that inventory
+     * while it is open - which is what a modal step over the whole page is supposed to do. It works because
+     * the screen paints the page first and the inventory afterwards, and the menu marks the player's slots
+     * inactive while this page covers the panel (see {@code ExtensionAddonMenu#setPlayerSlotsActive}), so
+     * neither their frames nor their items are drawn over the panel: the page reads as a full page, exactly
+     * like Oritech's own inventory proxy screen, which shows the machine's slots and nothing of the
+     * player's.
      */
-    private static int[] pickerOrigin(AddonPageContext context, List<int[]> slots) {
-        int panelWidth = context.panelWidth();
-        int top = 4;
-        int bottom = context.layout().contentBottom();
+    private static Placed place(AddonPageContext context, List<int[]> slots) {
+        var layout = context.layout();
 
-        int minX = Integer.MAX_VALUE;
-        int minY = Integer.MAX_VALUE;
-        int maxX = Integer.MIN_VALUE;
-        int maxY = Integer.MIN_VALUE;
+        int innerX = Math.max(0, (context.panelWidth() - PANEL_WIDTH) / 2);
+        int top = TOP_BAND;
+        // centred in the drawn panel, but never far enough down for the panel's frame to reach the player
+        // inventory (the player's slots are hidden while this is open, but the panel should not cover the
+        // whole inventory either)
+        int innerY = Math.max(top, Math.min((context.panelHeight() - PANEL_HEIGHT) / 2,
+                layout.playerRowsY() - 2 - PANEL_FRAME - PANEL_HEIGHT));
 
-        for (var slot : slots) {
-            minX = Math.min(minX, slot[1]);
-            minY = Math.min(minY, slot[2]);
-            maxX = Math.max(maxX, slot[1] + 18);
-            maxY = Math.max(maxY, slot[2] + 18);
-        }
+        int iconY = Math.max(0, innerY - ICON_SIZE);
+        int iconX = innerX + (PANEL_WIDTH - ICON_SIZE) / 2;
 
-        var width = maxX - minX;
-        var height = maxY - minY;
-        return new int[]{Math.max(4, (panelWidth - width) / 2) - minX,
-                Math.max(top, top + (bottom - top - height) / 2) - minY};
+        // The page has no control of its own beyond the machine's slots, exactly like Oritech's screen: a
+        // click on a slot binds it, a click anywhere else (or the right mouse button) closes the page. So
+        // the only geometry it adds is the panel and the icon above it.
+        return new Placed(innerX, innerY, iconX, iconY, context.panelHeight(),
+                iconY + ICON_SIZE + PROMPT_Y);
+    }
+
+    /**
+     * The bedrock panel of the configuration page: Oritech's own {@link OritechSurface#PANEL} nine patch,
+     * drawn twice - a darker copy as the frame around it, exactly the way Oritech's widget screens stack
+     * their {@code SurfaceWidget}s.
+     */
+    private static void drawPanel(GuiGraphics graphics, Placed placed) {
+        graphics.pose().pushPose();
+        graphics.pose().translate(placed.innerX(), placed.innerY(), 0f);
+
+        new SurfaceWidget(-PANEL_FRAME, -PANEL_FRAME, PANEL_WIDTH + 2 * PANEL_FRAME, PANEL_HEIGHT + 2 * PANEL_FRAME,
+                OritechSurface.PANEL_DARK).render(graphics, 0, 0, 0f);
+        new SurfaceWidget(0, 0, PANEL_WIDTH, PANEL_HEIGHT, OritechSurface.PANEL).render(graphics, 0, 0, 0f);
+
+        graphics.pose().popPose();
+    }
+
+    /** One line of the configuration page's own text, centred in Oritech's panel. */
+    private static void centered(GuiGraphics graphics, net.minecraft.client.gui.Font font, AddonPageContext context,
+            Placed placed, Component text) {
+        var string = text.getString();
+        graphics.drawString(font, string, context.left() + placed.innerX() + (PANEL_WIDTH - font.width(string)) / 2,
+                context.top() + placed.innerY() + (PANEL_HEIGHT - 8) / 2, AddonPanelStyle.PANEL_TEXT, false);
     }
 
     /** The machine inventory the picker previews items from, or {@code null} while it is out of reach. */
@@ -477,6 +620,20 @@ public final class ItemProxyAddonPage implements AddonPage {
         return blockEntity.getLevel().getBlockEntity(target) instanceof ScreenProvider screen
                 ? screen.getDisplayedInventory()
                 : null;
+    }
+
+    /** The item drawn as the configuration page's icon: the block this menu belongs to. */
+    private static ItemStack icon(ExtensionAddonMenu menu) {
+        var block = menu.addonBlock();
+        return block == null ? ItemStack.EMPTY : new ItemStack(block);
+    }
+
+    /**
+     * Geometry of Oritech's configuration page inside our panel, in panel space: the panel itself
+     * ({@link #PANEL_WIDTH} x {@link #PANEL_HEIGHT} at {@code innerX/innerY}), the header icon above it,
+     * the bottom of the backdrop that covers the page behind it, and the prompt line inside the panel.
+     */
+    private record Placed(int innerX, int innerY, int iconX, int iconY, int backdropBottom, int promptY) {
     }
 
     /** Sends a packet to the server; the page is client only, so this is the one place that talks back. */
