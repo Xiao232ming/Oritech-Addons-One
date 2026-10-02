@@ -41,8 +41,8 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
     private final boolean wireless;
     /**
      * True when this menu was built by the client constructor. On the server the machine name and the
-     * chunk state are resolved from the block entities; on the client they come from what the server sent
-     * (the addons are plain block entities, so their data is not synced by itself).
+     * force load state are resolved from the block entities; on the client they come from what the server
+     * sent (the addons are plain block entities, so their data is not synced by itself).
      */
     private final boolean clientSide;
 
@@ -55,29 +55,30 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
 
     /** Client side: true while the screen shows the wireless page, which is what enables its own slot. */
     private boolean wirelessPageActive;
-    /** Client side copy of {@link #targetChunkLoadedSlot} (the server computes the value itself). */
-    private boolean targetChunkLoaded;
+    /** Client side copy of {@link #targetChunkForceLoadedSlot} (the server computes the value itself). */
+    private boolean targetChunkForceLoaded;
 
     /**
-     * Container data slot 0: whether the chunk of the connected machine is loaded. Both variants answer
-     * it - a wired addon is claimed by a machine in a loaded chunk, a dock by the machine it is linked to -
-     * see {@link ExtensionAddonBlockEntity#isTargetChunkLoaded()}.
+     * Container data slot 0: whether the chunk of the connected machine is force loaded, i.e. kept loaded
+     * without a player nearby. Both variants answer it - a wired addon by the chunk of the machine it is
+     * attached to, a dock by the chunk of the machine it is linked to - see
+     * {@link ExtensionAddonBlockEntity#isTargetChunkForceLoaded()}.
      * <p>
      * Oritech's synced fields would need a networked block entity, and the addons are plain ones, so the
      * value is published through vanilla's container data instead: the server polls it on every menu tick
      * and sends it only when it changed, which is the same "resolve it on the server, tell the client when
      * it changes" shape the rest of this mod uses for GUI values.
      */
-    private final DataSlot targetChunkLoadedSlot = new DataSlot() {
+    private final DataSlot targetChunkForceLoadedSlot = new DataSlot() {
         @Override
         public int get() {
-            if (clientSide) return targetChunkLoaded ? 1 : 0;
-            return container instanceof ExtensionAddonBlockEntity addon && addon.isTargetChunkLoaded() ? 1 : 0;
+            if (clientSide) return targetChunkForceLoaded ? 1 : 0;
+            return container instanceof ExtensionAddonBlockEntity addon && addon.isTargetChunkForceLoaded() ? 1 : 0;
         }
 
         @Override
         public void set(int value) {
-            targetChunkLoaded = value != 0;
+            targetChunkForceLoaded = value != 0;
         }
     };
 
@@ -130,11 +131,11 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
     }
 
     /**
-     * True while the chunk of the connected machine is loaded. On the server this is the value of this
-     * tick, on the client the value the server last sent.
+     * True while the chunk of the connected machine is force loaded, i.e. kept loaded without a player
+     * nearby. On the server this is the value of this tick, on the client the value the server last sent.
      */
-    public boolean targetChunkLoaded() {
-        return targetChunkLoadedSlot.get() != 0;
+    public boolean targetChunkForceLoaded() {
+        return targetChunkForceLoadedSlot.get() != 0;
     }
 
     /** Index of the reserved single item slot of the wireless page. */
@@ -210,7 +211,7 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
             addSlot(new Slot(inventory, column, 8 + column * 18, layout.hotbarY()));
         }
 
-        addDataSlot(targetChunkLoadedSlot);
+        addDataSlot(targetChunkForceLoadedSlot);
     }
 
     /** Client side constructor; block position and slot count are sent along when the menu is opened. */

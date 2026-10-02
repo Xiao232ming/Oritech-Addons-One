@@ -51,6 +51,7 @@ import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonType;
 import io.github.xiao232ming.oritechaddonsone.block.WirelessExtensionAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonLayout;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonMenu;
+import io.github.xiao232ming.oritechaddonsone.wireless.ForceLoadedChunks;
 import io.github.xiao232ming.oritechaddonsone.wireless.WirelessLinks;
 
 /**
@@ -202,17 +203,18 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
     }
 
     /**
-     * True while the chunk of the connected machine is loaded, i.e. while this addon can really hand its
-     * plugins over.
+     * True while the chunk of the connected machine is force loaded, i.e. while something keeps that chunk
+     * loaded on purpose - see {@link ForceLoadedChunks} for what counts (vanilla {@code /forceload}, the
+     * spawn area and force load tickets from other mods).
      * <p>
-     * This holds for a wired addon too - it is claimed by a machine in a loaded chunk, so the answer is
-     * normally "yes" - and it is the one value the GUI's status badge shows for both variants. False while
-     * there is no machine at all (nothing is loaded then) and while the machine sits in an unloaded chunk.
-     * Read on the server, see {@code ExtensionAddonMenu#targetChunkLoaded()}.
+     * It is the one value the GUI's status badge shows for both variants. False while there is no machine at
+     * all (nothing is kept loaded then), while the machine is in an unloaded chunk and while the chunk is
+     * only loaded because a player is nearby or because this mod looked the target up - looking a block up
+     * loads its chunk through vanilla's short lived {@code unknown} ticket, which is not a force load.
+     * Read on the server, see {@code ExtensionAddonMenu#targetChunkForceLoaded()}.
      */
-    public boolean isTargetChunkLoaded() {
-        var machine = connectedMachinePos();
-        return machine != null && level != null && level.isLoaded(machine);
+    public boolean isTargetChunkForceLoaded() {
+        return ForceLoadedChunks.isForceLoaded(level, connectedMachinePos());
     }
 
     // ------------------------------------------------------------------ storage bonuses
