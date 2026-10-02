@@ -278,13 +278,17 @@ public record ExtensionAddonLayout(int slots, int columns, int rows, int firstSl
     // ------------------------------------------------------------------ drawn panel per page
 
     /**
-     * Bottom edge of the Item Proxy page's reservation, i.e. the lowest Y the panel ever has to reach:
-     * the counter's own line (see {@link #counterY()}) plus the panel's bottom bevel and margin. It is
-     * exactly {@link #imageHeight()} of every layout, which is what makes the full height the height of
-     * that one page.
+     * Bottom edge of the Item Proxy page's reservation, i.e. the lowest Y the panel ever has to reach. It
+     * is exactly {@link #imageHeight()}: the counter's line already sits inside {@link #BOTTOM_BAND}, so
+     * the menu height is the height this one page needs. Asking for more does not draw anything, it only
+     * pushes the panel past the rectangle everything else uses - the screen's click bounds, and the
+     * {@linkplain #imageHeight() menu height} the Item Proxy page's modal overlay fills to - so the panel
+     * hung below the GUI and kept a strip of undimmed panel at its bottom edge while Oritech's
+     * configuration page was open. An earlier version added the counter's line on top of that band again
+     * (3 pixels) which is exactly what it showed.
      */
     public int proxyPageHeight() {
-        return counterY() + 9 + PAGE_BOTTOM_BAND;
+        return imageHeight();
     }
 
     /**
