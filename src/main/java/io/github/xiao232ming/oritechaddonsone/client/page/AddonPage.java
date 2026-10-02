@@ -35,6 +35,25 @@ public interface AddonPage {
     }
 
     /**
+     * Height of the panel this page wants to be drawn in, for the layout the GUI currently shows.
+     * <p>
+     * The menu owns one geometry for every page - the slot coordinates of the client and of the server
+     * are derived from it and have to agree - but a page usually needs far less room than the tallest
+     * one. This is what the screen paints the panel border with, so a page whose content ends well above
+     * the player inventory does not show the empty band the Item Proxy page reserves for its net and
+     * counter. The slot positions, the item sync and the interaction are untouched: only the bottom
+     * border of the panel (and the label above the player inventory) follows the visible page.
+     * <p>
+     * The default is the full panel height every menu has, so a page that draws down to the layout's
+     * bottom band needs no override;
+     * {@code io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonLayout#pageHeight(int)} measures a
+     * page by the bottom of its own content.
+     */
+    default int drawnHeight(io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonLayout layout) {
+        return layout.imageHeight();
+    }
+
+    /**
      * Draws the content of this page inside the panel. The context maps the panel's coordinate system
      * onto the screen, so a page draws at {@code context.left() + layout.slotX(slot)} like the panel
      * background does.

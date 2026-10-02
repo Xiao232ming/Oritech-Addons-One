@@ -108,6 +108,17 @@ public final class WirelessAddonPage implements AddonPage {
     }
 
     /**
+     * The lowest content of this page is the reserved slot's frame (level with the first plugin row) and
+     * the info lines under it. Nothing else is drawn here - the page has no net and no counter - so the
+     * panel ends just below its text instead of showing the band the Item Proxy page reserves.
+     */
+    @Override
+    public int drawnHeight(ExtensionAddonLayout layout) {
+        int lines = FIRST_LINE_Y + 2 * LINE_HEIGHT;
+        return layout.pageHeight(Math.max(ExtensionAddonLayout.RESERVED_SLOT_Y + ExtensionAddonLayout.SLOT_SIZE, lines));
+    }
+
+    /**
      * Draws the force load badge, the info lines and the frame of the reserved slot. The slot's item is
      * drawn by the screen like every other slot's item; the frame is painted here, one pixel above and left
      * of the slot, exactly like the plugin page does it for its fields.

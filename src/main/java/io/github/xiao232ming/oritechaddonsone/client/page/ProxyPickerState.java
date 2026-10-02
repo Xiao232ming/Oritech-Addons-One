@@ -56,6 +56,15 @@ public final class ProxyPickerState {
         return Objects.equals(openPos, pos) && openFace == face;
     }
 
+    /**
+     * True while any face's picker of this block is open, i.e. while the Item Proxy page covers the panel
+     * with Oritech's configuration page. The screen asks this to hide the player's own inventory slots,
+     * which are drawn - and clickable - only while the panel is closed.
+     */
+    public static boolean isOpen(BlockPos pos) {
+        return openPos != null && openPos.equals(pos);
+    }
+
     /** Drops everything this page remembered, called when the GUI closes. */
     public static void clear() {
         close();

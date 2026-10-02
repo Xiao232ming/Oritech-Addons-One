@@ -6,6 +6,7 @@ import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 
+import io.github.xiao232ming.oritechaddonsone.client.page.AddonPage;
 import io.github.xiao232ming.oritechaddonsone.client.page.AddonPageContext;
 import io.github.xiao232ming.oritechaddonsone.client.page.AddonPageRegistry;
 import io.github.xiao232ming.oritechaddonsone.client.page.AddonTabStrip;
@@ -46,7 +47,9 @@ public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddon
         this.layout = menu.layout();
         // the pages depend on the block this menu belongs to (wired addon or wireless dock)
         this.tabs = new AddonTabStrip(AddonPageRegistry.pages(menu));
-        this.inventoryLabelY = this.imageHeight - ExtensionAddonLayout.LABEL_OFFSET;
+        // The label belongs to the player inventory, so it is anchored to the first inventory row (the
+        // vanilla twelve pixel gap) instead of to the panel's bottom border, which follows the page.
+        this.inventoryLabelY = this.layout.inventoryLabelY();
     }
 
     @Override
@@ -77,6 +80,11 @@ public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddon
         if (page != AddonPageRegistry.proxyPage()) {
             ProxyPickerState.close();
         }
+        // The Item Proxy page's configuration panel is an opaque modal step over the whole panel, and the
+        // player inventory is extracted after the page - so the inventory is hidden while that panel is
+        // open, which is what makes the panel read as a full page like Oritech's own inventory proxy
+        // screen. The slot positions, their ids and everything the server sees are untouched.
+        this.menu.setPlayerSlotsActive(!ProxyPickerState.isOpen(this.menu.position()));
     }
 
     /**
@@ -175,34 +183,47 @@ public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddon
      * This runs before the slots themselves are extracted, so the dim plugin hints of type III end up
      * behind any plugin that is actually inserted.
      * <p>
-     * The panel body is {@link ExtensionAddonLayout#WIDTH} wide and {@code imageHeight} tall, both from
-     * the layout; the tab strip is painted over its right border, which is what makes the selected tab
-     * look connected to the panel.
+     * The panel body is {@link ExtensionAddonLayout#WIDTH} wide; its bottom border is drawn at the height
+     * the visible page asks for ({@link AddonPage#drawnHeight}), not at the menu's own height. The menu
+     * keeps {@code layout.imageHeight()} - that is the geometry the server and the client derive the slot
+     * coordinates from - but the plugin page and the wireless page only need the player inventory, so
+     * their panel ends right below it instead of showing the band the Item Proxy page reserves for its net
+     * and counter. The GUI stays centred on the menu's height either way, so switching a tab moves
+     * nothing. The tab strip is painted over its right border, which is what makes the selected tab look
+     * connected to the panel.
      */
     @Override
     public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         super.extractBackground(graphics, mouseX, mouseY, partialTick);
 
+        // The page can open or close its configuration panel on a click, and that changes whether the
+        // player's inventory is extracted at all; syncing here (once per frame, and idempotent) keeps the
+        // menu's slot activity correct without the page having to reach into the menu.
+        syncVisiblePage();
+
         int xo = this.leftPos;
         int yo = this.topPos;
         int right = xo + ExtensionAddonLayout.WIDTH;
 
+        var page = this.tabs.selectedPage();
+        int panelHeight = page.drawnHeight(this.layout);
+
         // classic container panel with a light top/left and dark bottom/right bevel
-        graphics.fill(xo, yo, right, yo + this.imageHeight, AddonPanelStyle.PANEL);
+        graphics.fill(xo, yo, right, yo + panelHeight, AddonPanelStyle.PANEL);
         graphics.fill(xo, yo, right, yo + 2, AddonPanelStyle.PANEL_LIGHT);
-        graphics.fill(xo, yo, xo + 2, yo + this.imageHeight, AddonPanelStyle.PANEL_LIGHT);
-        graphics.fill(xo, yo + this.imageHeight - 2, right, yo + this.imageHeight, AddonPanelStyle.PANEL_DARK);
-        graphics.fill(right - 2, yo, right, yo + this.imageHeight, AddonPanelStyle.PANEL_DARK);
+        graphics.fill(xo, yo, xo + 2, yo + panelHeight, AddonPanelStyle.PANEL_LIGHT);
+        graphics.fill(xo, yo + panelHeight - 2, right, yo + panelHeight, AddonPanelStyle.PANEL_DARK);
+        graphics.fill(right - 2, yo, right, yo + panelHeight, AddonPanelStyle.PANEL_DARK);
 
         // the content of the selected page only (the plugin page draws the plugin slots and the type III
         // hints, the wireless page its info text and the Item Proxy page the net, counter and picker)
-        var page = this.tabs.selectedPage();
         if (this.context != null) {
             page.render(this.context, graphics, partialTick);
         }
 
         // player inventory (3 rows of 9) and the hotbar - these frames came from the background
-        // texture before, so they have to be drawn here as well.
+        // texture before, so they have to be drawn here as well. They sit at the menu's coordinates,
+        // which every page's drawn height covers.
         for (int row = 0; row < 3; row++) {
             for (int column = 0; column < 9; column++) {
                 AddonPanelStyle.drawSlot(graphics, xo + 7 + column * 18, yo + layout.playerRowsY() + row * 18 - 1);

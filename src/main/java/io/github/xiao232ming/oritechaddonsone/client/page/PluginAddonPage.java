@@ -10,6 +10,7 @@ import net.minecraft.world.level.block.Block;
 
 import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonType;
 import io.github.xiao232ming.oritechaddonsone.client.AddonPanelStyle;
+import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonLayout;
 
 /**
  * The plugin page: the slots an extension addon (or a wireless extension dock) holds its plugins in.
@@ -49,6 +50,16 @@ public final class PluginAddonPage implements AddonPage {
     @Override
     public Identifier icon() {
         return ICON;
+    }
+
+    /**
+     * The lowest thing this page draws is the last plugin slot frame (or the player inventory, when the
+     * grid is short): there is no net and no counter here, so the panel ends right below that instead of
+     * showing the band the Item Proxy page reserves for its own content.
+     */
+    @Override
+    public int drawnHeight(ExtensionAddonLayout layout) {
+        return layout.pageHeight(layout.firstSlotY() + layout.rows() * ExtensionAddonLayout.SLOT_SIZE);
     }
 
     /**
