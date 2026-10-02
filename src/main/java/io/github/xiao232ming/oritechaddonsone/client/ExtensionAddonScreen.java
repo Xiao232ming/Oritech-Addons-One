@@ -92,8 +92,9 @@ public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddon
 
     /**
      * Draws the tooltip a page offers for its own controls, unless the mouse is over an item - an item's
-     * own tooltip is the more interesting one, and the page only has to explain a control that is empty
-     * anyway (the reserved slot of the wireless page).
+     * own tooltip is the more interesting one, and a page only has to explain a control that holds no item
+     * of its own. No page uses this today (the wireless page's reserved slot shows no text at all), but the
+     * hook is what such a control would be explained with.
      */
     private void renderPageTooltip(GuiGraphics graphics, int mouseX, int mouseY) {
         if (this.context == null) return;

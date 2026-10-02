@@ -24,10 +24,8 @@ public final class PluginAddonPage implements AddonPage {
     /** Id of this page, also the suffix of its language keys. */
     public static final String ID = "plugins";
 
-    /** Language keys of the tab label and tooltip. */
+    /** Language key of the tab label, which is all the tab shows. */
     private static final String LABEL_KEY = "gui.oritechaddonsone.page." + ID;
-    private static final String TOOLTIP_KEY = LABEL_KEY + ".tooltip";
-    private static final String HINT_KEY = LABEL_KEY + ".hint";
 
     /**
      * Icon of the tab: Oritech's machine extender texture ({@code oritech:block/machine_extender}). That is
@@ -51,11 +49,6 @@ public final class PluginAddonPage implements AddonPage {
     @Override
     public ResourceLocation icon() {
         return ICON;
-    }
-
-    @Override
-    public List<Component> tooltip() {
-        return List.of(label(), Component.translatable(TOOLTIP_KEY), Component.translatable(HINT_KEY));
     }
 
     /**
