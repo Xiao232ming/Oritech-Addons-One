@@ -1,5 +1,5 @@
 {
-  "parent": "oritechaddonsone:block/anchor_addon",
+  "parent": "oritechaddonsone:block/chunk_anchor_addon",
   "display": {
     "thirdperson_righthand": {"translation": [-2, 0, 0], "scale": [0.4, 0.4, 0.4]},
     "thirdperson_lefthand": {"translation": [2, 0, 0], "scale": [0.4, 0.4, 0.4]},

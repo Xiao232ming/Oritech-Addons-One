@@ -1,7 +1,7 @@
 {
   "textures": {
-    "all": "oritech:block/machine_extender",
-    "side": "oritechaddonsone:block/extension_addon_2_side",
+    "port": "oritech:block/machine_extender",
+    "side": "oritechaddonsone:block/extension_addon_1_side",
     "particle": "oritech:block/machine_extender"
   },
   "elements": [
@@ -14,7 +14,7 @@
         "east": { "uv": [0, 8, 16, 16], "texture": "#side" },
         "south": { "uv": [0, 8, 16, 16], "texture": "#side" },
         "west": { "uv": [0, 8, 16, 16], "texture": "#side" },
-        "up": { "uv": [0, 0, 16, 16], "texture": "#all" },
+        "up": { "uv": [0, 0, 16, 16], "texture": "#port" },
         "down": { "uv": [0, 0, 16, 16], "texture": "#side" }
       }
     }

@@ -2,7 +2,7 @@
   "format_version": "1.21.6",
   "credit": "Made with Blockbench",
   "texture_size": [64, 64],
-  "textures": {"0": "oritechaddonsone:block/anchor_addon_on", "1": "oritech:block/machine_particle_texture", "particle": "oritech:block/machine_particle_texture"},
+  "textures": {"0": "oritechaddonsone:block/chunk_anchor_addon", "particle": "oritech:block/machine_particle_texture"},
   "elements": [
     {
       "name": "base",

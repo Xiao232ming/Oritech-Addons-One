@@ -156,7 +156,7 @@ public final class WirelessAddonPage implements AddonPage {
             int slotY) {
         if (!menu.getSlot(menu.reservedSlot()).getItem().isEmpty()) return;
 
-        graphics.item(new ItemStack(OritechAddonsOne.ANCHOR_ADDON_ITEM.get()), slotX, slotY);
+        graphics.item(new ItemStack(OritechAddonsOne.CHUNK_ANCHOR_ADDON_ITEM.get()), slotX, slotY);
         graphics.fill(slotX, slotY, slotX + 16, slotY + 16, AddonPanelStyle.HINT_VEIL);
     }
 
