@@ -244,14 +244,19 @@ public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddon
 
         // player inventory (3 rows of 9) and the hotbar - these frames came from the background
         // texture before, so they have to be drawn here as well. They sit at the menu's coordinates,
-        // which every page's drawn height covers.
-        for (int row = 0; row < 3; row++) {
-            for (int column = 0; column < 9; column++) {
-                AddonPanelStyle.drawSlot(graphics, xo + 7 + column * 18, yo + layout.playerRowsY() + row * 18 - 1);
+        // which every page's drawn height covers. While the Item Proxy page's configuration panel is
+        // open they are skipped together with their items and their label: that panel is an opaque modal
+        // step over the whole panel, and these frames are painted after it, so they used to show up as a
+        // grid of empty slots on top of Oritech's configuration page.
+        if (this.menu.playerSlotsActive()) {
+            for (int row = 0; row < 3; row++) {
+                for (int column = 0; column < 9; column++) {
+                    AddonPanelStyle.drawSlot(graphics, xo + 7 + column * 18, yo + layout.playerRowsY() + row * 18 - 1);
+                }
             }
-        }
-        for (int column = 0; column < 9; column++) {
-            AddonPanelStyle.drawSlot(graphics, xo + 7 + column * 18, yo + layout.hotbarY() - 1);
+            for (int column = 0; column < 9; column++) {
+                AddonPanelStyle.drawSlot(graphics, xo + 7 + column * 18, yo + layout.hotbarY() - 1);
+            }
         }
 
         // the tab strip on the right edge, painted last so the selected tab covers the panel border
