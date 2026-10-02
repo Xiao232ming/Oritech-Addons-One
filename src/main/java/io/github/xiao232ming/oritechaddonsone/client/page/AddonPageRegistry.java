@@ -30,10 +30,28 @@ public final class AddonPageRegistry {
     private AddonPageRegistry() {
     }
 
-    /** All pages of the given menu, in tab order. */
+    /**
+     * All pages of the given menu, in tab order.
+     * <p>
+     * The list is per menu and not a constant, because a page can depend on what the block holds - see
+     * {@link #pages(boolean)}. The screen compares this list with the pages it currently shows on every
+     * container tick, so taking the last inventory proxy addon out removes the tab right away and putting
+     * one in adds it right away, without reopening the GUI.
+     */
     public static List<AddonPage> pages(ExtensionAddonMenu menu) {
-        // the proxy page is offered by both variants, and only while an inventory proxy addon is inside
-        if (!menu.hasInventoryProxy()) return List.of(PLUGINS, WIRELESS);
+        return pages(menu.hasInventoryProxy());
+    }
+
+    /**
+     * The pages of a block that does or does not hold an Oritech inventory proxy addon.
+     * <p>
+     * The proxy page is offered by both variants - wired addon and wireless dock - and only while an
+     * inventory proxy addon is stored inside: it is that addon that gives the block the ability to proxy a
+     * machine inventory. Keeping the decision in this pure function is what lets the screen (and a test)
+     * ask for the page list of a contents change without building a menu.
+     */
+    public static List<AddonPage> pages(boolean hasInventoryProxy) {
+        if (!hasInventoryProxy) return List.of(PLUGINS, WIRELESS);
         return List.of(PLUGINS, WIRELESS, PROXY);
     }
 

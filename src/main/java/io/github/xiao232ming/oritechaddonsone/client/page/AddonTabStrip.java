@@ -14,13 +14,15 @@ import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonMenu;
  * <p>
  * The strip only holds client side state - which page is selected - and draws and hit tests its tabs. It
  * never touches the menu: every slot of every page already exists in {@code ExtensionAddonMenu}, so
- * switching a tab only changes what is drawn. The strip is also the one place that keeps the tabs inside
+ * switching a tab only changes what is drawn. Its page list is replaceable ({@link #setPages}), because a
+ * page can depend on what the block holds and may therefore appear or disappear while the GUI is open.
+ * The strip is also the one place that keeps the tabs inside
  * the window: the strip is part of the GUI width, so the tabs are inside the window for every window
  * Minecraft can produce, and the {@link #layout} clamp covers the theoretical case of a smaller one.
  */
 public final class AddonTabStrip {
 
-    private final List<AddonTabWidget> tabs;
+    private List<AddonTabWidget> tabs;
     private int selected;
 
     /** Called after the selection changed, so the screen can follow it (e.g. enable the page's slots). */
@@ -32,18 +34,54 @@ public final class AddonTabStrip {
     }
 
     public AddonTabStrip(List<AddonPage> pages) {
-        var widgets = new ArrayList<AddonTabWidget>(pages.size());
+        this.tabs = widgets(pages);
+        select(0);
+    }
+
+    /** One tab widget per page, in tab order; the index a tab selects is its position in the strip. */
+    private List<AddonTabWidget> widgets(List<AddonPage> pages) {
+        var built = new ArrayList<AddonTabWidget>(pages.size());
         for (int index = 0; index < pages.size(); index++) {
             final int tab = index;
-            widgets.add(new AddonTabWidget(pages.get(index), index, () -> select(tab)));
+            built.add(new AddonTabWidget(pages.get(index), index, () -> select(tab)));
         }
-        this.tabs = List.copyOf(widgets);
-        select(0);
+        return List.copyOf(built);
     }
 
     /** All tabs, in tab order (the first one is the page a freshly opened GUI shows). */
     public List<AddonTabWidget> tabs() {
         return tabs;
+    }
+
+    /**
+     * True while the strip already shows exactly these pages, i.e. while a contents change does not have
+     * to rebuild anything. The pages are singletons of the registry, so identity is the whole comparison.
+     */
+    public boolean shows(List<AddonPage> pages) {
+        if (pages.size() != tabs.size()) return false;
+        for (int index = 0; index < pages.size(); index++) {
+            if (tabs.get(index).page() != pages.get(index)) return false;
+        }
+        return true;
+    }
+
+    /**
+     * Replaces the pages of the strip, which is what a change of the block's contents does live.
+     * <p>
+     * The selected page stays selected while it is still offered; if it disappeared (the last inventory
+     * proxy addon was taken out while the Item Proxy page was open) the strip falls back to the first
+     * page - the plugin page - so the GUI can never show a page that is no longer registered. The
+     * selection listener runs, so the screen re-enables the slots of the page that ends up visible.
+     * <p>
+     * The new tabs start at {@code (0, 0)}: the screen re-lays the strip out right after calling this
+     * (see {@code ExtensionAddonScreen#containerTick}), because the panel origin is only known there.
+     */
+    public void setPages(List<AddonPage> pages) {
+        var previous = selectedPage();
+        this.tabs = widgets(pages);
+
+        var index = pages.indexOf(previous);
+        select(index < 0 ? 0 : index);
     }
 
     /** Sets what runs after {@link #select(int)} changed the visible page. */

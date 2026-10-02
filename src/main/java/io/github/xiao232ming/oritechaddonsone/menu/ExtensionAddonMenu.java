@@ -27,11 +27,13 @@ import io.github.xiao232ming.oritechaddonsone.block.entity.WirelessExtensionAddo
  * configurable, 1-36, and sent along when the menu is opened), the reserved single item slot of the
  * wireless page and then the regular player inventory.
  * <p>
- * Both pages of the GUI share this one menu, so both slot groups exist at all times; which of them the
+ * All pages of the GUI share this one menu, so all slot groups exist at all times; which of them the
  * player can use is decided by {@linkplain Slot#isActive() the slot's own activity}, which the screen
- * sets from the page it currently shows. The server never sees that flag (it only changes what is drawn
- * and clicked), so the plugin page behaves exactly as it did before - and the reserved slot sits outside
- * the plugin grid, so the two groups cannot overlap even while both are active.
+ * sets from the page it currently shows - the plugin slots are active on the plugin page only and the
+ * reserved slot on the wireless page only, so the Item Proxy page (which owns no menu slot) shows neither
+ * group's items. The server never sees that flag (it only changes what is drawn and clicked), so the
+ * plugin page behaves exactly as it did before - and the reserved slot sits outside the plugin grid, so
+ * the two groups cannot overlap even while both are active.
  */
 public class ExtensionAddonMenu extends AbstractContainerMenu {
 
@@ -56,6 +58,8 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
     @Nullable
     private String linkedMachineNameKey;
 
+    /** Client side: true while the screen shows the plugin page, which is what enables the plugin slots. */
+    private boolean pluginPageActive = true;
     /** Client side: true while the screen shows the wireless page, which is what enables its own slot. */
     private boolean wirelessPageActive;
     /** Client side copy of {@link #targetChunkForceLoadedSlot} (the server computes the value itself). */
@@ -147,11 +151,27 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
     }
 
     /**
+     * Whether the plugin page is the page the screen shows. Only ever set on the client: the server has no
+     * idea which page is open, and every slot exists on both sides either way.
+     * <p>
+     * It defaults to {@code true}, so a menu whose screen was never initialised behaves like the GUI did
+     * before the page framework: the plugin slots - the slots that really hold the addons - stay usable.
+     */
+    public boolean pluginPageActive() {
+        return pluginPageActive;
+    }
+
+    /**
      * Whether the wireless page is the page the screen shows. Only ever set on the client: the server has
      * no idea which page is open, and every slot exists on both sides either way.
      */
     public boolean wirelessPageActive() {
         return wirelessPageActive;
+    }
+
+    /** Called by the screen whenever the selected page changes, so the pages' slots become active. */
+    public void setPluginPageActive(boolean active) {
+        this.pluginPageActive = active;
     }
 
     /** Called by the screen whenever the selected page changes, so the pages' slots become active. */
@@ -188,13 +208,15 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
                 }
 
                 /**
-                 * The plugin slots are only usable while the plugin page is shown. This is display and
-                 * clicking only - nothing of it reaches the server - and it keeps the plugin items from
-                 * floating over the wireless page's text.
+                 * The plugin slots are only usable while the plugin page is shown. Vanilla asks a slot for
+                 * this before it draws it and before it hands a click to it, so no plugin item can appear
+                 * on another page (the wireless page's text, the Item Proxy page's net) and no click can
+                 * reach a plugin slot from there. It is display and clicking only - nothing of it reaches
+                 * the server.
                  */
                 @Override
                 public boolean isActive() {
-                    return !wirelessPageActive;
+                    return pluginPageActive;
                 }
             });
         }
