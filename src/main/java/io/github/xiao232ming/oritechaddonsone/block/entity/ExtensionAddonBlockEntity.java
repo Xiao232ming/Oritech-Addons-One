@@ -169,7 +169,7 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
     /** True while the reserved slot of the wireless page holds a chunk anchor plugin. */
     public boolean holdsAnchor() {
         var stack = items.get(RESERVED_SLOT);
-        return !stack.isEmpty() && stack.getItem() == OritechAddonsOne.ANCHOR_ADDON_ITEM.get();
+        return !stack.isEmpty() && stack.getItem() == OritechAddonsOne.CHUNK_ANCHOR_ADDON_ITEM.get();
     }
 
     // ------------------------------------------------------------------ connected machine (wireless page)

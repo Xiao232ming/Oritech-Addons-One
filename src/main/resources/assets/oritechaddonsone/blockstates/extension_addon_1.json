@@ -4,7 +4,8 @@
       "when": {
         "placement": "vertical",
         "facing": "north",
-        "addon_used": "false"
+        "addon_used": "false",
+        "control_unit": "false"
       },
       "apply": {
         "model": "oritechaddonsone:block/extension_addon_1_off"
@@ -14,17 +15,41 @@
       "when": {
         "placement": "vertical",
         "facing": "north",
-        "addon_used": "true"
+        "addon_used": "false",
+        "control_unit": "true"
       },
       "apply": {
-        "model": "oritechaddonsone:block/extension_addon_1"
+        "model": "oritechaddonsone:block/extension_addon_1_off"
+      }
+    },
+    {
+      "when": {
+        "placement": "vertical",
+        "facing": "north",
+        "addon_used": "true",
+        "control_unit": "false"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/extension_addon_1_on"
+      }
+    },
+    {
+      "when": {
+        "placement": "vertical",
+        "facing": "north",
+        "addon_used": "true",
+        "control_unit": "true"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/extension_addon_1_on"
       }
     },
     {
       "when": {
         "placement": "vertical",
         "facing": "east",
-        "addon_used": "false"
+        "addon_used": "false",
+        "control_unit": "false"
       },
       "apply": {
         "model": "oritechaddonsone:block/extension_addon_1_off",
@@ -35,10 +60,35 @@
       "when": {
         "placement": "vertical",
         "facing": "east",
-        "addon_used": "true"
+        "addon_used": "false",
+        "control_unit": "true"
       },
       "apply": {
-        "model": "oritechaddonsone:block/extension_addon_1",
+        "model": "oritechaddonsone:block/extension_addon_1_off",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "placement": "vertical",
+        "facing": "east",
+        "addon_used": "true",
+        "control_unit": "false"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/extension_addon_1_on",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "placement": "vertical",
+        "facing": "east",
+        "addon_used": "true",
+        "control_unit": "true"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/extension_addon_1_on",
         "y": 90
       }
     },
@@ -46,7 +96,8 @@
       "when": {
         "placement": "vertical",
         "facing": "south",
-        "addon_used": "false"
+        "addon_used": "false",
+        "control_unit": "false"
       },
       "apply": {
         "model": "oritechaddonsone:block/extension_addon_1_off",
@@ -57,10 +108,35 @@
       "when": {
         "placement": "vertical",
         "facing": "south",
-        "addon_used": "true"
+        "addon_used": "false",
+        "control_unit": "true"
       },
       "apply": {
-        "model": "oritechaddonsone:block/extension_addon_1",
+        "model": "oritechaddonsone:block/extension_addon_1_off",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "placement": "vertical",
+        "facing": "south",
+        "addon_used": "true",
+        "control_unit": "false"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/extension_addon_1_on",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "placement": "vertical",
+        "facing": "south",
+        "addon_used": "true",
+        "control_unit": "true"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/extension_addon_1_on",
         "y": 180
       }
     },
@@ -68,7 +144,8 @@
       "when": {
         "placement": "vertical",
         "facing": "west",
-        "addon_used": "false"
+        "addon_used": "false",
+        "control_unit": "false"
       },
       "apply": {
         "model": "oritechaddonsone:block/extension_addon_1_off",
@@ -79,17 +156,43 @@
       "when": {
         "placement": "vertical",
         "facing": "west",
-        "addon_used": "true"
+        "addon_used": "false",
+        "control_unit": "true"
       },
       "apply": {
-        "model": "oritechaddonsone:block/extension_addon_1",
+        "model": "oritechaddonsone:block/extension_addon_1_off",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "placement": "vertical",
+        "facing": "west",
+        "addon_used": "true",
+        "control_unit": "false"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/extension_addon_1_on",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "placement": "vertical",
+        "facing": "west",
+        "addon_used": "true",
+        "control_unit": "true"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/extension_addon_1_on",
         "y": 270
       }
     },
     {
       "when": {
         "placement": "bottom",
-        "addon_used": "false"
+        "addon_used": "false",
+        "control_unit": "false"
       },
       "apply": {
         "model": "oritechaddonsone:block/extension_addon_1_flat_off"
@@ -98,16 +201,38 @@
     {
       "when": {
         "placement": "bottom",
-        "addon_used": "true"
+        "addon_used": "false",
+        "control_unit": "true"
       },
       "apply": {
-        "model": "oritechaddonsone:block/extension_addon_1_flat"
+        "model": "oritechaddonsone:block/extension_addon_1_flat_off"
+      }
+    },
+    {
+      "when": {
+        "placement": "bottom",
+        "addon_used": "true",
+        "control_unit": "false"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/extension_addon_1_flat_on"
+      }
+    },
+    {
+      "when": {
+        "placement": "bottom",
+        "addon_used": "true",
+        "control_unit": "true"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/extension_addon_1_flat_on"
       }
     },
     {
       "when": {
         "placement": "top",
-        "addon_used": "false"
+        "addon_used": "false",
+        "control_unit": "false"
       },
       "apply": {
         "x": 180,
@@ -117,11 +242,34 @@
     {
       "when": {
         "placement": "top",
-        "addon_used": "true"
+        "addon_used": "false",
+        "control_unit": "true"
       },
       "apply": {
         "x": 180,
-        "model": "oritechaddonsone:block/extension_addon_1_flat"
+        "model": "oritechaddonsone:block/extension_addon_1_flat_off"
+      }
+    },
+    {
+      "when": {
+        "placement": "top",
+        "addon_used": "true",
+        "control_unit": "false"
+      },
+      "apply": {
+        "x": 180,
+        "model": "oritechaddonsone:block/extension_addon_1_flat_on"
+      }
+    },
+    {
+      "when": {
+        "placement": "top",
+        "addon_used": "true",
+        "control_unit": "true"
+      },
+      "apply": {
+        "x": 180,
+        "model": "oritechaddonsone:block/extension_addon_1_flat_on"
       }
     }
   ]

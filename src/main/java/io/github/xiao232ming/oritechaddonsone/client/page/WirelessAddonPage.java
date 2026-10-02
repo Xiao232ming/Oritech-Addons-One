@@ -163,7 +163,7 @@ public final class WirelessAddonPage implements AddonPage {
 
         graphics.pose().pushPose();
         graphics.pose().translate(0.0F, 0.0F, AddonPanelStyle.HINT_ICON_Z - AddonPanelStyle.ITEM_Z);
-        graphics.renderItem(new ItemStack(OritechAddonsOne.ANCHOR_ADDON_ITEM.get()), slotX, slotY);
+        graphics.renderItem(new ItemStack(OritechAddonsOne.CHUNK_ANCHOR_ADDON_ITEM.get()), slotX, slotY);
         graphics.pose().popPose();
 
         // renderItem flushes its own batch, so the veil lands on top of the icon and everything drawn

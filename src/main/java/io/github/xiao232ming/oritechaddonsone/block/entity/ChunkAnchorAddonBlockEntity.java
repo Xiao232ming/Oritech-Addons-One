@@ -11,7 +11,7 @@ import org.jetbrains.annotations.Nullable;
 import rearth.oritech.block.entity.addons.AddonBlockEntity;
 
 import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
-import io.github.xiao232ming.oritechaddonsone.block.AnchorAddonBlock;
+import io.github.xiao232ming.oritechaddonsone.block.ChunkAnchorAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.wireless.AnchorForceLoad;
 
 /**
@@ -29,9 +29,9 @@ import io.github.xiao232ming.oritechaddonsone.wireless.AnchorForceLoad;
  * follows from the world, and {@link AnchorForceLoad} reconciles it every few ticks, so nothing here has to
  * be saved.
  */
-public class AnchorAddonBlockEntity extends AddonBlockEntity implements BlockEntityTicker<BlockEntity> {
+public class ChunkAnchorAddonBlockEntity extends AddonBlockEntity implements BlockEntityTicker<BlockEntity> {
 
-    public AnchorAddonBlockEntity(BlockPos pos, BlockState state) {
+    public ChunkAnchorAddonBlockEntity(BlockPos pos, BlockState state) {
         super(OritechAddonsOne.PLUGIN_ADDON_ENTITY.get(), pos, state);
     }
 
@@ -99,7 +99,7 @@ public class AnchorAddonBlockEntity extends AddonBlockEntity implements BlockEnt
     public void setRemoved() {
         if (level instanceof ServerLevel serverLevel
                 && level.isLoaded(worldPosition)
-                && !(level.getBlockState(worldPosition).getBlock() instanceof AnchorAddonBlock)) {
+                && !(level.getBlockState(worldPosition).getBlock() instanceof ChunkAnchorAddonBlock)) {
             AnchorForceLoad.release(serverLevel, worldPosition);
         }
         super.setRemoved();
@@ -115,7 +115,7 @@ public class AnchorAddonBlockEntity extends AddonBlockEntity implements BlockEnt
      */
     @Override
     public void tick(Level level, BlockPos pos, BlockState state, BlockEntity anchor) {
-        if (anchor instanceof AnchorAddonBlockEntity self) {
+        if (anchor instanceof ChunkAnchorAddonBlockEntity self) {
             AnchorForceLoad.register(self);
         }
     }

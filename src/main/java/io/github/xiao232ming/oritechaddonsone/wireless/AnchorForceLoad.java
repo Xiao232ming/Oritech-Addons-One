@@ -19,8 +19,8 @@ import rearth.oritech.block.entity.addons.AddonBlockEntity;
 import rearth.oritech.util.MachineAddonController;
 
 import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
-import io.github.xiao232ming.oritechaddonsone.block.AnchorAddonBlock;
-import io.github.xiao232ming.oritechaddonsone.block.entity.AnchorAddonBlockEntity;
+import io.github.xiao232ming.oritechaddonsone.block.ChunkAnchorAddonBlock;
+import io.github.xiao232ming.oritechaddonsone.block.entity.ChunkAnchorAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEntity;
 
 /**
@@ -31,7 +31,7 @@ import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEn
  * <ul>
  *     <li><b>placed as a block</b> next to a machine - the machine's addon scan claims the block (it is an
  *     ordinary Oritech {@code MachineAddonBlock}) and writes its own position into the block entity, see
- *     {@link AnchorAddonBlockEntity};</li>
+ *     {@link ChunkAnchorAddonBlockEntity};</li>
  *     <li><b>inserted into the reserved slot</b> of one of this mod's addons or wireless docks - the
  *     anchor item then names the machine that addon is connected to, see
  *     {@link ExtensionAddonBlockEntity#connectedMachinePos()}.</li>
@@ -114,11 +114,11 @@ public final class AnchorForceLoad {
      * is inserted into changes, so the effect is there immediately instead of at the next reconcile - the
      * regular re-check in {@link #onServerTick} makes the call optional, never wrong.
      */
-    public static void register(AnchorAddonBlockEntity anchor) {
+    public static void register(ChunkAnchorAddonBlockEntity anchor) {
         refresh(anchor);
     }
 
-    /** See {@link #register(AnchorAddonBlockEntity)} - same thing for the reserved slot of an addon. */
+    /** See {@link #register(ChunkAnchorAddonBlockEntity)} - same thing for the reserved slot of an addon. */
     public static void register(ExtensionAddonBlockEntity addon) {
         refresh(addon);
     }
@@ -294,7 +294,7 @@ public final class AnchorForceLoad {
         // the old target is gone (the machine was relinked or replaced), so it goes first
         release(level, source);
 
-        var receipt = new Receipt(source, chunk, addon instanceof AnchorAddonBlockEntity, !alreadyForced);
+        var receipt = new Receipt(source, chunk, addon instanceof ChunkAnchorAddonBlockEntity, !alreadyForced);
         RECEIPTS.computeIfAbsent(level, key -> new HashMap<>())
                 .computeIfAbsent(chunk, key -> new ArrayList<>())
                 .add(receipt);
@@ -319,7 +319,7 @@ public final class AnchorForceLoad {
     @Nullable
     private static BlockPos machinePosOf(AddonBlockEntity addon) {
         try {
-            if (addon instanceof AnchorAddonBlockEntity anchor) {
+            if (addon instanceof ChunkAnchorAddonBlockEntity anchor) {
                 return anchor.claimedMachinePos();
             }
             if (addon instanceof ExtensionAddonBlockEntity container && holdsAnchor(container)) {
@@ -351,9 +351,9 @@ public final class AnchorForceLoad {
         // The anchor is claimed when the machine's addon scan marked it used (addon_used, a synced block
         // state) and there is a machine at the controller position. A removed block, an unloaded chunk and
         // a broken machine all fail one of the two.
-        if (!(level.getBlockState(source).getBlock() instanceof AnchorAddonBlock)) return false;
+        if (!(level.getBlockState(source).getBlock() instanceof ChunkAnchorAddonBlock)) return false;
 
-        return level.getBlockEntity(source) instanceof AnchorAddonBlockEntity anchor
+        return level.getBlockEntity(source) instanceof ChunkAnchorAddonBlockEntity anchor
                 && machineOf(anchor) != null;
     }
 
@@ -386,7 +386,7 @@ public final class AnchorForceLoad {
      * replaced.
      */
     @Nullable
-    private static BlockPos machineOf(AnchorAddonBlockEntity anchor) {
+    private static BlockPos machineOf(ChunkAnchorAddonBlockEntity anchor) {
         var state = anchor.getBlockState();
         if (!state.hasProperty(MachineAddonBlock.ADDON_USED) || !state.getValue(MachineAddonBlock.ADDON_USED)) {
             return null;

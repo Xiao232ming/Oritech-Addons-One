@@ -9,7 +9,7 @@ import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 
-import io.github.xiao232ming.oritechaddonsone.block.entity.AnchorAddonBlockEntity;
+import io.github.xiao232ming.oritechaddonsone.block.entity.ChunkAnchorAddonBlockEntity;
 
 /**
  * 锚点插件 - the chunk anchor plugin.
@@ -24,16 +24,16 @@ import io.github.xiao232ming.oritechaddonsone.block.entity.AnchorAddonBlockEntit
  * same settings, same bounding shape - the only difference is the block entity, which is what learns which
  * machine claimed the anchor.
  */
-public class AnchorAddonBlock extends PluginAddonBlock {
+public class ChunkAnchorAddonBlock extends PluginAddonBlock {
 
-    public AnchorAddonBlock(Properties properties, AddonSettings addonSettings) {
+    public ChunkAnchorAddonBlock(Properties properties, AddonSettings addonSettings) {
         super(properties, addonSettings);
     }
 
     @Nullable
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
-        return new AnchorAddonBlockEntity(pos, state);
+        return new ChunkAnchorAddonBlockEntity(pos, state);
     }
 
     /**

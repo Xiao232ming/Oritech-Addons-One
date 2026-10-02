@@ -1,5 +1,5 @@
 {
-  "parent": "oritechaddonsone:block/extension_addon_1_flat",
+  "parent": "oritechaddonsone:block/extension_addon_1_flat_on",
   "gui_light": "front",
   "display": {
     "thirdperson_righthand": {

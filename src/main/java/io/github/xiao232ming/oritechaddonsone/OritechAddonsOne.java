@@ -35,12 +35,12 @@ import rearth.oritech.block.blocks.addons.MachineAddonBlock;
 import rearth.oritech.block.entity.addons.AddonBlockEntity;
 
 import io.github.xiao232ming.oritechaddonsone.addon.AddonStorageBonus;
-import io.github.xiao232ming.oritechaddonsone.block.AnchorAddonBlock;
+import io.github.xiao232ming.oritechaddonsone.block.ChunkAnchorAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonType;
 import io.github.xiao232ming.oritechaddonsone.block.PluginAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.block.WirelessExtensionAddonBlock;
-import io.github.xiao232ming.oritechaddonsone.block.entity.AnchorAddonBlockEntity;
+import io.github.xiao232ming.oritechaddonsone.block.entity.ChunkAnchorAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.WirelessExtensionAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonLayout;
@@ -152,12 +152,12 @@ public class OritechAddonsOne {
      * to.
      * <p>
      * Unlike the warehouse and tank addons this block uses its own block class and block entity
-     * ({@link AnchorAddonBlock} / {@code AnchorAddonBlockEntity}), because the anchor has to learn which
+     * ({@link ChunkAnchorAddonBlock} / {@code ChunkAnchorAddonBlockEntity}), because the anchor has to learn which
      * machine claimed it - the warehouse and tank addons never need to know.
      */
-    public static final DeferredBlock<AnchorAddonBlock> ANCHOR_ADDON = BLOCKS.registerBlock(
-            "anchor_addon",
-            properties -> new AnchorAddonBlock(properties, pluginAddonSettings()),
+    public static final DeferredBlock<ChunkAnchorAddonBlock> CHUNK_ANCHOR_ADDON = BLOCKS.registerBlock(
+            "chunk_anchor_addon",
+            properties -> new ChunkAnchorAddonBlock(properties, pluginAddonSettings()),
             blockProperties());
 
     /**
@@ -221,9 +221,9 @@ public class OritechAddonsOne {
      * chunk, it does not change a stat - so the item is registered without a green bonus argument and the
      * language key has no placeholder, see {@link PluginAddonItem#PluginAddonItem}.
      */
-    public static final DeferredItem<BlockItem> ANCHOR_ADDON_ITEM = ITEMS.registerItem(
-            "anchor_addon",
-            properties -> new PluginAddonItem(ANCHOR_ADDON.get(), properties),
+    public static final DeferredItem<BlockItem> CHUNK_ANCHOR_ADDON_ITEM = ITEMS.registerItem(
+            "chunk_anchor_addon",
+            properties -> new PluginAddonItem(CHUNK_ANCHOR_ADDON.get(), properties),
             new Item.Properties());
 
     /** All plugin types share one block entity type, the type is read from the owning block. */
@@ -243,7 +243,7 @@ public class OritechAddonsOne {
      * Block entity type of the warehouse, tank and anchor addons.
      * <p>
      * The block entities are Oritech's ordinary {@link AddonBlockEntity} - the anchor uses
-     * {@link AnchorAddonBlockEntity}, a subclass of it; the type exists because Minecraft validates the
+     * {@link ChunkAnchorAddonBlockEntity}, a subclass of it; the type exists because Minecraft validates the
      * block state against the block entity's type when the block entity is created
      * ({@code BlockEntity#validateBlockState}). Oritech's shared {@code oritech:addon_entity} type only
      * lists Oritech's own addon blocks, so this type lists the plugin blocks of this mod instead and is
@@ -262,7 +262,7 @@ public class OritechAddonsOne {
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<AddonBlockEntity>> PLUGIN_ADDON_ENTITY =
             BLOCK_ENTITIES.register("plugin_addon",
                     () -> BlockEntityType.Builder.<AddonBlockEntity>of(OritechAddonsOne::pluginAddonEntity,
-                            WAREHOUSE_ADDON.get(), TANK_ADDON.get(), ANCHOR_ADDON.get()).build(null));
+                            WAREHOUSE_ADDON.get(), TANK_ADDON.get(), CHUNK_ANCHOR_ADDON.get()).build(null));
 
     public static final DeferredHolder<MenuType<?>, MenuType<ExtensionAddonMenu>> EXTENSION_ADDON_MENU =
             MENUS.register("extension_addon", () -> IMenuTypeExtension.create(ExtensionAddonMenu::new));
@@ -281,7 +281,7 @@ public class OritechAddonsOne {
                         output.accept(WIRELESS_EXTENSION_ADDON_3_ITEM.get());
                         output.accept(WAREHOUSE_ADDON_ITEM.get());
                         output.accept(TANK_ADDON_ITEM.get());
-                        output.accept(ANCHOR_ADDON_ITEM.get());
+                        output.accept(CHUNK_ANCHOR_ADDON_ITEM.get());
                     })
                     .build());
 
@@ -326,8 +326,8 @@ public class OritechAddonsOne {
      * simple name inside its own initializer.
      */
     private static AddonBlockEntity pluginAddonEntity(BlockPos pos, BlockState state) {
-        if (state.getBlock() instanceof AnchorAddonBlock) {
-            return new AnchorAddonBlockEntity(pos, state);
+        if (state.getBlock() instanceof ChunkAnchorAddonBlock) {
+            return new ChunkAnchorAddonBlockEntity(pos, state);
         }
         return new AddonBlockEntity(PLUGIN_ADDON_ENTITY.get(), pos, state);
     }

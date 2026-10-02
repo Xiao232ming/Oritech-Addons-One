@@ -330,7 +330,7 @@ public enum ExtensionAddonType {
             // a machine as a block, or while it sits in the reserved item slot of the wireless page (which
             // is not a plugin slot of this list). Keeping it out of the plugin sets is what makes a slot
             // refuse it instead of storing a plugin that silently does nothing.
-            excluded.add(OritechAddonsOne.ANCHOR_ADDON.get());
+            excluded.add(OritechAddonsOne.CHUNK_ANCHOR_ADDON.get());
 
             var result = new HashSet<Block>();
             for (var block : BuiltInRegistries.BLOCK) {
