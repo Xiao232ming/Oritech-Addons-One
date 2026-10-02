@@ -8,7 +8,9 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.item.ItemStack;
 
+import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 import io.github.xiao232ming.oritechaddonsone.client.AddonPanelStyle;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonLayout;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonMenu;
@@ -118,6 +120,11 @@ public final class WirelessAddonPage implements AddonPage {
      * Draws the force load badge, the info lines and the frame of the reserved slot. The slot's item is
      * drawn by the screen like every other slot's item; the frame is painted here, one pixel above and left
      * of the slot, exactly like the plugin page does it for its fields.
+     * <p>
+     * While the slot is empty the chunk anchor's own icon is drawn into it, dimmed behind the same veil the
+     * plugin page uses for its fixed slots - so the cell reads as "this is where the anchor goes" instead
+     * of being an unexplained empty field. The page draws in the background layer on this version, so a
+     * real anchor inserted later simply covers the hint.
      */
     @Override
     public void render(AddonPageContext context, GuiGraphicsExtractor graphics, float partialTick) {
@@ -133,8 +140,24 @@ public final class WirelessAddonPage implements AddonPage {
                     lines.get(line).color(), false);
         }
 
-        AddonPanelStyle.drawSlot(graphics, context.left() + ExtensionAddonLayout.RESERVED_SLOT_X - 1,
-                context.top() + ExtensionAddonLayout.RESERVED_SLOT_Y - 1);
+        int slotX = context.left() + ExtensionAddonLayout.RESERVED_SLOT_X;
+        int slotY = context.top() + ExtensionAddonLayout.RESERVED_SLOT_Y;
+        AddonPanelStyle.drawSlot(graphics, slotX - 1, slotY - 1);
+
+        drawReservedSlotHint(menu, graphics, slotX, slotY);
+    }
+
+    /**
+     * Draws the anchor icon of the empty reserved slot, exactly like the plugin page draws the reference
+     * icons of its fixed slots. Nothing is drawn while the slot holds something: the frame and the item are
+     * the cell then.
+     */
+    private static void drawReservedSlotHint(ExtensionAddonMenu menu, GuiGraphicsExtractor graphics, int slotX,
+            int slotY) {
+        if (!menu.getSlot(menu.reservedSlot()).getItem().isEmpty()) return;
+
+        graphics.item(new ItemStack(OritechAddonsOne.ANCHOR_ADDON_ITEM.get()), slotX, slotY);
+        graphics.fill(slotX, slotY, slotX + 16, slotY + 16, AddonPanelStyle.HINT_VEIL);
     }
 
     /**

@@ -51,6 +51,7 @@ import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonType;
 import io.github.xiao232ming.oritechaddonsone.block.WirelessExtensionAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonLayout;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonMenu;
+import io.github.xiao232ming.oritechaddonsone.wireless.AnchorForceLoad;
 import io.github.xiao232ming.oritechaddonsone.wireless.ForceLoadedChunks;
 import io.github.xiao232ming.oritechaddonsone.wireless.WirelessLinks;
 
@@ -165,6 +166,12 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         return false;
     }
 
+    /** True while the reserved slot of the wireless page holds a chunk anchor plugin. */
+    public boolean holdsAnchor() {
+        var stack = items.get(RESERVED_SLOT);
+        return !stack.isEmpty() && stack.getItem() == OritechAddonsOne.ANCHOR_ADDON_ITEM.get();
+    }
+
     // ------------------------------------------------------------------ connected machine (wireless page)
 
     /**
@@ -262,6 +269,14 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
      */
     public void serverTickRedstone() {
         if (level == null || level.isClientSide()) return;
+
+        // A chunk anchor in the reserved slot works from here whether or not anything changed: this tick
+        // runs on both variants (the wired addon ticks every tick, the wireless dock calls it from its own
+        // ticker) and by then the saved link is loaded, which onLoad may be too early for. The lookup is
+        // one item slot, and the reconcile behind it is a no-op while the receipt is unchanged.
+        if (holdsAnchor()) {
+            AnchorForceLoad.register(this);
+        }
 
         var hasPlugin = hasRedstonePlugin();
         if (!hasPlugin && !redstoneApplied) return;
@@ -667,6 +682,7 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         if (!removed.isEmpty()) {
             if (isReservedSlot(slot)) {
                 setChanged();
+                refreshAnchor();
             } else {
                 contentsChanged();
             }
@@ -680,6 +696,7 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         if (!removed.isEmpty()) {
             if (isReservedSlot(slot)) {
                 setChanged();
+                refreshAnchor();
             } else {
                 contentsChanged();
             }
@@ -692,11 +709,34 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         items.set(slot, stack);
         if (isReservedSlot(slot)) {
             // The reserved item is not a plugin: it changes neither the machine's stats nor its storage,
-            // so the machine must not be asked to recompute its addons because of it.
+            // so the machine must not be asked to recompute its addons because of it. One item of it may
+            // still have an effect of its own: the chunk anchor force loads the connected machine's chunk.
             setChanged();
+            refreshAnchor();
             return;
         }
         contentsChanged();
+    }
+
+    /**
+     * Tells the chunk anchor that the reserved slot changed, so the force load of the connected machine is
+     * updated at once. Called for every change of that slot, because removing the anchor is as important as
+     * inserting it; a slot that holds anything else (or nothing) simply answers "release".
+     */
+    protected void refreshAnchor() {
+        AnchorForceLoad.register(this);
+    }
+
+    /**
+     * Announces a chunk anchor that was saved in the reserved slot. The force loads themselves are runtime
+     * state, so after a server start the anchor has to report itself again; the periodic reconcile and the
+     * addon's own tick cover the case where the saved link is only read after this hook.
+     */
+    @Override
+    public void onLoad() {
+        super.onLoad();
+        if (level == null || level.isClientSide()) return;
+        AnchorForceLoad.register(this);
     }
 
     /** True for the index of the reserved single item slot of the wireless page. */
