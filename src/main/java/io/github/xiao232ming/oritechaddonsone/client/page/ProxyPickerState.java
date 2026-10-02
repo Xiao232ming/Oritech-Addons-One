@@ -11,9 +11,11 @@ import net.minecraft.core.Direction;
 
 import org.jetbrains.annotations.Nullable;
 
+import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonLayout;
+
 /**
- * Client side state of the Item Proxy page: which face's slot picker is open and which slots the machine
- * of an addon offers.
+ * Client side state of the Item Proxy page: which face's slot picker is open, which slots the machine of an
+ * addon offers, and where Oritech's own configuration page is placed inside our panel.
  * <p>
  * The slot layout is asked for from the server (see {@code ProxyNetworking.RequestPicker}), because the
  * client may not have the machine's chunk loaded - which is exactly the case the wireless dock exists for.
@@ -21,7 +23,8 @@ import org.jetbrains.annotations.Nullable;
  * is open.
  * <p>
  * Everything here is presentation: the binding that really makes a face proxy the machine inventory lives
- * on the block entity (see {@code ProxyFaceBindings}).
+ * on the block entity (see {@code ProxyFaceBindings}). The geometry lives here as well, next to the state,
+ * so the drawing, the click handling and the tooltips of the page all measure the same rectangle.
  */
 public final class ProxyPickerState {
 
@@ -88,5 +91,56 @@ public final class ProxyPickerState {
     public static List<int[]> layout(BlockPos pos, Direction face) {
         var perFace = LAYOUTS.get(pos);
         return perFace == null ? null : perFace.get(face);
+    }
+
+    // ------------------------------------------------------------------ geometry of Oritech's page
+
+    /**
+     * Places Oritech's own 176x100 configuration page inside our panel, in <b>panel relative</b>
+     * coordinates.
+     * <p>
+     * Oritech's screen is the same size as the page it reproduces, so the machine's GUI slots keep the
+     * coordinates {@link rearth.oritech.util.ScreenProvider#getGuiSlots()} gives them and the prompt stays
+     * at Oritech's own y. Our panel is
+     * {@code ExtensionAddonLayout.WIDTH - ItemProxyAddonPage.PANEL_WIDTH = 24} pixels wider, so the page is
+     * centred horizontally with a twelve pixel gutter on each side, and it is centred vertically in the
+     * room between the title icon - Oritech draws the icon of a widget screen 27 pixels above the panel's
+     * top edge, so ours is a header floating over the panel body - and the section that holds the drawn
+     * panel and the player inventory.
+     * <p>
+     * The placement is clamped to the drawn panel, so the configuration page and its icon are always fully
+     * inside our GUI, whatever the window, the slot count or the plugin rows: on a panel with three plugin
+     * rows the panel is taller than the page needs and the page is simply centred, and on the two taller
+     * pages it is pushed up until it fits. It is never resized or scaled, so it always lands in the window.
+     */
+    public static Placed place(AddonPageContext context, List<int[]> slots) {
+        int innerX = Math.max(0, (context.panelWidth() - ItemProxyAddonPage.PANEL_WIDTH) / 2);
+
+        // the header icon sits on top of the panel and inside the body, so the panel starts below it
+        int top = ItemProxyAddonPage.ICON_SIZE + ExtensionAddonLayout.TOP_BAND;
+        int room = context.panelHeight() - ItemProxyAddonPage.PANEL_HEIGHT - ItemProxyAddonPage.ICON_SIZE;
+        int centred = top + Math.max(0, room - ExtensionAddonLayout.TOP_BAND) / 2;
+        int lowest = context.panelHeight() - ItemProxyAddonPage.PANEL_HEIGHT - 2;
+        int innerY = Math.max(top, Math.min(centred, lowest));
+
+        int iconX = innerX + (ItemProxyAddonPage.PANEL_WIDTH - ItemProxyAddonPage.ICON_SIZE) / 2;
+        int iconY = innerY - ItemProxyAddonPage.ICON_SIZE;
+
+        return new Placed(innerX, innerY, iconX, iconY);
+    }
+
+    /** True while the given panel relative mouse position is on one of the machine's slot cells. */
+    public static boolean isOverSlot(Placed placed, int[] slot, double mouseX, double mouseY) {
+        double x = placed.innerX() + slot[1];
+        double y = placed.innerY() + slot[2];
+        return mouseX >= x && mouseX < x + 16 && mouseY >= y && mouseY < y + 16;
+    }
+
+    /**
+     * Geometry of Oritech's configuration page inside our panel, all in panel relative coordinates: the
+     * panel itself ({@code PANEL_WIDTH} x {@code PANEL_HEIGHT} at {@code innerX/innerY}) and the header icon
+     * above it.
+     */
+    public record Placed(int innerX, int innerY, int iconX, int iconY) {
     }
 }

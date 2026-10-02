@@ -143,13 +143,29 @@ public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddon
     }
 
     /**
+     * Draws the panel's title, and the player inventory's label only while the inventory is really shown.
+     * <p>
+     * Vanilla's {@link AbstractContainerScreen#renderLabels} always draws both labels and it runs after the
+     * background, so the inventory label ("物品栏") used to stay visible in the middle of the Item Proxy
+     * page's configuration panel - a light grey box floating next to Oritech's page, over an inventory the
+     * modal step hides anyway. The title stays: it belongs to the panel itself.
+     */
+    @Override
+    protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
+        if (this.menu.playerSlotsActive()) {
+            super.renderLabels(graphics, mouseX, mouseY);
+            return;
+        }
+        graphics.drawString(this.font, this.title, this.titleLabelX, this.titleLabelY, 4210752, false);
+    }
+
+    /**
      * Draws the tooltip a page offers for its own controls, unless the mouse is over an item - an item's
      * own tooltip is the more interesting one, and a page only has to explain a control that holds no item
      * of its own. No page uses this today (the wireless page's reserved slot shows no text at all), but the
      * hook is what such a control would be explained with.
      */
-    private void renderPageTooltip(GuiGraphics graphics, int mouseX, int mouseY) {
-        if (this.context == null) return;
+    private void renderPageTooltip(GuiGraphics graphics, int mouseX, int mouseY) {        if (this.context == null) return;
         if (this.hoveredSlot != null && this.hoveredSlot.hasItem()) return;
 
         var lines = this.tabs.selectedPage().tooltipAt(this.context, mouseX - this.leftPos, mouseY - this.topPos);
