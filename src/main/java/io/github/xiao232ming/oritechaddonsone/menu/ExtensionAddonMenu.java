@@ -1,6 +1,7 @@
 package io.github.xiao232ming.oritechaddonsone.menu;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
@@ -11,6 +12,8 @@ import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
 import io.github.xiao232ming.oritechaddonsone.Config;
@@ -261,6 +264,64 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
     /** Position of the addon this menu belongs to. */
     public BlockPos position() {
         return position;
+    }
+
+    /**
+     * The addon block entity this menu shows, or {@code null} while it cannot be resolved (client side,
+     * chunk not loaded, block already broken). The Item Proxy page reads its per-face bindings and the
+     * machine it works on from here; both fail safe to "nothing configured" without it.
+     */
+    @Nullable
+    public ExtensionAddonBlockEntity blockEntity() {
+        return container instanceof ExtensionAddonBlockEntity blockEntity ? blockEntity : null;
+    }
+
+    /**
+     * Number of inventory proxy addons stored in the addon, i.e. the maximum number of configurable faces
+     * of the Item Proxy page. Answered from the client side container, which holds the same items as the
+     * server's one because the plugin slots are menu slots.
+     */
+    public int inventoryProxyCount() {
+        var blockEntity = blockEntity();
+        return blockEntity == null ? 0 : blockEntity.inventoryProxyCount();
+    }
+
+    /** True while the Item Proxy page has anything to show, i.e. while an inventory proxy addon is stored. */
+    public boolean hasInventoryProxy() {
+        return inventoryProxyCount() > 0;
+    }
+
+    /** True while the given face of the addon is bound to a machine inventory slot. */
+    public boolean isProxyFaceConfigured(Direction face) {
+        var blockEntity = blockEntity();
+        return blockEntity != null && blockEntity.proxyFaces().isConfigured(face);
+    }
+
+    /** Slot the given face proxies, or {@code null} while it proxies nothing. */
+    @Nullable
+    public Integer proxySlotOf(Direction face) {
+        var blockEntity = blockEntity();
+        return blockEntity == null ? null : blockEntity.proxyFaces().slotOf(face);
+    }
+
+    /** Number of currently configured faces, i.e. the "x" of the page's counter. */
+    public int configuredProxyFaces() {
+        var blockEntity = blockEntity();
+        return blockEntity == null ? 0 : blockEntity.proxyFaces().configuredFaces();
+    }
+
+    /** The block this addon is, used by the Item Proxy page to draw its six faces. */
+    public Block addonBlock() {
+        var blockEntity = blockEntity();
+        if (blockEntity != null) return blockEntity.getBlockState().getBlock();
+        return wireless ? type.wirelessBlock() : type.wiredBlock();
+    }
+
+    /** The block state of the addon, or {@code null} while it cannot be resolved. */
+    @Nullable
+    public BlockState addonBlockState() {
+        var blockEntity = blockEntity();
+        return blockEntity == null ? null : blockEntity.getBlockState();
     }
 
     /** Level this menu's block entity lives in, or {@code null} while it is not placed. */

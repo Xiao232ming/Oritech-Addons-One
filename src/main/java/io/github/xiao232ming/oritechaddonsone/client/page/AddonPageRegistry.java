@@ -11,10 +11,10 @@ import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonMenu;
  * showing, builds one tab per entry and draws whichever entry is selected. The plugin page is the first
  * page, so it is also the page a freshly opened GUI shows.
  * <p>
- * The list depends on the block the menu belongs to ({@link ExtensionAddonMenu#wireless()}), so a page
- * that only makes sense for one of the two variants is one entry away. Both variants currently show the
- * same two pages: the wireless page reads what it shows from the menu, so a wired addon shows the machine
- * it is attached to while a dock adds the link's coordinates; both show the same chunk status badge.
+ * The list is built per menu, because a page can depend on what the block holds: the Item Proxy page only
+ * makes sense while an Oritech inventory proxy addon is stored inside (it is that addon that gives the
+ * block the ability to proxy a machine inventory), so it appears as a third tab when it does and is gone
+ * again when the last proxy addon is taken out. Both variants - wired addon and wireless dock - get it.
  */
 public final class AddonPageRegistry {
 
@@ -24,18 +24,17 @@ public final class AddonPageRegistry {
     /** The wireless page: the connected machine and the reserved single item slot. */
     private static final AddonPage WIRELESS = new WirelessAddonPage();
 
-    /** Pages of a wired Extension Addon. */
-    private static final List<AddonPage> WIRED_PAGES = List.of(PLUGINS, WIRELESS);
-
-    /** Pages of a Wireless Extension Dock. */
-    private static final List<AddonPage> DOCK_PAGES = List.of(PLUGINS, WIRELESS);
+    /** The Item Proxy page: the face net and the machine inventory a face proxies. */
+    private static final AddonPage PROXY = new ItemProxyAddonPage();
 
     private AddonPageRegistry() {
     }
 
     /** All pages of the given menu, in tab order. */
     public static List<AddonPage> pages(ExtensionAddonMenu menu) {
-        return menu.wireless() ? DOCK_PAGES : WIRED_PAGES;
+        // the proxy page is offered by both variants, and only while an inventory proxy addon is inside
+        if (!menu.hasInventoryProxy()) return List.of(PLUGINS, WIRELESS);
+        return List.of(PLUGINS, WIRELESS, PROXY);
     }
 
     /**
@@ -49,5 +48,15 @@ public final class AddonPageRegistry {
     /** The plugin page instance, the page a freshly opened GUI shows. */
     public static AddonPage pluginPage() {
         return PLUGINS;
+    }
+
+    /** The Item Proxy page instance. */
+    public static AddonPage proxyPage() {
+        return PROXY;
+    }
+
+    /** True while the given page is the Item Proxy page. */
+    public static boolean isProxyPage(AddonPage page) {
+        return page == PROXY;
     }
 }

@@ -48,6 +48,7 @@ import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEn
 import io.github.xiao232ming.oritechaddonsone.block.entity.WirelessExtensionAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonLayout;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonMenu;
+import io.github.xiao232ming.oritechaddonsone.network.ProxyNetworking;
 
 /**
  * An addon for Oritech (26.1.2) that adds the "Extension Addon" block.
@@ -354,6 +355,8 @@ public class OritechAddonsOne {
         modEventBus.addListener(this::registerCapabilities);
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
         modEventBus.addListener(this::onCommonSetup);
+        // the four packets of the Item Proxy page (see ProxyNetworking)
+        modEventBus.addListener(ProxyNetworking::register);
 
         LOGGER.info("Oritech Addons One loaded: {}, {}, {} and the wireless variants {} registered",
                 EXTENSION_ADDON_1.getId(), EXTENSION_ADDON_2.getId(), EXTENSION_ADDON_3.getId(),
@@ -392,14 +395,25 @@ public class OritechAddonsOne {
 
 
     /**
-     * Registers the energy capability of the Extension Addons. The handler only becomes active while a
-     * machine acceptor plugin is inserted, so the block can then be used as an energy input of the
-     * machine it is attached to.
+     * Registers the energy capability of the Extension Addons and their item capability.
+     * <p>
+     * The energy handler only becomes active while a machine acceptor plugin is inserted, so the block can
+     * then be used as an energy input of the machine it is attached to.
+     * <p>
+     * The item capability is what makes the Item Proxy page work: it exposes
+     * {@link ExtensionAddonBlockEntity#getItemLookup} - the machine slot a face was bound to - so Oritech's
+     * own item pipes (which look a neighbouring inventory up through {@code Capabilities.Item.BLOCK}), as
+     * well as hoppers and other mods, really see and use that machine inventory through this block.
      */
     private void registerCapabilities(RegisterCapabilitiesEvent event) {
         event.registerBlockEntity(Capabilities.Energy.BLOCK, EXTENSION_ADDON_ENTITY.get(),
                 (blockEntity, side) -> blockEntity.getEnergyLookup(side));
         event.registerBlockEntity(Capabilities.Energy.BLOCK, WIRELESS_EXTENSION_ADDON_ENTITY.get(),
                 (blockEntity, side) -> blockEntity.getEnergyLookup(side));
+
+        event.registerBlockEntity(Capabilities.Item.BLOCK, EXTENSION_ADDON_ENTITY.get(),
+                (blockEntity, side) -> blockEntity.getItemLookup(side));
+        event.registerBlockEntity(Capabilities.Item.BLOCK, WIRELESS_EXTENSION_ADDON_ENTITY.get(),
+                (blockEntity, side) -> blockEntity.getItemLookup(side));
     }
 }
