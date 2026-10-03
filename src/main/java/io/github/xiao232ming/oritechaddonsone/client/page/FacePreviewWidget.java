@@ -24,12 +24,16 @@ import rearth.oritech.util.MultiblockMachineController;
  * It replaces the drawing half of Oritech's {@link BlockPreviewWidget} for three reasons, all of them because the
  * widget's model lives in private fields of that class:
  * <ul>
- * <li>the page's model is <b>one</b> machine and never a list of blocks, so the widget keeps one state and entity
- * instead of Oritech's block list,</li>
+ * <li>the page's model is <b>one</b> machine, so the widget keeps one state, one entity and the machine's own part
+ * list instead of Oritech's block list (see {@link #partOffsets()}),</li>
  * <li>the hover highlight needs the face the mouse is over to be drawn <em>in</em> the model's render pass, which
  * means submitting this mod's state rather than Oritech's,</li>
  * <li>and it needs that face plus the block it belongs to, which Oritech's widget never keeps.</li>
  * </ul>
+ * <b>Every part of a multiblock machine is a candidate.</b> The machine the page configures can be several blocks of
+ * world, and its surface is the surface of all of them - so the picking tests one cell per part and the face it
+ * reports is the world direction of the part it entered (see {@link #partOffsets()}). The page's per-face modes are
+ * keyed on exactly that direction, which is why the answer is a direction and not a part index.
  * <b>The picking is not a second copy of the drawing any more.</b> It used to be Oritech's own
  * {@code findBlockAt}, which knows the pitch, the yaw and the panel scale but neither the picture-in-picture
  * pipeline's vertical flip nor its viewport factor - so its model-space ray was mirrored against the model the
@@ -74,6 +78,14 @@ public final class FacePreviewWidget extends BlockPreviewWidget {
     /** Face the last drawn frame had under the mouse, or {@code null} while it was outside the model. */
     @Nullable
     private Direction hoveredFace;
+
+    /**
+     * Part of the machine the last drawn frame had under the mouse, or {@code null} while it was outside the model.
+     * It is the offset of the block whose face {@link #hoveredFace} names, which is what puts the highlight on the
+     * part the mouse is really over instead of on the core block of a multiblock machine.
+     */
+    @Nullable
+    private Vec3i hoveredOffset;
 
     /** Block the last {@link #pickFace(double, double)} landed on, or {@code null} while there was none. */
     @Nullable
@@ -131,11 +143,13 @@ public final class FacePreviewWidget extends BlockPreviewWidget {
     public void render(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
         var hovered = faceAt(mouseX, mouseY);
         this.hoveredFace = hovered == null ? null : hovered.face();
+        this.hoveredOffset = hovered == null ? null : hovered.offset();
         super.render(graphics, mouseX, mouseY, delta);
     }
 
     /**
-     * Submits the model of this frame: the machine plus, while the mouse is on it, the face to highlight.
+     * Submits the model of this frame: every part of the machine plus, while the mouse is on it, the face to
+     * highlight and the part that face is on.
      * <p>
      * It takes the place of Oritech's own content, which draws its private block list - a list this widget never
      * fills - and is therefore the one place the model's numbers are worked out. The rotation it submits is the
@@ -148,6 +162,7 @@ public final class FacePreviewWidget extends BlockPreviewWidget {
         if (machineState == null) {
             this.renderedScale = 0.0F;
             this.hoveredFace = null;
+            this.hoveredOffset = null;
             return;
         }
 
@@ -160,8 +175,15 @@ public final class FacePreviewWidget extends BlockPreviewWidget {
         int height = contentHeight();
 
         graphics.submitPictureInPictureRenderState(MachinePreviewRenderState.of(
-                machineState, entity, hoveredFace, pitch, yaw, center.x, center.y, center.z, delta,
+                entries(), hoveredFace, hoveredOffset, pitch, yaw, center.x, center.y, center.z, delta,
                 cx, cy, cx + width, cy + height, renderedScale, graphics.pose(), graphics.peekScissorStack()));
+    }
+
+    /** The model's entries in the render state's own shape, one per block {@link #blocks()} answers with. */
+    private List<MachinePreviewRenderState.Entry> entries() {
+        return blocks().stream()
+                .map(block -> new MachinePreviewRenderState.Entry(block.state(), block.entity(), block.offset()))
+                .toList();
     }
 
     /** Face the last drawn frame had under the mouse, or {@code null} while it was outside the model. */
@@ -305,23 +327,86 @@ public final class FacePreviewWidget extends BlockPreviewWidget {
                 renderedScale, pitch, yaw, center.x, center.y, center.z);
     }
 
-    /** The one block of this model, as the picking and the measuring both want it. */
+    /**
+     * <b>Every part of the machine</b>, as the picking and the drawing both want them: the core block at the model's
+     * origin plus one entry per part of a multiblock machine (see {@link #partOffsets()}).
+     * <p>
+     * The model of a multiblock machine is several blocks of world, so a single entry would make one cell of it
+     * clickable and leave the rest of the machine - the surface the player really sees - unanswerable. One entry per
+     * part is also what the stock widget means by its block list: its size, its picking and its drawing all loop over
+     * that list, and Oritech's own addon overlay puts the machine's addons into it as one entry each.
+     * <p>
+     * A part is drawn with the block state standing at its own position in the client's level, because that is the
+     * model of that part: a multiblock machine is a controller plus core blocks, and the core block's own model is
+     * the structure's surface. The controller's state is the fallback for a part whose position the client cannot
+     * read a state from (an unassembled or unloaded machine, where the model has to fall back to the one block the
+     * page does know), and only the core block at the model's origin carries the block entity, because a block
+     * entity render state belongs to the one position it was extracted from.
+     * <p>
+     * Drawing every part is not a decoration of the picking: the two have to be the same cells. A model drawn at the
+     * origin while the picking tests the whole structure would put clickable surface where nothing is drawn, and the
+     * highlight of a face the player really sees on a part would be painted on the core block.
+     */
     private List<BlockEntry> blocks() {
         BlockState machineState = state;
         if (machineState == null) return List.of();
 
-        return List.of(new BlockEntry(machineState, entity, Vec3i.ZERO));
+        var level = entity == null ? null : entity.getLevel();
+        var machinePos = entity == null ? null : entity.getBlockPos();
+        var entries = new ArrayList<BlockEntry>();
+
+        for (var offset : partOffsets()) {
+            var partState = machineState;
+            if (level != null && machinePos != null && !offset.equals(Vec3i.ZERO)) {
+                var partPos = machinePos.offset(offset);
+                if (level.isLoaded(partPos)) {
+                    var worldState = level.getBlockState(partPos);
+                    if (!worldState.isAir()) partState = worldState;
+                }
+            }
+
+            entries.add(new BlockEntry(partState, offset.equals(Vec3i.ZERO) ? entity : null, offset));
+        }
+        return entries;
+    }
+
+    /**
+     * The parts of the machine this widget draws, in model space: the core block's own cell plus, for a multiblock
+     * machine, one offset per part of its assembled structure.
+     * <p>
+     * Oritech enumerates those parts as offsets <b>relative to the controller</b> in the machine's own frame
+     * ({@link MultiblockMachineController#getCorePositions()}), and turns them into cells of the world with
+     * {@link Geometry#rotatePosition} and the machine's facing - the very call the assembled machine itself makes when
+     * it looks for its cores. The model is drawn in world orientation (the renderer only rotates it for the viewer,
+     * see {@link PreviewTransform}), so an offset rotated that way is a world offset from the core block and the face
+     * the picking reads off it is a world direction of the machine.
+     * <p>
+     * A position Oritech lists twice, or one that falls onto the core block's own cell, contributes one entry: the
+     * entries are cells of one solid machine, and a repeated cell would only let the ray answer the same face twice.
+     */
+    private List<Vec3i> partOffsets() {
+        if (!(entity instanceof MultiblockMachineController multiblock)) return List.of(Vec3i.ZERO);
+
+        Direction facing = multiblock.getFacingForMultiblock();
+        var offsets = new ArrayList<Vec3i>();
+        offsets.add(Vec3i.ZERO);
+
+        for (Vec3i relativeOffset : multiblock.getCorePositions()) {
+            var offset = Geometry.rotatePosition(relativeOffset, facing);
+            if (!offsets.contains(offset)) offsets.add(offset);
+        }
+        return offsets;
     }
 
     /**
      * Works out the centre and the scale of the model, exactly like the stock widget works them out for the frame
-     * it is about to submit - including the core positions of a multiblock machine, because the renderer measures
-     * the machine's whole model and a single cell would otherwise be measured too small here.
+     * it is about to submit - over every part of the machine ({@link #partOffsets()}), so a multiblock machine is
+     * measured as the whole structure it is drawn as rather than as its core cell.
      */
     private void measure() {
         var positions = new ArrayList<Vec3i>();
         for (var entry : blocks()) {
-            positions.addAll(previewPositions(entry));
+            positions.add(entry.offset());
         }
         if (positions.isEmpty()) {
             renderedScale = 0.0F;
@@ -364,24 +449,6 @@ public final class FacePreviewWidget extends BlockPreviewWidget {
         float widthScale = contentWidth() * 0.5F / horizontalRadius;
         float heightScale = contentHeight() * 0.5F / verticalRadius;
         renderedScale = Math.min(widthScale, heightScale) * 0.98F;
-    }
-
-    /**
-     * The positions one model block really covers: its own cell, plus - exactly like the stock widget - the core
-     * positions of a multiblock machine, rotated into the offset's own frame. Without this a machine whose model is
-     * made of several blocks would be measured too small here while the renderer measures it correctly.
-     */
-    private static List<Vec3i> previewPositions(BlockEntry entry) {
-        var positions = new ArrayList<Vec3i>();
-        positions.add(entry.offset());
-
-        if (entry.entity() instanceof MultiblockMachineController multiblock) {
-            Direction facing = multiblock.getFacingForMultiblock();
-            for (Vec3i relativeOffset : multiblock.getCorePositions()) {
-                positions.add(Geometry.rotatePosition(relativeOffset, facing).offset(entry.offset()));
-            }
-        }
-        return positions;
     }
 
     /** Component of a vector on one axis; the array form the slab test uses. */

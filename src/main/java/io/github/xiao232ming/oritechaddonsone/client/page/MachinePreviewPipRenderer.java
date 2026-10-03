@@ -27,8 +27,8 @@ import net.neoforged.neoforge.client.event.RegisterPictureInPictureRenderersEven
 import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 
 /**
- * Draws the transfer preview page's model: exactly the machine and one translucent white quad on the face the mouse is
- * over.
+ * Draws the transfer preview page's model: every part of the machine and one translucent white quad on the face the
+ * mouse is over.
  * <p>
  * <b>Why this exists at all.</b> Oritech's own preview draws through a picture-in-picture state that carries block
  * states and nothing else ({@code BlockPreviewRenderState} / {@code BlockPreviewPipRenderer}), and the GUI API next to
@@ -39,8 +39,8 @@ import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
  * <p>
  * The model is drawn the way Oritech draws it: the same pose (pitch, yaw and the centre of the model), the same
  * orthographic picture-in-picture target, the same item lighting, and entries translated to {@code offset - 0.5}. The
- * highlight then needs nothing of its own: it is a quad on the hovered face's plane in model space, so the pose that
- * puts the block on screen puts it on that block's face too.
+ * highlight then needs nothing of its own but the part it belongs to: it is a quad on the hovered face's plane in
+ * model space, so the pose that puts the part on screen puts it on that part's face too.
  * <p>
  * It is registered per state class, which is why this is one renderer and not an addition to Oritech's.
  */
@@ -147,14 +147,23 @@ public class MachinePreviewPipRenderer extends PictureInPictureRenderer<MachineP
 
     /**
      * Draws the translucent quad on the hovered face, in the pose that is still active from the model above: the quad
-     * is built in model space around the face's own centre, so it lands on the face whatever the model is rotated to.
+     * is built in model space around the face's own centre of the part the mouse is over, so it lands on that face
+     * whatever the model is rotated to.
+     * <p>
+     * The part is the one the picking answered with ({@link MachinePreviewRenderState#offset()}): a multiblock machine
+     * is several cells of model space, and the quad of a face on one of them belongs on that cell - drawn at the model
+     * origin it would mark the core block's face instead, on the far side of the machine.
      * <p>
      * Nothing is drawn while no face is hovered, i.e. while the mouse is not on the model - the page's picking keeps
      * working unchanged, because this only ever adds geometry to the frame and never touches the mouse.
      */
     private void drawHighlight(MachinePreviewRenderState renderState, PoseStack poseStack) {
         Direction face = renderState.face();
-        if (face == null) return;
+        Vec3i offset = renderState.offset();
+        if (face == null || offset == null) return;
+
+        poseStack.pushPose();
+        poseStack.translate(offset.getX(), offset.getY(), offset.getZ());
 
         var pose = poseStack.last();
         VertexConsumer consumer = bufferSource.getBuffer(RenderTypes.debugFilledBox());
@@ -170,6 +179,8 @@ public class MachinePreviewPipRenderer extends PictureInPictureRenderer<MachineP
             float z = normal[2] * centre + (u[2] * corner[0] + v[2] * corner[1]) * size;
             consumer.addVertex(pose, x, y, z).setColor(HIGHLIGHT_COLOR);
         }
+
+        poseStack.popPose();
     }
 
     /** One axis of {@link #FACE_AXES} for a face. */

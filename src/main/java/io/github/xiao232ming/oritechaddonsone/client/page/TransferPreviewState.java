@@ -90,8 +90,9 @@ public final class TransferPreviewState {
      * place for as long as the panel is open.
      * <p>
      * A multiblock machine is complete with this one entry: Oritech's renderer draws the whole model of the core's
-     * block state, which carries the machine's assembled structure, so the other parts of the structure are part of
-     * the machine's own model rather than blocks of their own here.
+     * block state and the widget works the machine's own part list out from its controller (see
+     * {@code FacePreviewWidget#partOffsets()}), so the other parts of the structure are drawn and picked as cells of
+     * the machine rather than as blocks of their own here.
      */
     @Nullable
     private static Preview build(Level level, BlockPos machinePos, int x, int y, int width, int height) {
