@@ -102,6 +102,7 @@
   "gui.oritechaddonsone.page.transfer_preview": "Transfer Preview",
   "gui.oritechaddonsone.page.transfer_preview.tooltip": "A rotatable 3D model of the machine this plugin serves: drag to turn it, click a face to open its transfer settings",
   "gui.oritechaddonsone.preview.hint": "Drag to rotate - click a face to configure it",
+  "gui.oritechaddonsone.preview.counter": "Configured faces: %s",
   "gui.oritechaddonsone.preview.no_machine": "The machine this plugin serves is not loaded",
   "gui.oritechaddonsone.transfer.side.north": "North",
   "gui.oritechaddonsone.transfer.side.south": "South",

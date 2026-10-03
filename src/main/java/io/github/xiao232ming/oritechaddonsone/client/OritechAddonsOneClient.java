@@ -11,7 +11,9 @@ import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 
 import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 import io.github.xiao232ming.oritechaddonsone.client.page.ProxyPickerState;
+import io.github.xiao232ming.oritechaddonsone.client.page.TransferFaceState;
 import io.github.xiao232ming.oritechaddonsone.network.ProxyNetworking;
+import io.github.xiao232ming.oritechaddonsone.network.TransferNetworking;
 
 /**
  * Client only setup: registers the screen for the Extension Addon menu and the in-game config screen
@@ -27,6 +29,10 @@ public class OritechAddonsOneClient {
         // the Item Proxy page asks the server for the machine's slot layout; the answer is routed here, so
         // that no client class is ever touched on a dedicated server (see ProxyNetworking.ClientHandler)
         ProxyNetworking.setClientHandler(ProxyPickerState::putLayout);
+        // 传输插件's page draws the cell-face settings of the machine, which the server owns and sends as a whole
+        // map because no fixed set of menu slots can carry one setting per face of every cell (see
+        // TransferFaceState); routed here for the same reason
+        TransferNetworking.setClientHandler(TransferFaceState::put);
         OritechAddonsOne.LOGGER.debug("In-game config screen registered for {}", OritechAddonsOne.MODID);
     }
 

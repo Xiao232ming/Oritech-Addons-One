@@ -1,44 +1,58 @@
 package io.github.xiao232ming.oritechaddonsone.client.page;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.Vec3i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+
+import net.neoforged.neoforge.network.PacketDistributor;
 
 import org.jetbrains.annotations.Nullable;
 
 import rearth.oritech.api.screen.OritechSurface;
 
+import io.github.xiao232ming.oritechaddonsone.block.entity.CellFaceModes;
+import io.github.xiao232ming.oritechaddonsone.block.entity.TransferFaceModes;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferMode;
 import io.github.xiao232ming.oritechaddonsone.client.AddonPanelStyle;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonLayout;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonMenu;
+import io.github.xiao232ming.oritechaddonsone.network.TransferNetworking;
 
 /**
  * The page of 传输插件: the machine this plugin serves as a rotatable 3D model, and the configuration of one of
- * its faces in the modal page a click on that face opens.
+ * its <b>cell-faces</b> in the modal page a click on that face opens.
  * <p>
  * What the page <b>does</b> is exactly what the Extension Transfer page does - one {@link TransferMode} plus the
- * automation flag per face, the same occupied-face refusal, the same packet to the server, the same container data
- * back - and the two pages even agree on the look of a configured face (see {@link TransferFaceStyle} and
- * {@link TransferFaceModal}). What differs is how a face is chosen: instead of the host unfolded into a cube net,
- * this page renders the machine the plugin works on as a 3D model and picks the face the player clicks on it. This
- * branch has no picture in picture GUI rendering, so the model is drawn straight into the page's own pose stack by
- * {@link FacePreviewWidget}, which is also what lets the face under the mouse be marked with a translucent white quad
- * in the model's own pose there.
+ * automation flag per face, the same occupied-face refusal, the same modal, the same look for a configured face (see
+ * {@link TransferFaceStyle} and {@link TransferFaceModal}) - and what differs is <b>what a "face" is</b>. The cube net
+ * page unfolds one block, so a setting there is one of the six world directions of the host. This page draws the whole
+ * assembled structure, and its settings are per <b>cell and direction</b> (see {@link CellFaceModes}): the north face
+ * of the top-left cell and the north face of the top-right cell are two faces and two settings. This branch has no
+ * picture in picture GUI rendering, so the model is drawn straight into the page's own pose stack by
+ * {@link FacePreviewWidget} - which is also what lets the face under the mouse be marked with a translucent white quad
+ * in the model's own pose there, and lets the page know exactly which cell that face belongs to.
+ * <p>
+ * <b>The map lives on the server and is sent whole.</b> The page draws every configured cell-face, so it needs all of
+ * them: that is {@code TransferNetworking.FaceModes}, one int per configured cell-face, sent when the menu opens and
+ * after every accepted change, and held here by {@link TransferFaceState}. A fixed set of menu data slots - what the
+ * cube net page uses - cannot carry a map of unknown size, and a structure's surface has no natural maximum.
  * <p>
  * <b>The page itself shows only the model.</b> The counter, the instruction line and the 3D model with its hover
- * highlight are the whole page; everything that configures a face - the three mode plates and the automation switch -
- * lives in the modal page a left click on a face opens, and a right click on a configured face clears it without
- * opening anything. That is the cube net page's interaction, applied to a model instead of a net: the plates are only
- * ever in front of the player while a face is really being configured, so the model - which is what this page is for -
- * stays visible the rest of the time. The face list the page used to draw under the model is gone with them: a face's
- * mode is now read off the modal that configures it, and the counter still says how many faces are configured.
+ * highlight are the whole page; everything that configures a cell-face - the three mode plates and the automation
+ * switch - lives in the modal page a left click on a face opens, and a right click on a configured face clears it
+ * without opening anything. That is the cube net page's interaction, applied to a model instead of a net: the
+ * plates are only ever in front of the player while a face is really being configured, so the model - which is
+ * what this page is for - stays visible the rest of the time. The counter reports how many cell-faces are configured
+ * and <b>no maximum</b>, because there is none (see {@link #drawCounter}).
  * <p>
  * <b>The model lives in absolute screen space.</b> This page draws in panel space while the widget is rendered at the
  * pixel position it was given, which is what its own drawing and its picking assume; every coordinate the page hands
@@ -49,11 +63,12 @@ import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonMenu;
  * between {@link #mouseDragged} and {@link AddonPage#mouseClicked}, and the wheel in {@link #mouseScrolled}, which
  * zooms the model over the model's own panel (see {@link TransferPreviewState.Preview#zoomBy}).
  * <p>
- * <b>The page is the same one in both screens.</b> It is the only page of 传输插件 while the plugin is placed in the
- * world, and it is one of the pages of an Extension Addon while the plugin is stored in its slots. Which block entity
- * it configures never depends on that: everything it reads (the modes, the automation flags, the occupied faces) and
- * everything it writes comes from the menu it was handed (see {@link ExtensionAddonMenu#transferPreviewMachinePos()}),
- * and that menu is the block the screen was opened for - the placed plugin, or the addon.
+ * <b>The page is the same one in both screens.</b> It is the only page of 传输插件 while the plugin is placed in
+ * the world, and it is one of the pages of an Extension Addon while the plugin is stored in its slots. Which
+ * block entity it configures never depends on that: everything it reads (the modes, the automation flags, the
+ * occupied faces) and everything it writes comes from the menu it was handed (see
+ * {@link ExtensionAddonMenu#transferPreviewMachinePos()}), and that menu is the block the screen was opened for -
+ * the placed plugin, or the addon.
  */
 public final class TransferPreviewAddonPage implements AddonPage {
 
@@ -71,18 +86,15 @@ public final class TransferPreviewAddonPage implements AddonPage {
     private static final ResourceLocation ICON =
             ResourceLocation.fromNamespaceAndPath("oritechaddonsone", "textures/gui/transfer_preview_tab.png");
 
-    /** Faces of the machine, i.e. the maximum of the counter - there is no per-plugin limit. */
-    private static final int MAX_FACES = Direction.values().length;
-
     // ------------------------------------------------------------------ geometry
 
     /**
-     * The page's rows, in panel space, top to bottom. The panel's own title label is drawn by the screen in the top
-     * band (Y 6, see {@code ExtensionAddonScreen#renderLabels}) and the counter shares that band on the right
+     * The page's rows, in panel space, top to bottom. The panel's own title label is drawn by the screen in the
+     * top band (Y 6, see {@code ExtensionAddonScreen#renderLabels}) and the counter shares that band on the right
      * ({@link ExtensionAddonLayout#counterY()}), so the page's first own row starts below both of them: the
-     * instruction line, then the model. The plates and the switch are no part of the page any more - they belong to
-     * the modal page - so the model is the page's last row and the shortest a layout can make the panel is tall
-     * enough for the modal that opens over it (see {@link #drawnHeight}).
+     * instruction line, then the model. The plates and the switch are no part of the page any more - they belong
+     * to the modal page - so the model is the page's last row and the shortest a layout can make the panel is
+     * tall enough for the modal that opens over it (see {@link #drawnHeight}).
      */
     private static final int HINT_Y = 18;
 
@@ -115,18 +127,18 @@ public final class TransferPreviewAddonPage implements AddonPage {
     /**
      * The panel ends below the model, which is the page's own content.
      * <p>
-     * The modal configuration page is the reason this is not simply {@code PREVIEW_Y + PREVIEW_HEIGHT}: the modal is
-     * Oritech's 176x100 panel with its 28 pixel title icon floating above it ({@link AddonPickerPanel}), and it has to
-     * fit inside the drawn panel for <b>every</b> layout - including the shortest one, a single plugin row. So the
-     * page asks for enough height to hold the model <em>and</em> the modal, and lets
+     * The modal configuration page is the reason this is not simply {@code PREVIEW_Y + PREVIEW_HEIGHT}: the modal
+     * is Oritech's 176x100 panel with its 28 pixel title icon floating above it ({@link AddonPickerPanel}), and it
+     * has to fit inside the drawn panel for <b>every</b> layout - including the shortest one, a single plugin row.
+     * So the page asks for enough height to hold the model <em>and</em> the modal, and lets
      * {@link ExtensionAddonLayout#pageHeight(int)} keep the player inventory band as the floor. Without this the
      * one-row panel would be shorter than the modal and the lower third of the plates would be cut off.
      */
     @Override
     public int drawnHeight(ExtensionAddonLayout layout) {
         int modelBottom = PREVIEW_Y + PREVIEW_HEIGHT;
-        // the two pixels AddonPickerPanel keeps above its placement floor, and a small margin so the modal's frame
-        // is never flush with the panel's dark bottom bevel
+        // the two pixels AddonPickerPanel keeps above its placement floor, and a small margin so the modal's
+        // frame is never flush with the panel's dark bottom bevel
         int modalBottom = AddonPickerPanel.ICON_SIZE + AddonPickerPanel.HEIGHT + 10;
         return layout.pageHeight(Math.max(modelBottom, modalBottom));
     }
@@ -144,37 +156,44 @@ public final class TransferPreviewAddonPage implements AddonPage {
             double mouseX, double mouseY) {
         var menu = context.menu();
 
-        drawCounter(context, graphics, menu.transferFaces(), MAX_FACES);
         drawHint(context, graphics);
 
         var preview = currentPreview(context);
         drawPreviewPanel(context, graphics);
         if (preview == null) {
+            // no model, so nothing can be configured either; the counter is not drawn at all rather than as a zero,
+            // because there is no machine whose cell-faces it could be counting
             drawNoMachine(context, graphics);
             return;
         }
 
         // the widget is drawn at the absolute pixel position it was built for, and it is asked with the same
-        // absolute mouse position for its own hover state. The markings it draws are what the menu says, which is what
-        // the page itself reads for its counter and its modal - including the pending value of a click that has just
-        // been sent - so a mode the player sets shows on the model in the same frame
+        // absolute mouse position for its own hover state. The markings it draws are what the page reads back for its
+        // counter and its modal - the server's own map, plus the pending value of a click that has just been sent -
+        // so a mode the player sets shows on the model in the same frame
         var widget = preview.widget();
         widget.withRotation(preview.pitch(), preview.yaw());
         widget.setZoom(preview.zoom());
-        widget.setFaceOverlays(faceModes(menu), menu.attachedTransferFaces());
+        widget.setFaceOverlays(configuredModes(context), menu.attachedTransferFaces());
         widget.tick();
         widget.render(graphics, screenX(context, mouseX), screenY(context, mouseY), partialTick);
 
-        var openFace = openFace(menu);
+        // the counter counts what the player configured, over as many cell-faces as the structure has: there is no
+        // maximum and the page shows none (see #drawCounter)
+        drawCounter(context, graphics, widget);
+
+        var openFace = TransferPreviewPickerState.openFace();
         if (openFace != null) {
+            var openCell = TransferPreviewPickerState.openCell();
             preview.select(openFace);
-            TransferFaceModal.render(context, graphics, menu, openFace, isOccupied(menu, openFace), mouseX, mouseY);
+            TransferFaceModal.render(context, graphics, openFace, current(context, openCell, openFace),
+                    isOccupied(menu, openCell, openFace), mouseX, mouseY);
         }
     }
 
     /**
-     * The instruction line, centred in the panel one row below the panel's own title band: it names what the model is
-     * for and what a click on it does - the plates themselves are only shown by the modal that click opens.
+     * The instruction line, centred in the panel one row below the panel's own title band: it names what the model
+     * is for and what a click on it does - the plates themselves are only shown by the modal that click opens.
      */
     private void drawHint(AddonPageContext context, GuiGraphics graphics) {
         var font = Minecraft.getInstance().font;
@@ -184,11 +203,11 @@ public final class TransferPreviewAddonPage implements AddonPage {
     }
 
     /**
-     * The sunken panel the model lives in, drawn behind it: the same dark inset Oritech uses for a field that is not a
-     * button, so the model reads as the page's content rather than as something floating on the panel.
+     * The sunken panel the model lives in, drawn behind it: the same dark inset Oritech uses for a field that is
+     * not a button, so the model reads as the page's content rather than as something floating on the panel.
      * <p>
-     * It is drawn for the "no machine" state as well, which is the whole point: the message then reads as this page's
-     * own empty content instead of as a line of text in an otherwise empty panel.
+     * It is drawn for the "no machine" state as well, which is the whole point: the message then reads as this
+     * page's own empty content instead of as a line of text in an otherwise empty panel.
      */
     private void drawPreviewPanel(AddonPageContext context, GuiGraphics graphics) {
         OritechSurface.PANEL_INSET.render(graphics, context.screenX(previewX(context)), context.screenY(PREVIEW_Y),
@@ -199,10 +218,10 @@ public final class TransferPreviewAddonPage implements AddonPage {
      * What the model's panel shows while there is no model to draw: the machine a plugin is meant to serve is not
      * visible to this client.
      * <p>
-     * It is reached in three cases, and they are deliberately not told apart, because the player's next step is the
-     * same in all of them: the plugin serves no machine at all (it stands on an extender no machine ever claimed), the
-     * machine it serves is in a chunk this client has not loaded, or the plugin has just been picked up. The line is
-     * centred in the model's panel, so the panel - which is drawn either way - reads as this page's empty content.
+     * It is reached in three cases, and they are deliberately not told apart, because the player's next step is
+     * the same in all of them: the plugin serves no machine at all (it stands on an extender no machine ever
+     * claimed), the machine it serves is in a chunk this client has not loaded, or the plugin has just been picked
+     * up.
      */
     private void drawNoMachine(AddonPageContext context, GuiGraphics graphics) {
         var font = Minecraft.getInstance().font;
@@ -211,10 +230,22 @@ public final class TransferPreviewAddonPage implements AddonPage {
                 context.screenY(PREVIEW_Y + PREVIEW_HEIGHT / 2), AddonPanelStyle.PANEL_TEXT_DIM, false);
     }
 
-    /** The "Configurable: x/6" counter in the panel's top right corner, exactly as the cube net page draws it. */
-    private void drawCounter(AddonPageContext context, GuiGraphics graphics, int configured, int maximum) {
+    /**
+     * The counter in the panel's top right corner: how many cell-faces the player has configured, and <b>nothing
+     * else</b>.
+     * <p>
+     * <b>There is no maximum, so none is shown.</b> The model this page configures has one setting per face of every
+     * cell of the machine's structure, which is a number the page cannot know before the structure is assembled and
+     * which Oritech's part lists do not bound - so a fraction like the cube net page's {@code x/6} would be a lie
+     * twice over: there is no denominator, and the "6" would be the wrong shape for this model even if there were.
+     * What the count <em>is</em> worth showing is that something is configured at all - a player who has just set a
+     * face wants to see the page acknowledge it - so the line stays and the denominator is gone, which is also why the
+     * count is taken from the model the frame actually drew: it is what the player can see.
+     */
+    private void drawCounter(AddonPageContext context, GuiGraphics graphics, FacePreviewWidget widget) {
         var font = Minecraft.getInstance().font;
-        var text = Component.translatable("gui.oritechaddonsone.transfer.counter", configured, maximum).getString();
+        var text = Component.translatable("gui.oritechaddonsone.preview.counter",
+                widget.configuredFaces()).getString();
         var layout = context.layout();
 
         graphics.drawString(font, text, context.screenX(layout.counterRight() - font.width(text)),
@@ -224,55 +255,65 @@ public final class TransferPreviewAddonPage implements AddonPage {
     // ------------------------------------------------------------------ clicks and drags
 
     /**
-     * A click on the model picks the face under it. With no modal open, a left click opens that face's configuration
-     * page (or, on the face the plugin itself stands on, does nothing but select it - it can never be configured) and
-     * a right click clears what a configured face does without opening anything. While the modal is open every click
-     * belongs to it: a plate or the switch is applied and the modal stays open, and anything else closes it.
+     * A click on the model picks the <b>cell-face</b> under it. With no modal open, a left click opens that
+     * cell-face's configuration page (or, on a face the plugin itself stands in, does nothing but select it - it can
+     * never be configured) and a right click clears what a configured cell-face does without opening anything. While
+     * the modal is open every click belongs to it: a plate or the switch is applied and the modal stays open, and
+     * anything else closes it.
+     * <p>
+     * <b>The click configures exactly what was picked.</b> The widget's own picking answers the cell and the face
+     * ({@link FacePreviewWidget#pickFace}), and both are remembered and sent - not just the direction, which on a
+     * structure names as many faces as the machine has cells.
      */
     @Override
     public boolean mouseClicked(AddonPageContext context, double mouseX, double mouseY, int button) {
         var menu = context.menu();
 
-        var openFace = openFace(menu);
+        var openFace = TransferPreviewPickerState.openFace();
         if (openFace != null) {
-            return TransferFaceModal.mouseClicked(context, menu, openFace, isOccupied(menu, openFace), mouseX, mouseY,
-                    button);
+            var openCell = TransferPreviewPickerState.openCell();
+            return TransferFaceModal.mouseClicked(context, openFace, current(context, openCell, openFace),
+                    send(context), isOccupied(menu, openCell, openFace), mouseX, mouseY, button);
         }
 
         var preview = currentPreview(context);
         if (preview == null) return false;
 
-        // a click on the model picks a face; the widget remembers the pick, the page remembers the selection
+        // a click on the model picks a cell-face; the widget remembers the pick, the page remembers the selection
         var picked = preview.widget().pickFace(screenX(context, mouseX), screenY(context, mouseY));
         if (picked == null) return false;
 
-        preview.select(picked);
-        if (isOccupied(menu, picked)) return true;
+        var cell = preview.widget().pickedOffset();
+        if (cell == null) return false;
 
-        // a right click on a configured face clears what that face does, exactly like on the cube net page
+        preview.select(picked);
+        if (isOccupied(menu, cell, picked)) return true;
+
+        // a right click on a configured cell-face clears what it does, exactly like on the cube net page
         if (button == 1) {
-            if (TransferFaceModal.modeOf(menu, picked) != TransferMode.NONE) {
+            if (mode(context, cell, picked) != TransferMode.NONE) {
                 TransferPreviewPickerState.close();
-                TransferFaceModal.clear(menu.position(), picked);
+                clear(menu.position(), cell, picked);
             }
             return true;
         }
 
-        TransferPreviewPickerState.open(menu.position(), picked);
+        TransferPreviewPickerState.open(menu.position(), cell, picked);
         return true;
     }
 
     /**
-     * Rotates the model while the player drags over it. Only a drag that stays over the model is claimed, so dragging
-     * an item across a slot of this GUI still reaches vanilla's slot logic, and the drag starts wherever the button
-     * went down - the page does not have to remember its own press, because it only ever turns the model while the
-     * mouse is on it.
+     * Rotates the model while the player drags over it. Only a drag that stays over the model is claimed, so
+     * dragging an item across a slot of this GUI still reaches vanilla's slot logic, and the drag starts wherever
+     * the button went down - the page does not have to remember its own press, because it only ever turns the
+     * model while the mouse is on it.
      * <p>
      * A drag never reaches the modal: while a face is being configured the model is covered by it, and
-     * {@link #mouseDragged} asks the model's own hit test, which the backdrop is not part of - so the rotation would
-     * only start from the visible sliver of the panel around the modal. Turning the model while its configuration is
-     * open is exactly what a player does to see the face from the other side, so that is allowed: the modal follows the
-     * model's rotation, because the face it configures is the one the page selected.
+     * {@link #mouseDragged} asks the model's own hit test, which the backdrop is not part of - so the rotation
+     * would only start from the visible sliver of the panel around the modal. Turning the model while its
+     * configuration is open is exactly what a player does to see the face from the other side, so that is
+     * allowed: the modal follows the model's rotation, because the face it configures is the one the page
+     * selected.
      */
     @Override
     public boolean mouseDragged(AddonPageContext context, double mouseX, double mouseY, double dragX, double dragY,
@@ -288,9 +329,9 @@ public final class TransferPreviewAddonPage implements AddonPage {
     }
 
     /**
-     * Nothing has to end here: the rotation ends with the drag itself and the modal stays open until it is deliberately
-     * closed. The hook is kept as the counterpart of {@link #mouseDragged} and as the place a gesture that does need an
-     * end would use.
+     * Nothing has to end here: the rotation ends with the drag itself and the modal stays open until it is
+     * deliberately closed. The hook is kept as the counterpart of {@link #mouseDragged} and as the place a gesture
+     * that does need an end would use.
      */
     @Override
     public void mouseReleased(AddonPageContext context, double mouseX, double mouseY, int button) {
@@ -312,7 +353,7 @@ public final class TransferPreviewAddonPage implements AddonPage {
     @Override
     public boolean mouseScrolled(AddonPageContext context, double mouseX, double mouseY, double scrollX,
             double scrollY) {
-        if (openFace(context.menu()) != null) return false;
+        if (TransferPreviewPickerState.isOpen(context.menu().position())) return false;
         if (mouseX < previewX(context) || mouseX >= previewX(context) + PREVIEW_WIDTH) return false;
         if (mouseY < PREVIEW_Y || mouseY >= PREVIEW_Y + PREVIEW_HEIGHT) return false;
 
@@ -329,28 +370,29 @@ public final class TransferPreviewAddonPage implements AddonPage {
     public List<Component> tooltipAt(AddonPageContext context, double mouseX, double mouseY) {
         var menu = context.menu();
         // the modal explains itself with its plates and its prompt, so nothing is shown over it
-        if (openFace(menu) != null) return List.of();
+        if (TransferPreviewPickerState.isOpen(menu.position())) return List.of();
 
         var preview = currentPreview(context);
         if (preview == null) return List.of();
 
         var hovered = preview.widget().hoveredFace();
-        if (hovered == null) return List.of();
+        var hoveredCell = preview.widget().hoveredOffset();
+        if (hovered == null || hoveredCell == null) return List.of();
 
-        // the occupied face explains why it cannot be configured instead of naming a mode it can never have
-        if (isOccupied(menu, hovered)) return List.of(Component.translatable(OCCUPIED_KEY));
+        // the occupied cell-face explains why it cannot be configured instead of naming a mode it can never have
+        if (isOccupied(menu, hoveredCell, hovered)) return List.of(Component.translatable(OCCUPIED_KEY));
 
         return List.of(Component.translatable(sideKey(hovered)),
-                Component.translatable(TransferFaceStyle.modeKey(TransferFaceModal.modeOf(menu, hovered))));
+                Component.translatable(TransferFaceStyle.modeKey(mode(context, hoveredCell, hovered))));
     }
 
     // ------------------------------------------------------------------ helpers
 
     /**
      * The machine the page renders, as the menu it belongs to reports it: the machine a placed plugin serves, or -
-     * while the page is shown inside an Extension Addon that stores a preview plugin - the machine that addon works on.
-     * The page therefore never has to know which of the two screens it is drawn in; it configures whatever the menu
-     * addresses.
+     * while the page is shown inside an Extension Addon that stores a preview plugin - the machine that addon
+     * works on. The page therefore never has to know which of the two screens it is drawn in; it configures
+     * whatever the menu addresses.
      * <p>
      * The menu answers with the machine the server resolved when the screen was opened and sent along with it
      * ({@link ExtensionAddonMenu#transferPreviewMachinePos()}). It has to come from there: the machine of a placed
@@ -370,27 +412,85 @@ public final class TransferPreviewAddonPage implements AddonPage {
                 context.screenX(previewX(context)), context.screenY(PREVIEW_Y), PREVIEW_WIDTH, PREVIEW_HEIGHT);
     }
 
-    /** The face whose configuration page is open for this menu, or {@code null} while none is. */
-    @Nullable
-    private static Direction openFace(ExtensionAddonMenu menu) {
-        for (var face : Direction.values()) {
-            if (TransferPreviewPickerState.isOpen(menu.position(), face)) return face;
+    /**
+     * What every <b>surface cell-face</b> of the machine is configured to do, as the model's markings are drawn
+     * from: the server's own map (see {@link TransferFaceState}), with the pending value of a click that has just been
+     * sent laid over the cell-face the modal has open.
+     * <p>
+     * Only the machine's <b>outer surface</b> is listed ({@link FacePreviewWidget#surfaceCells()}): a face between two
+     * cells of the structure has no container outside it and cannot be configured, so it must not be marked either.
+     * An entry with {@link TransferMode#NONE} means "nothing configured here", which the widget draws nothing for.
+     */
+    private static Map<FacePreviewWidget.CellFace, TransferMode> configuredModes(AddonPageContext context) {
+        var modes = new HashMap<FacePreviewWidget.CellFace, TransferMode>();
+        var preview = currentPreview(context);
+        if (preview == null) return modes;
+
+        for (var cellFace : preview.widget().surfaceCells()) {
+            modes.put(cellFace, mode(context, cellFace.cell(), cellFace.face()));
         }
-        return null;
+        return modes;
     }
 
     /**
-     * What every face of the machine is configured to do, indexed by {@link Direction#ordinal()}, as the model's
-     * markings are drawn from: exactly what a click on that face has chosen, i.e. the same
-     * {@link TransferFaceModal#modeOf(ExtensionAddonMenu, Direction)} the page's own plates and prompt read - the
-     * pending value of a click that has just been sent first, the menu's own container data after it.
+     * The mode one cell-face has right now: the pending value the open modal set a moment ago first, so a plate turns
+     * dark in the same frame as its click, and otherwise what the server last reported.
      */
-    private static List<TransferMode> faceModes(ExtensionAddonMenu menu) {
-        var modes = new TransferMode[Direction.values().length];
-        for (var face : Direction.values()) {
-            modes[face.ordinal()] = TransferFaceModal.modeOf(menu, face);
+    private static TransferMode mode(AddonPageContext context, Vec3i cell, Direction face) {
+        var pending = TransferPreviewPickerState.pending();
+        if (pending != null && TransferPreviewPickerState.isOpen(context.menu().position(), cell, face)) {
+            return pending.mode();
         }
-        return List.of(modes);
+        return TransferFaceState.modeOf(context.menu().position(), cell, face);
+    }
+
+    /** True while a cell-face moves its items by itself, with the open modal's pending value first. */
+    private static boolean automation(AddonPageContext context, Vec3i cell, Direction face) {
+        var pending = TransferPreviewPickerState.pending();
+        if (pending != null && TransferPreviewPickerState.isOpen(context.menu().position(), cell, face)) {
+            return pending.automation();
+        }
+        return TransferFaceState.automationOf(context.menu().position(), cell, face);
+    }
+
+    /** What the face the modal is configuring does, as the modal is told it. */
+    private static TransferFaceModal.Current current(AddonPageContext context, Vec3i cell, Direction face) {
+        return new TransferFaceModal.Current() {
+            @Override
+            public TransferMode mode() {
+                return TransferPreviewAddonPage.mode(context, cell, face);
+            }
+
+            @Override
+            public boolean automation() {
+                return TransferPreviewAddonPage.automation(context, cell, face);
+            }
+        };
+    }
+
+    /**
+     * Where a change the modal makes is sent: the packet that carries the <b>cell</b> as well as the face
+     * ({@code TransferNetworking.SetCellFaceMode}), so the server writes the setting on the cell the player really
+     * clicked. The pending value is remembered first, so the page shows the change before the server's answer arrives
+     * - and the answer replaces it a round trip later.
+     */
+    private static TransferFaceModal.Sink send(AddonPageContext context) {
+        return (face, mode, automation) -> {
+            var cell = TransferPreviewPickerState.openCell();
+            if (cell == null) return;
+
+            TransferPreviewPickerState.select(mode, automation);
+            // no limit and no denominator on the answer either: only the cell, the face and the packed value travel
+            var pluginPos = context.menu().position();
+            PacketDistributor.sendToServer(new TransferNetworking.SetCellFaceMode(pluginPos,
+                    CellFaceModes.pack(cell, face, TransferFaceModes.pack(mode, automation))));
+        };
+    }
+
+    /** Clears one cell-face without opening the modal: the page's right click on a configured face. */
+    private static void clear(BlockPos pluginPos, Vec3i cell, Direction face) {
+        PacketDistributor.sendToServer(new TransferNetworking.SetCellFaceMode(pluginPos,
+                CellFaceModes.pack(cell, face, TransferFaceModes.pack(TransferMode.NONE, false))));
     }
 
     /** X of a panel relative coordinate, converted to the absolute space the model lives in. */
@@ -409,11 +509,20 @@ public final class TransferPreviewAddonPage implements AddonPage {
     }
 
     /**
-     * True while the given face of the machine is one the plugin refuses to configure, i.e. while it is in the mask
+     * True while the given face of the given cell is one the plugin refuses to configure, i.e. while it is in the mask
      * the block entity published: the face the plugin itself occupies, and every face another plugin of this mod
      * stands on.
+     * <p>
+     * <b>Only the controller's own cell can be occupied.</b> The mask is about the machine's own six directions, and
+     * the plugin's host block stands in exactly one face of exactly one cell - the cell the machine's controller is in,
+     * which is the origin of the frame the page's offsets are measured in. Every other cell of the structure is free,
+     * which is what makes a face of a cell the plugin does not touch configurable even while one of the controller's
+     * faces is taken.
      */
-    private static boolean isOccupied(ExtensionAddonMenu menu, Direction face) {
+    private static boolean isOccupied(ExtensionAddonMenu menu, @Nullable Vec3i cell, @Nullable Direction face) {
+        if (cell == null || face == null) return false;
+        if (!cell.equals(Vec3i.ZERO)) return false;
+
         return (menu.attachedTransferFaces() & 1 << face.ordinal()) != 0;
     }
 
