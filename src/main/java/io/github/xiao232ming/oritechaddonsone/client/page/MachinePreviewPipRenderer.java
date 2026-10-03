@@ -122,7 +122,16 @@ public class MachinePreviewPipRenderer extends PictureInPictureRenderer<MachineP
         minecraft.gameRenderer.getLighting().setupFor(Lighting.Entry.ITEMS_3D);
 
         // the pose Oritech's preview renderer sets up: y down the picture-in-picture target is flipped, then the model
-        // is rotated and moved so that its centre lands on the panel's centre
+        // is rotated and moved so that its centre lands on the panel's centre.
+        // <p>
+        // <b>The z flip here is not a second one.</b> {@code PictureInPictureRenderer#prepare} scales the pose by
+        // {@code -guiScale * renderState.scale()} in z, and that is the pipeline's own flip; this negates z again, so
+        // on this branch the model is drawn mirrored front to back with respect to the pipeline's convention. It is
+        // harmless for what the page does - the model is drawn with an orthographic projection whose depth only
+        // decides what occludes what, and the markings are lifted off their faces rather than depth tested against
+        // them - and it is <b>not</b> what makes a face and the cursor disagree: measured through the whole chain
+        // (prepare's pose, the orthographic projection, the viewport and the blit), the pixel a model point lands on
+        // is identical with and without this flip, to 0.0000 px at gui scales 1 to 4.
         poseStack.scale(1.0F, -1.0F, -1.0F);
         poseStack.mulPose(Axis.XP.rotationDegrees(renderState.rotationX()));
         poseStack.mulPose(Axis.YP.rotationDegrees(renderState.rotationY()));

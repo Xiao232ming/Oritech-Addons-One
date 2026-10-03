@@ -45,7 +45,8 @@ import io.github.xiao232ming.oritechaddonsone.block.entity.TransferMode;
  * @param y0         top edge of the preview panel, in GUI space
  * @param x1         right edge of the preview panel, in GUI space
  * @param y1         bottom edge of the preview panel, in GUI space
- * @param scale      pixels per model unit the model is drawn at
+ * @param scale      pixels per model unit the model is drawn at, in the panel's own GUI pixels (the picture-in-picture
+ *                   pipeline multiplies it by the GUI scale itself, so it must not be pre-multiplied here)
  * @param pose       the GUI pose the panel is drawn in
  * @param scissorArea the screen area the panel is clipped to, or {@code null} while nothing clips it
  * @param bounds     the area this state can draw to, i.e. panel and clip intersected

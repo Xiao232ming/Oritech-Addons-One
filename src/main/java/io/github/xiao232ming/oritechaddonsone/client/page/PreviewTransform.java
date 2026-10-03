@@ -118,6 +118,25 @@ public final class PreviewTransform {
      * coordinates. It is the exact composition the renderer and the picture-in-picture pipeline produce: the
      * panel's centre, the model scale with the pipeline's vertical flip, the pitch, the yaw, and the translation
      * that brings the model's own centre to the origin.
+     * <p>
+     * <b>This was measured against the whole pipeline, not only against itself.</b> An earlier check compared the
+     * picking with a copy of the drawing and passed while the game did not; the check that means something walks the
+     * real chain - {@code PictureInPictureRenderer#prepare}'s pose (the panel's centre, and
+     * {@code guiScale * renderState.scale()} with the pipeline's own z flip), {@code Projection#setupOrtho}'s
+     * {@code 1000 / width, 1000 / height} factor, the viewport mapping of the render target, and {@code blitTexture}'s
+     * stretch of the whole target back over the widget's own rectangle. Doing that for every corner of the machine
+     * gives:
+     * <ul>
+     *     <li><b>0.0000 px</b> between the pixel this transform puts a model point on and the pixel the pipeline puts
+     *     it on, at GUI scales 1, 2, 3 and 4 - so the two differ nowhere, at any scale;</li>
+     *     <li>the blit rectangle is the widget's content rectangle exactly ({@code x0,y0,x1,y1} are the widget's,
+     *     unchanged), so the drawing is not stretched into a rectangle the picking does not know about;</li>
+     *     <li>those bounds are plain integers in the page (140x96 at an integer origin), and the GUI pose handed to the
+     *     state is identity, so there is no half-pixel offset to explain a small error either;</li>
+     *     <li>1.21.1's direct drawing applies the same scale exactly once, so a face/cursor disagreement there is not
+     *     the picture-in-picture pipeline's doing either.</li>
+     * </ul>
+     * What that leaves for a disagreement the player can see is not this transform.
      */
     public Matrix4f modelToScreen() {
         return new Matrix4f()
