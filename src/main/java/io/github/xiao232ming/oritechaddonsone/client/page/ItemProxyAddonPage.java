@@ -11,7 +11,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.Property;
@@ -24,7 +23,6 @@ import rearth.oritech.api.screen.Insets;
 import rearth.oritech.api.screen.OritechSurface;
 import rearth.oritech.api.screen.widgets.ItemSlotWidget;
 import rearth.oritech.api.screen.widgets.SurfaceWidget;
-import rearth.oritech.util.ScreenProvider;
 
 import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.client.AddonPanelStyle;
@@ -34,8 +32,8 @@ import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonMenu;
 import io.github.xiao232ming.oritechaddonsone.network.ProxyNetworking;
 
 /**
- * The Item Proxy page (物品代理): the six faces of this addon unfolded into a cube net, and the inventory
- * of the machine a face can be pointed at.
+ * The Item Proxy page (物品代理): the six faces of this addon unfolded into a cube net, and the slot
+ * layout of the machine a face can be pointed at.
  * <p>
  * The page only exists while at least one Oritech inventory proxy addon is stored inside the block - the
  * registry adds it per menu - and it is a direct port of what that addon does on its own: Oritech's
@@ -46,8 +44,9 @@ import io.github.xiao232ming.oritechaddonsone.network.ProxyNetworking;
  * <ul>
  *     <li>the net is drawn from the block's own per-face textures (see {@link FaceTextures}),</li>
  *     <li>a left click on an unconfigured face opens the configuration page of that face, which is
- *     Oritech's own inventory proxy page: the machine's GUI slots as framed cells, the same prompt and the
- *     same click-to-select interaction (see {@link #drawPicker}),</li>
+ *     Oritech's own inventory proxy page: the machine's GUI slots as framed cells with Oritech's own
+ *     selection plate inside every cell - the plate of the slot the face is bound to is the dark, sunken
+ *     one - plus the same prompt and the same click-to-select interaction (see {@link #drawPicker}),</li>
  *     <li>a right click on any face - or a left click on a configured one - removes the binding again,</li>
  *     <li>the panel's top right corner shows the counter {@code 可配置数: x/x} / {@code Configurable: x/x}:
  *     configured faces out of the number of stored inventory proxy addons, which is the maximum. It sits on
@@ -103,6 +102,13 @@ public final class ItemProxyAddonPage implements AddonPage {
      */
     public static final int ICON_SIZE = 28;
     private static final int ICON_PADDING = 3;
+    /**
+     * Size of the selection plate Oritech puts inside a slot of its inventory proxy screen, and its
+     * offset inside the 16x16 cell - its screen builds
+     * {@code ButtonWidget.panel(slot.x() + 3, slot.y() + 3, 10, 10, ...)} per GUI slot of the machine.
+     */
+    public static final int PLATE_SIZE = 10;
+    public static final int PLATE_OFFSET = 3;
 
     /**
      * Icon of the tab: a chest front with a latch and a keyhole
@@ -168,7 +174,8 @@ public final class ItemProxyAddonPage implements AddonPage {
     // ------------------------------------------------------------------ drawing
 
     @Override
-    public void render(AddonPageContext context, GuiGraphics graphics, float partialTick) {
+    public void render(AddonPageContext context, GuiGraphics graphics, float partialTick,
+            double mouseX, double mouseY) {
         var menu = context.menu();
         var textures = FaceTextures.of(menu.addonBlock(), menu.addonBlockState());
         var cells = cells(menu);
@@ -180,7 +187,7 @@ public final class ItemProxyAddonPage implements AddonPage {
         drawCounter(context, graphics, menu.configuredProxyFaces(), menu.inventoryProxyCount());
 
         var openFace = openFace(menu);
-        if (openFace != null) drawPicker(context, graphics, menu, openFace);
+        if (openFace != null) drawPicker(context, graphics, menu, openFace, mouseX, mouseY);
     }
 
     /**
@@ -261,11 +268,11 @@ public final class ItemProxyAddonPage implements AddonPage {
      * <p>
      * This is Oritech's own inventory proxy configuration page, painted where its own screen would be: a
      * 176x100 {@linkplain OritechSurface#PANEL bedrock panel} (the nine patch Oritech itself fills its
-     * widgets with - see {@link SurfaceWidget}), a framed cell per
-     * {@linkplain ScreenProvider#getGuiSlots() GUI slot} of the machine ({@link ItemSlotWidget}, again
-     * Oritech's own widget, so the frames are pixel for pixel the same), the same prompt
+     * widgets with - see {@link SurfaceWidget}), a framed cell per GUI slot of the machine
+     * ({@link ItemSlotWidget}, again Oritech's own widget, so the frames are pixel for pixel the same)
+     * carrying Oritech's selection plate ({@link #drawSlots}), the same prompt
      * {@code tooltip.oritech.addon_proxy_select} in Oritech's dark label colour, and the block's item
-     * above the panel as its title icon - the same three elements, in the same places and sizes, that
+     * above the panel as its title icon - the same elements, in the same places and sizes, that
      * {@code rearth.oritech.client.ui.InventoryProxyScreen} builds for its own menu.
      * <p>
      * The one thing that cannot be reused is Oritech's {@code InventoryProxyScreenHandler}: it holds the
@@ -275,14 +282,17 @@ public final class ItemProxyAddonPage implements AddonPage {
      * page with Oritech's classes and handles the click itself, which is what makes a face bind the slot
      * the player clicked.
      * <p>
-     * While this is open it covers the net and the counter of the page: a modal step, closed by a click on
-     * a slot that binds it, and by a click anywhere else (or the right mouse button) - the same "the slots
-     * are the only controls" interaction Oritech's own screen has. The panel is
+     * While this is open it covers the net and the counter of the page: a modal step that a click on a
+     * slot does <b>not</b> close - like Oritech's screen it stays up with the selected slot's plate turned
+     * dark, so the player can read off which slot was taken and pick another one - and it is closed by the
+     * right mouse button or by a click anywhere that is not a slot, the same "the slots are the only
+     * controls" interaction Oritech's own screen has. The panel is
      * {@linkplain ProxyPickerState#place placed} fully inside our panel - centred horizontally, and as high
      * as the title icon above it allows - so it can never be clipped by the window edge, and it is never
      * resized, so the machine's slot layout stays Oritech's own.
      */
-    private void drawPicker(AddonPageContext context, GuiGraphics graphics, ExtensionAddonMenu menu, Direction face) {
+    private void drawPicker(AddonPageContext context, GuiGraphics graphics, ExtensionAddonMenu menu,
+            Direction face, double mouseX, double mouseY) {
         var slots = ProxyPickerState.layout(menu.position(), face);
         var font = Minecraft.getInstance().font;
         var placed = ProxyPickerState.place(context, slots == null ? List.of() : slots);
@@ -305,7 +315,7 @@ public final class ItemProxyAddonPage implements AddonPage {
         } else if (slots.isEmpty()) {
             centered(graphics, font, Component.translatable("gui.oritechaddonsone.proxy.picker.no_machine"));
         } else {
-            drawSlots(graphics, menu, face, slots);
+            drawSlots(graphics, menu, face, slots, placed, mouseX, mouseY);
             prompt(graphics, font, Component.translatable(PROMPT_KEY));
         }
 
@@ -316,29 +326,57 @@ public final class ItemProxyAddonPage implements AddonPage {
         graphics.pose().popPose();
     }
 
-    /** The framed cells of the machine's GUI slots, with their items, inside the translated page. */
-    private void drawSlots(GuiGraphics graphics, ExtensionAddonMenu menu, Direction face, List<int[]> slots) {
-        var inventory = displayedInventory(menu);
-        var selected = menu.proxySlotOf(face);
+    /**
+     * The framed cells of the machine's GUI slots, each with the selection plate Oritech draws inside it,
+     * in the translated page.
+     * <p>
+     * Cell for cell this is what Oritech's {@code InventoryProxyScreen} builds for its own menu: an
+     * {@link ItemSlotWidget} frame per GUI slot of the machine, and three pixels inside it a 10x10 plate
+     * whose surface says what the cell is. Its screen disables the button of the selected slot with
+     * {@code ButtonWidget.setActive(false)}, which renders {@code PANEL_DARK} - the dark, sunken plate -
+     * while every other cell is the raised {@code PANEL} and lights up with {@code PANEL_HOVER} under the
+     * mouse. So the dark cell is the slot this face proxies, and it stays visible because a click binds
+     * without closing the page (see {@link #handlePickerClick}) - exactly like Oritech's screen, where the
+     * selected plate is the only thing that says which slot was taken.
+     * <p>
+     * The items of the machine are deliberately not drawn, again like Oritech's own screen: its menu holds
+     * no slots at all, so it shows the bare cells, and it is the cell's position inside the machine's own
+     * GUI layout that identifies the slot.
+     * <p>
+     * The plate is 10x10 but the whole 16x16 cell is both the hover area and the hit area, so the plate
+     * lights up - and binds - for a click anywhere on its cell, the same rectangle
+     * {@link ProxyPickerState#isOverSlot} tests and the tooltip speaks about. Oritech's own
+     * {@code ButtonWidget} would answer only its own ten pixels, which would leave the frame of the cell
+     * dead while the tooltip still calls it that slot.
+     */
+    private void drawSlots(GuiGraphics graphics, ExtensionAddonMenu menu, Direction face,
+            List<int[]> slots, ProxyPickerState.Placed placed, double mouseX, double mouseY) {
+        var selected = selectedSlot(menu, face);
 
         for (var slot : slots) {
             int x = slot[1];
             int y = slot[2];
 
             // Oritech's own slot widget paints the frame at the slot's position
-            new ItemSlotWidget(x, y).render(graphics, x, y, 0f);
+            new ItemSlotWidget(x, y).render(graphics, (int) mouseX, (int) mouseY, 0f);
 
-            if (inventory != null && slot[0] >= 0 && slot[0] < inventory.getContainerSize()) {
-                var stack = inventory.getItem(slot[0]);
-                if (!stack.isEmpty()) graphics.renderItem(stack, x, y);
-            }
-
-            // the slot this face is bound to right now, marked like Oritech marks the selected one
-            if (selected != null && selected == slot[0]) {
-                graphics.fill(x - 1, y - 1, x + 17, y + 17, 0x552ECC71);
-                graphics.fill(x - 1, y - 1, x + 17, y, 0xFF2ECC71);
-            }
+            var hovered = ProxyPickerState.isOverSlot(placed, slot, mouseX, mouseY);
+            var plate = selected != null && selected == slot[0]
+                    ? OritechSurface.PANEL_DARK
+                    : hovered ? OritechSurface.PANEL_HOVER : OritechSurface.PANEL;
+            plate.render(graphics, x + PLATE_OFFSET, y + PLATE_OFFSET, PLATE_SIZE, PLATE_SIZE);
         }
+    }
+
+    /**
+     * The slot the open configuration page shows as selected: the binding the menu already knows, or the
+     * one this page bound a moment ago while the server has not answered yet - a plate that only darkens
+     * a tick after the click would read as a flicker (see {@link ProxyPickerState#select}).
+     */
+    @Nullable
+    private static Integer selectedSlot(ExtensionAddonMenu menu, Direction face) {
+        var pending = ProxyPickerState.pendingSlot();
+        return pending != null ? pending : menu.proxySlotOf(face);
     }
 
     /**
@@ -404,8 +442,8 @@ public final class ItemProxyAddonPage implements AddonPage {
         var menu = context.menu();
         var openFace = openFace(menu);
 
-        // while the picker is open every click belongs to it: either on a slot of the machine or outside,
-        // which closes it again
+        // while the picker is open every click belongs to it: a click on a slot of the machine selects
+        // that slot and leaves the page open, any other click closes it again
         if (openFace != null) return handlePickerClick(context, menu, openFace, mouseX, mouseY, button);
 
         var face = faceAt(menu, mouseX, mouseY);
@@ -431,7 +469,13 @@ public final class ItemProxyAddonPage implements AddonPage {
     /**
      * A click while the configuration page is open. A click on one of the machine's slots binds the face
      * that is being configured to it - the same click, on the same cell, that Oritech's own proxy screen
-     * turns into {@code setTargetSlot} - and any other click closes the page without changing anything.
+     * turns into {@code setTargetSlot} - and the page then <b>stays open</b>, the way Oritech's screen
+     * does, so the plate of the slot that was taken turns dark and the player can read the choice off,
+     * pick another slot or close the page. The disabled plate of the slot that is already bound ignores
+     * the click like Oritech's disabled button does.
+     * <p>
+     * The page is closed by the right mouse button and by any click that is not on a slot - a click
+     * outside a modal.
      * <p>
      * The mouse position arrives panel relative, exactly like the drawn cells, so the test uses the same
      * {@link ProxyPickerState#place(AddonPageContext, List) placement} the drawing does.
@@ -446,9 +490,14 @@ public final class ItemProxyAddonPage implements AddonPage {
         var slots = ProxyPickerState.layout(menu.position(), face);
         if (slots != null) {
             var placed = ProxyPickerState.place(context, slots);
+            var selected = selectedSlot(menu, face);
             for (var slot : slots) {
                 if (ProxyPickerState.isOverSlot(placed, slot, mouseX, mouseY)) {
-                    ProxyPickerState.close();
+                    // the plate of the slot this face already proxies is disabled: clicking it again does
+                    // nothing, so the page neither closes nor sends a binding the server already has
+                    if (selected != null && selected == slot[0]) return true;
+
+                    ProxyPickerState.select(slot[0]);
                     send(new ProxyNetworking.BindFace(menu.position(), ProxyNetworking.faceIndex(face), slot[0]));
                     return true;
                 }
@@ -472,7 +521,7 @@ public final class ItemProxyAddonPage implements AddonPage {
             var placed = ProxyPickerState.place(context, slots);
             for (var slot : slots) {
                 if (ProxyPickerState.isOverSlot(placed, slot, mouseX, mouseY)) {
-                    // the slot index and the face it is about to be bound to, so the click is unambiguous
+                    // the slot index and the face it belongs to, so the click is unambiguous
                     return List.of(Component.translatable("gui.oritechaddonsone.proxy.picker.slot", slot[0]),
                             Component.translatable("gui.oritechaddonsone.proxy.face", faceName(openFace)));
                 }
@@ -586,20 +635,6 @@ public final class ItemProxyAddonPage implements AddonPage {
     /** Translation key of a face name, e.g. {@code gui.oritechaddonsone.proxy.side.north}. */
     private static Component faceName(Direction face) {
         return Component.translatable("gui.oritechaddonsone.proxy.side." + face.getName());
-    }
-
-    /** The machine inventory the picker previews items from, or {@code null} while it is out of reach. */
-    @Nullable
-    private static Container displayedInventory(ExtensionAddonMenu menu) {
-        var blockEntity = menu.blockEntity();
-        if (blockEntity == null || blockEntity.getLevel() == null) return null;
-
-        var target = blockEntity.connectedMachinePos();
-        if (target == null || !blockEntity.getLevel().isLoaded(target)) return null;
-
-        return blockEntity.getLevel().getBlockEntity(target) instanceof ScreenProvider screen
-                ? screen.getDisplayedInventory()
-                : null;
     }
 
     /** The item drawn as the configuration page's icon: the block this menu belongs to. */

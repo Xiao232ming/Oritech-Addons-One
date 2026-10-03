@@ -34,6 +34,17 @@ public final class ProxyPickerState {
     @Nullable
     private static Direction openFace;
 
+    /**
+     * Slot the open picker has bound, until the menu's own binding catches up.
+     * <p>
+     * The binding travels to the server and comes back with the block entity's data, so it is one tick
+     * old when {@code ExtensionAddonMenu#proxySlotOf} first answers - the dark plate of the selected cell
+     * would light up three frames after the click, which reads as a flicker. The page therefore draws this
+     * one first and falls back to the menu, and it is dropped with the picker it belongs to.
+     */
+    @Nullable
+    private static Integer pendingSlot;
+
     /** Slot layouts the server sent, keyed by addon position and face. */
     private static final Map<BlockPos, Map<Direction, List<int[]>>> LAYOUTS = new HashMap<>();
 
@@ -44,6 +55,7 @@ public final class ProxyPickerState {
     public static void open(BlockPos pos, Direction face) {
         openPos = pos;
         openFace = face;
+        pendingSlot = null;
         var perFace = LAYOUTS.get(pos);
         if (perFace != null) perFace.remove(face);
     }
@@ -52,6 +64,21 @@ public final class ProxyPickerState {
     public static void close() {
         openPos = null;
         openFace = null;
+        pendingSlot = null;
+    }
+
+    /**
+     * Remembers the slot the open picker has just bound, so the selected plate appears in the same frame
+     * as the click. Only the picker calls this, and {@link #close()} drops it again.
+     */
+    public static void select(int slot) {
+        pendingSlot = slot;
+    }
+
+    /** The slot the open picker bound a moment ago, or {@code null} while it has bound nothing yet. */
+    @Nullable
+    public static Integer pendingSlot() {
+        return pendingSlot;
     }
 
     /** True while the picker of exactly this face is open. */

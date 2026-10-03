@@ -129,7 +129,8 @@ public final class WirelessAddonPage implements AddonPage {
      * where the anchor goes" instead of being an unexplained empty field.
      */
     @Override
-    public void render(AddonPageContext context, GuiGraphics graphics, float partialTick) {
+    public void render(AddonPageContext context, GuiGraphics graphics, float partialTick,
+            double mouseX, double mouseY) {
         var font = Minecraft.getInstance().font;
         var menu = context.menu();
         var lines = infoLines(menu);

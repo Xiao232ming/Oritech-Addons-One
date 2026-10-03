@@ -76,7 +76,8 @@ public final class PluginAddonPage implements AddonPage {
      * covers the icon, while a real plugin inserted later (z=150) still covers the veil.
      */
     @Override
-    public void render(AddonPageContext context, GuiGraphics graphics, float partialTick) {
+    public void render(AddonPageContext context, GuiGraphics graphics, float partialTick,
+            double mouseX, double mouseY) {
         var layout = context.layout();
 
         // one icon per slot for type III: the grid has one column per stat category and one row per tier,

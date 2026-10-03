@@ -56,8 +56,15 @@ public interface AddonPage {
      * Draws the content of this page inside the panel. The context maps the panel's coordinate system
      * onto the screen, so a page draws at {@code context.left() + layout.slotX(slot)} like the panel
      * background does.
+     *
+     * @param mouseX mouse X of this frame, <b>panel relative</b> - the same coordinate system every other
+     *               position on this page uses (the screen subtracts its own origin once), so a page can
+     *               light up the control the mouse is over while it draws it. Pages without their own
+     *               hover state ignore it.
+     * @param mouseY mouse Y of this frame, panel relative; see {@code mouseX}
      */
-    void render(AddonPageContext context, GuiGraphics graphics, float partialTick);
+    void render(AddonPageContext context, GuiGraphics graphics, float partialTick,
+            double mouseX, double mouseY);
 
     /**
      * Called on a click inside the panel before the slot logic sees it, with mouse coordinates relative
