@@ -49,6 +49,7 @@ import io.github.xiao232ming.oritechaddonsone.block.entity.WirelessExtensionAddo
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonLayout;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonMenu;
 import io.github.xiao232ming.oritechaddonsone.network.ProxyNetworking;
+import io.github.xiao232ming.oritechaddonsone.network.TransferNetworking;
 
 /**
  * An addon for Oritech (26.1.2) that adds the "Extension Addon" block.
@@ -165,6 +166,21 @@ public class OritechAddonsOne {
             OritechAddonsOne::blockProperties);
 
     /**
+     * 扩展传输插件 - the transfer addon: while it sits inside an Extension Addon, the machine that addon works
+     * on can be filled from and emptied into through the addon's own six faces, one direction per face (see
+     * the "Extension Transfer" page).
+     * <p>
+     * Like the warehouse and tank addons it is a neutral {@link PluginAddonBlock}, and the Extension Addon
+     * Type II accepts it because that type takes every Oritech addon that is not one of the stat plugins.
+     * Its model and texture are Oritech's inventory proxy addon for now, see
+     * {@code models/block/transfer_addon.json}.
+     */
+    public static final DeferredBlock<PluginAddonBlock> TRANSFER_ADDON = BLOCKS.registerBlock(
+            "transfer_addon",
+            properties -> new PluginAddonBlock(properties, pluginAddonSettings()),
+            OritechAddonsOne::blockProperties);
+
+    /**
      * Block items of all three types. They forward the block's tooltip to the item (the bridge Oritech
      * uses for its own blocks) and use the block name as their item name.
      */
@@ -227,6 +243,15 @@ public class OritechAddonsOne {
             properties -> new PluginAddonItem(CHUNK_ANCHOR_ADDON.get(), properties),
             () -> new Item.Properties().useBlockDescriptionPrefix());
 
+    /**
+     * Block item of the transfer addon. Like the anchor it changes no stat, so it is registered without a
+     * bonus number and its description key has no placeholder.
+     */
+    public static final DeferredItem<BlockItem> TRANSFER_ADDON_ITEM = ITEMS.registerItem(
+            "transfer_addon",
+            properties -> new PluginAddonItem(TRANSFER_ADDON.get(), properties),
+            () -> new Item.Properties().useBlockDescriptionPrefix());
+
     /** All plugin types share one block entity type, the type is read from the owning block. */
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<ExtensionAddonBlockEntity>> EXTENSION_ADDON_ENTITY =
             BLOCK_ENTITIES.register("extension_addon",
@@ -262,7 +287,8 @@ public class OritechAddonsOne {
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<AddonBlockEntity>> PLUGIN_ADDON_ENTITY =
             BLOCK_ENTITIES.register("plugin_addon",
                     () -> new BlockEntityType<AddonBlockEntity>(OritechAddonsOne::pluginAddonEntity,
-                            WAREHOUSE_ADDON.get(), TANK_ADDON.get(), CHUNK_ANCHOR_ADDON.get()));
+                            WAREHOUSE_ADDON.get(), TANK_ADDON.get(), CHUNK_ANCHOR_ADDON.get(),
+                            TRANSFER_ADDON.get()));
 
     public static final DeferredHolder<MenuType<?>, MenuType<ExtensionAddonMenu>> EXTENSION_ADDON_MENU =
             MENUS.register("extension_addon", () -> IMenuTypeExtension.create(ExtensionAddonMenu::new));
@@ -282,6 +308,7 @@ public class OritechAddonsOne {
                         output.accept(WAREHOUSE_ADDON_ITEM.get());
                         output.accept(TANK_ADDON_ITEM.get());
                         output.accept(CHUNK_ANCHOR_ADDON_ITEM.get());
+                        output.accept(TRANSFER_ADDON_ITEM.get());
                     })
                     .build());
 
@@ -355,8 +382,9 @@ public class OritechAddonsOne {
         modEventBus.addListener(this::registerCapabilities);
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
         modEventBus.addListener(this::onCommonSetup);
-        // the four packets of the Item Proxy page (see ProxyNetworking)
+        // the four packets of the Item Proxy page (see ProxyNetworking) and the transfer page's mode packet
         modEventBus.addListener(ProxyNetworking::register);
+        modEventBus.addListener(TransferNetworking::register);
 
         LOGGER.info("Oritech Addons One loaded: {}, {}, {} and the wireless variants {} registered",
                 EXTENSION_ADDON_1.getId(), EXTENSION_ADDON_2.getId(), EXTENSION_ADDON_3.getId(),

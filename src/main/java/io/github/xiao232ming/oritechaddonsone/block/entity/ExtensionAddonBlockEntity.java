@@ -78,7 +78,7 @@ import io.github.xiao232ming.oritechaddonsone.wireless.WirelessLinks;
  * <p>
  * Since type II also accepts Oritech's inventory proxy addon, this block can additionally proxy the
  * machine's item inventory to the outside world: see {@link #getItemLookup(Direction)},
- * {@link MachineProxyStorage} and {@link ProxyFaceBindings}. Which face proxies which machine slot is
+ * {@link MachineFaceStorage} and {@link ProxyFaceBindings}. Which face proxies which machine slot is
  * configured on the GUI's Item Proxy page and stored here, so it survives a save and is server
  * authoritative.
  */
@@ -404,10 +404,11 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
 
     /**
      * One handler per face, created on demand and kept so NeoForge's capability cache always sees the same
-     * object. The handlers do not cache anything themselves - they resolve the machine inventory on every
-     * call - so keeping them is only about identity, not about staleness.
+     * object. The handlers do not cache anything themselves - they resolve the machine inventory, the proxy
+     * binding and the transfer mode on every call - so keeping them is only about identity, not about
+     * staleness.
      */
-    private final java.util.EnumMap<Direction, MachineProxyStorage> proxyStorages =
+    private final java.util.EnumMap<Direction, MachineFaceStorage> faceStorages =
             new java.util.EnumMap<>(Direction.class);
 
     /** Number of inventory proxy addons stored in this block (a stack of them counts per item). */
@@ -438,12 +439,71 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         return inventoryProxyCount();
     }
 
+    // ------------------------------------------------------------------ item transfer (transfer page)
+
+    /**
+     * What each face of this block does with the machine's items - the Extension Transfer feature. Empty
+     * while no transfer addon is stored, which is what turns every face into "transfers nothing".
+     */
+    private final TransferFaceModes transferFaces = new TransferFaceModes();
+
+    /** Number of transfer addons stored in this block (a stack of them counts per item). */
+    public int transferAddonCount() {
+        return countPlugins(OritechAddonsOne.TRANSFER_ADDON.get());
+    }
+
+    /**
+     * True while at least one transfer addon is stored, i.e. while the "Extension Transfer" page has
+     * anything to offer. Unlike the inventory proxy there is no per-addon limit here: all six faces may
+     * transfer at the same time.
+     */
+    public boolean hasTransferAddon() {
+        return transferAddonCount() > 0;
+    }
+
+    /** True while this block may transfer the machine's items at all; see {@link #hasTransferAddon()}. */
+    public boolean canTransferItems() {
+        return hasTransferAddon();
+    }
+
+    /** The per-face transfer modes of this block; never {@code null}, empty while nothing is configured. */
+    public TransferFaceModes transferModes() {
+        return transferFaces;
+    }
+
+    /**
+     * Sets what one face does with the machine's items, or clears it again with
+     * {@link TransferMode#NONE}. Refused on the client and while no transfer addon is stored.
+     */
+    public boolean setTransferMode(Direction face, TransferMode mode) {
+        if (level == null || level.isClientSide() || face == null || mode == null) return false;
+        if (mode != TransferMode.NONE && !canTransferItems()) return false;
+
+        transferFaces.set(face, mode);
+        setChanged();
+        return true;
+    }
+
+    /**
+     * Drops every mode while the block no longer holds a transfer addon. Called from
+     * {@link #contentsChanged}: a block that lost its last transfer addon must stop feeding or emptying the
+     * machine through its faces.
+     */
+    private void reconcileTransferModes() {
+        if (level == null || level.isClientSide()) return;
+        if (transferFaces.isEmpty()) return;
+        if (hasTransferAddon()) return;
+
+        transferFaces.clear();
+        setChanged();
+    }
+
     /**
      * Slot count of the machine inventory one face would proxy, or {@code 0} while there is no machine
      * (not connected, chunk unloaded, block entity gone). Used to refuse a binding the server cannot honour.
      */
     public int proxySlotCount() {
-        var storage = MachineProxyStorage.machineStorage(this);
+        var storage = MachineFaceStorage.machineStorage(this);
         return storage == null ? 0 : storage.size();
     }
 
@@ -515,14 +575,17 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
 
     /**
      * Inventory a face of this block offers to the outside world (Oritech's {@code ItemProvider}
-     * contract). The returned handler reports the machine's slots and only lets the bound one be used; with
-     * no binding, no machine or no inventory proxy addon it reports an empty inventory, so a pipe simply
-     * sees "nothing here" instead of an error.
+     * contract). The handler reports the machine's slots and then either proxies the one slot that face is
+     * bound to or, with a transfer mode set, moves items in the direction that mode allows; with no binding,
+     * no mode, no machine or no matching addon it reports an empty inventory, so a pipe simply sees "nothing
+     * here" instead of an error.
      */
     @Override
     public ResourceHandler<ItemResource> getItemLookup(@Nullable Direction direction) {
         var face = direction == null ? Direction.NORTH : direction;
-        return proxyStorages.computeIfAbsent(face, key -> new MachineProxyStorage(this, key));
+        // One object per face forever: NeoForge caches what a face answers with, and the handler reads the
+        // binding and the mode on every call (see MachineFaceStorage).
+        return faceStorages.computeIfAbsent(face, key -> new MachineFaceStorage(this, key));
     }
 
     // ------------------------------------------------------------------ energy input (acceptor plugin)
@@ -755,6 +818,8 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         setChanged();
         // a block that lost its last inventory proxy addon must not keep any face configured
         reconcileProxyBindings();
+        // same for the transfer modes of a block that lost its last transfer addon
+        reconcileTransferModes();
         // keep the synced "has a control unit" state (and the machine) up to date right away
         updateControlUnitState();
         serverTickRedstone();
@@ -932,16 +997,19 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         output.store("items", ItemStack.OPTIONAL_CODEC.listOf(), singles);
         output.store("counts", Codec.INT.listOf(), counts);
 
-        // the per-face inventory proxy bindings of the Item Proxy page
+        // the per-face inventory proxy bindings of the Item Proxy page and the transfer modes of the
+        // Extension Transfer page
         proxyFaces.save(output);
+        transferFaces.save(output);
     }
 
     @Override
     protected void loadAdditional(ValueInput input) {
         super.loadAdditional(input);
 
-        // a stale binding is harmless: it only resolves to an inventory while the machine is there
+        // a stale binding or mode is harmless: it only resolves to an inventory while the machine is there
         proxyFaces.load(input);
+        transferFaces.load(input);
 
         var counts = input.read("counts", Codec.INT.listOf()).orElse(List.of());
         if (counts.isEmpty()) {

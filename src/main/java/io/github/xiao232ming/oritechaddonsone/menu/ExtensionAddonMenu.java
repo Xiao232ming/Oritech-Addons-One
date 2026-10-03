@@ -20,6 +20,7 @@ import io.github.xiao232ming.oritechaddonsone.Config;
 import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonType;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEntity;
+import io.github.xiao232ming.oritechaddonsone.block.entity.TransferMode;
 import io.github.xiao232ming.oritechaddonsone.block.entity.WirelessExtensionAddonBlockEntity;
 
 /**
@@ -133,6 +134,37 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
             @Override
             public void set(int value) {
                 syncedProxyFaces[face.ordinal()] = value;
+            }
+        };
+    }
+
+    /** Client side copy of the per-face transfer modes, one value per {@link Direction#values()} entry. */
+    private final int[] syncedTransferFaces = new int[Direction.values().length];
+    /** One container data slot per face: the transfer mode of that face (see {@link #transferFaceSlot}). */
+    private final DataSlot[] transferFaceSlots = new DataSlot[Direction.values().length];
+
+    /**
+     * Container data slot of one face: the ordinal of the {@link TransferMode} that face transfers with, i.e.
+     * {@code 0} while it transfers nothing. Published exactly like the proxy bindings
+     * ({@link #proxyFaceSlot}), so the net's colours and the page's counter follow what the server wrote.
+     */
+    private DataSlot transferFaceSlot(Direction face) {
+        return transferFaceSlots[face.ordinal()];
+    }
+
+    /** Creates the container data slot of one face; see {@link #transferFaceSlot(Direction)}. */
+    private DataSlot createTransferFaceSlot(Direction face) {
+        return new DataSlot() {
+            @Override
+            public int get() {
+                if (clientSide) return syncedTransferFaces[face.ordinal()];
+                var blockEntity = blockEntity();
+                return blockEntity == null ? 0 : blockEntity.transferModes().modeOf(face).ordinal();
+            }
+
+            @Override
+            public void set(int value) {
+                syncedTransferFaces[face.ordinal()] = value;
             }
         };
     }
@@ -313,6 +345,12 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
             proxyFaceSlots[face.ordinal()] = createProxyFaceSlot(face);
             addDataSlot(proxyFaceSlots[face.ordinal()]);
         }
+
+        // Same for the transfer modes of the Extension Transfer page (see #transferFaceSlot).
+        for (var face : Direction.values()) {
+            transferFaceSlots[face.ordinal()] = createTransferFaceSlot(face);
+            addDataSlot(transferFaceSlots[face.ordinal()]);
+        }
     }
 
     /** One slot of the player's own inventory; see {@link #playerSlotsActive}. */
@@ -422,6 +460,37 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
         var count = 0;
         for (var face : Direction.values()) {
             if (proxySlotOf(face) != null) count++;
+        }
+        return count;
+    }
+
+    /**
+     * Number of transfer addons stored in the addon. Unlike the inventory proxy this is not a limit on the
+     * configurable faces - all six faces may transfer - it only decides whether the page exists at all.
+     */
+    public int transferAddonCount() {
+        var blockEntity = blockEntity();
+        return blockEntity == null ? 0 : blockEntity.transferAddonCount();
+    }
+
+    /** True while the Extension Transfer page has anything to show, i.e. while a transfer addon is stored. */
+    public boolean hasTransferAddon() {
+        return transferAddonCount() > 0;
+    }
+
+    /**
+     * Mode the given face transfers with, read from that face's container data slot so the client sees what
+     * the server wrote; {@link TransferMode#NONE} while that face transfers nothing.
+     */
+    public TransferMode transferMode(Direction face) {
+        return TransferMode.byOrdinal(transferFaceSlot(face).get());
+    }
+
+    /** Number of faces that transfer something, i.e. the "x" of the transfer page's counter. */
+    public int transferFaces() {
+        var count = 0;
+        for (var face : Direction.values()) {
+            if (transferMode(face) != TransferMode.NONE) count++;
         }
         return count;
     }

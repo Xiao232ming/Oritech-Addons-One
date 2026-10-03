@@ -82,5 +82,16 @@
   "gui.oritechaddonsone.proxy.side.east": "right",
   "gui.oritechaddonsone.proxy.side.west": "left",
   "gui.oritechaddonsone.proxy.side.up": "top",
-  "gui.oritechaddonsone.proxy.side.down": "bottom"
+  "gui.oritechaddonsone.proxy.side.down": "bottom",
+  "block.oritechaddonsone.transfer_addon": "Transfer Addon",
+  "container.oritechaddonsone.transfer_addon": "Transfer Addon",
+  "tooltip.oritechaddonsone.transfer_addon.desc": "Feed and empty the machine through its faces",
+  "gui.oritechaddonsone.page.transfer": "Extension Transfer",
+  "gui.oritechaddonsone.page.transfer.tooltip": "Unfolded faces of this block: click a face to choose whether it feeds the machine, empties it, or both",
+  "gui.oritechaddonsone.transfer.counter": "Configurable: %s/%s",
+  "gui.oritechaddonsone.transfer.prompt": "Choose what this face does",
+  "gui.oritechaddonsone.transfer.mode.input": "Input",
+  "gui.oritechaddonsone.transfer.mode.output": "Output",
+  "gui.oritechaddonsone.transfer.mode.both": "Input + Output",
+  "gui.oritechaddonsone.transfer.mode.none": "Not set"
 }
