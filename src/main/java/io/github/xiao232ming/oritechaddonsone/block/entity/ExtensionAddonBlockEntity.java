@@ -220,7 +220,7 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
      * {@code getControllerPos()} answers the addon's own position and this method answers {@code null} for an addon
      * that really is in use. Anything <em>authoritative</em> therefore reads it on the server only - the capability
      * providers and the automation do - and a value a client has to draw is sent to it with the menu instead
-     * ({@code ExtensionAddonMenu#transferPreviewMachinePos()}, filled from this very method on the server).
+     * ({@code ExtensionAddonMenu#transferMachinePos()}, filled from this very method on the server).
      */
     @Nullable
     public BlockPos servedMachinePos() {
@@ -469,52 +469,52 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
      * Faces of this block a placed transfer addon hangs on, as a bitmask over {@link Direction#values()}.
      * A block that can host one reports it through {@link #scanAttachedTransferFaces()}; the wired addons and
      * the wireless dock have nothing to scan, so this stays {@code 0} on all of them. The page draws a gold
-     * border around these faces and {@link #hasTransferAddon()} counts them, which is what lets the transfer
+     * border around these faces and {@link #hasExtensionTransferAddon()} counts them, which is what lets the transfer
      * page show a face that is already taken by the plugin itself.
      */
     private int attachedTransferFaces;
 
-    /** Number of transfer addons stored in this block (a stack of them counts per item). */
+    /** Number of 扩展传输插件 stored in this block (a stack of them counts per item). */
     public int transferAddonCount() {
+        return countPlugins(OritechAddonsOne.EXTENSION_TRANSFER_ADDON.get());
+    }
+
+    /**
+     * Number of 传输插件 stored in this block (a stack of them counts per item).
+     * <p>
+     * The two transfer plugins are separate here only because their pages are separate: 扩展传输插件 is configured
+     * on the cube net of the block's own faces ({@link #hasExtensionTransferAddon()}), 传输插件 on a 3D model of the machine
+     * ({@link #hasTransferAddon()}). What they do to the machine's items is the same thing, which is why
+     * {@link #canTransferItems()} counts both.
+     */
+    public int transferPluginCount() {
         return countPlugins(OritechAddonsOne.TRANSFER_ADDON.get());
     }
 
     /**
-     * Number of transfer <b>preview</b> plugins stored in this block (a stack of them counts per item).
-     * <p>
-     * The two transfer plugins are separate here only because their pages are separate: 扩展传输插件 is configured
-     * on the cube net of the block's own faces ({@link #hasTransferAddon()}), 传输插件 on a 3D model of the machine
-     * ({@link #hasTransferPreviewAddon()}). What they do to the machine's items is the same thing, which is why
-     * {@link #canTransferItems()} counts both.
-     */
-    public int transferPreviewAddonCount() {
-        return countPlugins(OritechAddonsOne.TRANSFER_PREVIEW_ADDON.get());
-    }
-
-    /**
-     * True while this block has a transfer addon at all - one stored inside, or one placed on a block that
+     * True while this block has a 扩展传输插件 at all - one stored inside, or one placed on a block that
      * hosts placed plugins - i.e. while the "Extension Transfer" page has anything to offer. Unlike the
      * inventory proxy there is no per-addon limit here: all six faces may transfer at the same time.
      * <p>
-     * Only {@link OritechAddonsOne#TRANSFER_ADDON} counts. 传输插件 is a transfer plugin in every other respect (see
-     * {@link #canTransferItems()}), but it is not configured on this page: its own page
-     * ({@link #hasTransferPreviewAddon()}) draws the machine instead of the block's faces, so counting it here would
+     * Only {@link OritechAddonsOne#EXTENSION_TRANSFER_ADDON} counts. 传输插件 is a transfer plugin in every other
+     * respect (see {@link #canTransferItems()}), but it is not configured on this page: its own page
+     * ({@link #hasTransferAddon()}) draws the machine instead of the block's faces, so counting it here would
      * open a second, redundant page for the same six faces.
      */
-    public boolean hasTransferAddon() {
+    public boolean hasExtensionTransferAddon() {
         return transferAddonCount() > 0 || attachedTransferFaces != 0;
     }
 
     /**
-     * True while the 传输插件 page has anything to show, i.e. while a transfer preview plugin is stored in this
+     * True while the 传输插件 page has anything to show, i.e. while 传输插件 is stored in this
      * block's plugin slots.
      * <p>
      * Like the Item Proxy and Extension Transfer pages this is answered from the container, which the client holds
      * the same contents of because the plugin slots are menu slots - so the tab appears and disappears while the GUI
      * is open, without reopening it.
      */
-    public boolean hasTransferPreviewAddon() {
-        return transferPreviewAddonCount() > 0;
+    public boolean hasTransferAddon() {
+        return transferPluginCount() > 0;
     }
 
     /**
@@ -531,7 +531,7 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
      * <p>
      * It is an overridable accessor and not {@code getBlockState().getBlock()} inside the page, because a
      * placed transfer addon shows the faces of the <b>host</b> it hangs on - the net, the gold border and the
-     * modes are about that block, not about the plugin (see {@code TransferAddonBlockEntity}).
+     * modes are about that block, not about the plugin (see {@code ExtensionTransferAddonBlockEntity}).
      */
     public Block transferPageBlock() {
         return getBlockState().getBlock();
@@ -550,7 +550,7 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
      * Faces of this block a placed transfer addon hangs on. Neither the wired addons nor the wireless dock
      * host one - a plugin standing on them is an ordinary Oritech addon - so both inherit this "nothing" and
      * only a block entity that really can host a placed plugin overrides it (see
-     * {@code TransferAddonBlockEntity}).
+     * {@code ExtensionTransferAddonBlockEntity}).
      */
     protected int scanAttachedTransferFaces() {
         return 0;
@@ -571,12 +571,12 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
 
     /**
      * True while this block may transfer the machine's items at all, i.e. while one of the two transfer plugins
-     * ({@link #hasTransferAddon()} or {@link #hasTransferPreviewAddon()}) is stored or placed on it. Both plugins
+     * ({@link #hasExtensionTransferAddon()} or {@link #hasTransferAddon()}) is stored or placed on it. Both plugins
      * move the same machine's items through the same faces with the same per-face modes, so this is the one gate the
      * automation and the packet path ask.
      */
     public boolean canTransferItems() {
-        return hasTransferAddon() || hasTransferPreviewAddon();
+        return hasExtensionTransferAddon() || hasTransferAddon();
     }
 
     /** The per-face transfer modes of this block; never {@code null}, empty while nothing is configured. */

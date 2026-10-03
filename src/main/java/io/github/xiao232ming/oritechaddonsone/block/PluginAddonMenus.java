@@ -19,7 +19,7 @@ import io.github.xiao232ming.oritechaddonsone.block.entity.WirelessExtensionAddo
  * It exists as one shared place because more than one block renders that menu: the wired
  * {@link ExtensionAddonBlock} and the wireless dock open it for themselves, and a transfer addon placed on
  * an Oritech machine extender opens its own block entity with the very same menu (see
- * {@link TransferAddonBlock}). Copying the buffer layout into every opener would mean three places that have
+ * {@link ExtensionTransferAddonBlock}). Copying the buffer layout into every opener would mean three places that have
  * to agree on what the client constructor reads, so the layout lives here once.
  */
 public final class PluginAddonMenus {

@@ -24,7 +24,7 @@ import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferMode;
 
 /**
- * The 3D model of the transfer preview page: one machine, drawn through a picture-in-picture state of this mod's
+ * The 3D model of the page of 传输插件: one machine, drawn through a picture-in-picture state of this mod's
  * own so that a translucent highlight can be drawn on the face the mouse is over (see
  * {@link MachinePreviewPipRenderer}).
  * <p>
@@ -233,7 +233,7 @@ public final class FacePreviewWidget extends BlockPreviewWidget {
     /**
      * Sets the user's zoom: a factor on the fit-to-panel scale the model is measured with, so 1 is "the whole machine,
      * exactly as this panel sized it". The page hands it over once per frame from the interaction state it keeps
-     * (see {@link TransferPreviewState.Preview#zoom()}), the way it hands over the rotation.
+     * (see {@link TransferAddonState.Preview#zoom()}), the way it hands over the rotation.
      * <p>
      * It is applied <b>inside</b> {@link #scale(float, float)}, i.e. in the one number every user of this frame's
      * geometry reads: {@link #transform()} builds the shared {@link PreviewTransform} from {@code renderedScale} for

@@ -1,7 +1,8 @@
 {
-  "textures": {"0": "oritechaddonsone:block/transfer_preview_addon_off", "particle": "oritechaddonsone:block/transfer_preview_addon_off"},
+  "textures": {"0": "oritechaddonsone:block/extension_transfer_addon_off", "particle": "oritech:block/machine_particle_texture"},
   "elements": [
     {
+      "name": "cube",
       "from": [3, 0, 3],
       "to": [13, 2, 13],
       "faces": {
@@ -11,10 +12,10 @@
         "west": {"uv": [0, 7.5, 5, 8.5], "texture": "#0"},
         "up": {"uv": [5, 5.5, 0, 0.5], "texture": "#0"},
         "down": {"uv": [5, 0.5, 0, 5.5], "texture": "#0"}
-      },
-      "name": "cube"
+      }
     },
     {
+      "name": "cube",
       "from": [5, 2, 5],
       "to": [11, 8, 11],
       "faces": {
@@ -24,10 +25,10 @@
         "west": {"uv": [5, 0, 8, 3], "texture": "#0"},
         "up": {"uv": [5, 0, 8, 3], "texture": "#0"},
         "down": {"uv": [5, 0, 8, 3], "texture": "#0"}
-      },
-      "name": "cube"
+      }
     },
     {
+      "name": "cube",
       "from": [5, 8, 5],
       "to": [11, 9, 11],
       "faces": {
@@ -37,9 +38,7 @@
         "west": {"uv": [5, 6, 8, 6.5], "texture": "#0"},
         "up": {"uv": [5, 3, 8, 6], "texture": "#0"},
         "down": {"uv": [5, 3, 8, 6], "texture": "#0"}
-      },
-      "name": "cube"
+      }
     }
-  ],
-  "render_type": "minecraft:cutout"
+  ]
 }

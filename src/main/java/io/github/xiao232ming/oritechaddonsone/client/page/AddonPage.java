@@ -86,7 +86,7 @@ public interface AddonPage {
      * {@link #mouseReleased}: a drag is forwarded for the whole window, so a page that rotated on every drag
      * anywhere would steal the drag from a slot the player is moving items across.
      * <p>
-     * The 3D preview page is the one page that uses this today: it rotates its model while the player drags over
+     * The 3D page of 传输插件 is the one page that uses this today: it rotates its model while the player drags over
      * it. The screen's own page host is an {@code AbstractContainerScreen}, whose widgets know nothing about our
      * pages, so a page cannot be given a widget's own drag handling - this hook is what stands in for it.
      */
@@ -113,7 +113,7 @@ public interface AddonPage {
      * use it has to hit test its own control itself, because the scroll is forwarded for the whole panel - a page that
      * zoomed on every scroll anywhere would steal the wheel from the slots a player scrolls over.
      * <p>
-     * The 3D preview page is the one page that uses this today: it zooms its model while the pointer is over the
+     * The 3D page of 传输插件 is the one page that uses this today: it zooms its model while the pointer is over the
      * model's own panel. The screen's page host is an {@code AbstractContainerScreen}, whose widgets know nothing
      * about our pages, so a page cannot be given a widget's own scroll handling - this hook stands in for it.
      *

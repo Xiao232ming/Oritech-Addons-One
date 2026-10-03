@@ -11,11 +11,11 @@
       "entries": [
         {
           "type": "minecraft:item",
-          "name": "oritechaddonsone:transfer_preview_addon"
+          "name": "oritechaddonsone:extension_transfer_addon"
         }
       ],
       "rolls": 1.0
     }
   ],
-  "random_sequence": "oritechaddonsone:blocks/transfer_preview_addon"
+  "random_sequence": "oritechaddonsone:blocks/extension_transfer_addon"
 }

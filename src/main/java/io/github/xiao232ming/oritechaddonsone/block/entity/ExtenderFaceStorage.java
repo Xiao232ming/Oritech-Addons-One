@@ -9,11 +9,11 @@ import org.jetbrains.annotations.Nullable;
 
 import rearth.oritech.block.entity.addons.AddonBlockEntity;
 
-import io.github.xiao232ming.oritechaddonsone.block.TransferAddonBlock;
+import io.github.xiao232ming.oritechaddonsone.block.ExtensionTransferAddonBlock;
 
 /**
  * The item inventory one <b>face of Oritech's machine extender</b> offers to the outside world while a placed
- * transfer plugin hangs on that extender - the pipe side of {@link TransferAddonBlockEntity}.
+ * transfer plugin hangs on that extender - the pipe side of {@link ExtensionTransferAddonBlockEntity}.
  * <p>
  * The gating, the machine inventory, the slot roles and the handler identity all live in
  * {@link FacePluginStorage}; this class is the one question that is specific to an extender: <b>which plugin
@@ -23,8 +23,8 @@ import io.github.xiao232ming.oritechaddonsone.block.TransferAddonBlock;
  * what it sets is a mode per face of the extender ({@link TransferFaceModes}), so a face is a connection when
  * <em>that</em> face has a mode - never because the plugin happens to hang on it. The face the plugin occupies
  * is therefore never a connection: a pipe cannot stand there, the mode is refused for it (see
- * {@link TransferAddonBlockEntity#setTransferConfig}) and the plugin's own faces answer empty (see
- * {@link TransferAddonBlockEntity#getItemLookup}).
+ * {@link ExtensionTransferAddonBlockEntity#setTransferConfig}) and the plugin's own faces answer empty (see
+ * {@link ExtensionTransferAddonBlockEntity#getItemLookup}).
  * <p>
  * <b>The machine is the one the extender was claimed by</b>, read from the extender's own controller position,
  * and nothing is reached while no machine claimed it, the extender was broken, or its chunk is unloaded -
@@ -44,7 +44,7 @@ public final class ExtenderFaceStorage {
      * offers something on that face.
      * <p>
      * Only extender faces can answer this way: a plugin on an extender offers its own faces an empty inventory
-     * (see {@code TransferAddonBlockEntity#getItemLookup}), so the machine is reachable at exactly one place,
+     * (see {@code ExtensionTransferAddonBlockEntity#getItemLookup}), so the machine is reachable at exactly one place,
      * and the same items cannot be found at two.
      */
     @Nullable
@@ -86,9 +86,9 @@ public final class ExtenderFaceStorage {
      * connection that leads into the plugin block itself. With several plugins on one extender every plugin
      * therefore still answers for all faces but its own.
      * <p>
-     * Only {@link TransferAddonBlockEntity} is asked. The preview plugin of this mod
-     * ({@code TransferPreviewAddonBlockEntity}) also hangs on extenders, but it serves the machine through its
-     * own faces and never claims the extender's, so an extender carrying only a preview plugin keeps answering
+     * Only {@link ExtensionTransferAddonBlockEntity} is asked. 传输插件 of this mod
+     * ({@code TransferAddonBlockEntity}) also hangs on extenders, but it serves the machine through its
+     * own faces and never claims the extender's, so an extender carrying only 传输插件 keeps answering
      * "no inventory" - exactly as it did before that plugin existed.
      */
     private static TransferMode transferMode(BlockEntity host, Direction face) {
@@ -99,7 +99,7 @@ public final class ExtenderFaceStorage {
             var plugin = pluginAt(host, level, side);
             if (plugin == null) continue;
 
-            var pluginFace = TransferAddonBlock.attachedFace(plugin.getBlockState());
+            var pluginFace = ExtensionTransferAddonBlock.attachedFace(plugin.getBlockState());
             if (face == pluginFace) continue;
             if (!plugin.canTransferItems()) continue;
 
@@ -115,7 +115,7 @@ public final class ExtenderFaceStorage {
      * back at this very extender, or {@code null} while there is none.
      * <p>
      * The plugin is looked up through the world on every call and not remembered: a plugin can be broken or
-     * placed at any time, and NeoForge's own invalidation (see {@code TransferAddonBlockEntity}) is what makes a
+     * placed at any time, and NeoForge's own invalidation (see {@code ExtensionTransferAddonBlockEntity}) is what makes a
      * pipe ask again - the answer itself has to be correct whenever it is asked.
      * <p>
      * {@code side} runs from the extender to the neighbour and {@code attachedFace} is the extender's own face
@@ -123,12 +123,12 @@ public final class ExtenderFaceStorage {
      * and never matched, which left every face of every extender answering "no inventory".
      */
     @Nullable
-    private static TransferAddonBlockEntity pluginAt(BlockEntity extender, Level level, Direction side) {
+    private static ExtensionTransferAddonBlockEntity pluginAt(BlockEntity extender, Level level, Direction side) {
         var pluginPos = extender.getBlockPos().relative(side);
         if (!level.isLoaded(pluginPos)) return null;
-        if (!(level.getBlockEntity(pluginPos) instanceof TransferAddonBlockEntity plugin)) return null;
+        if (!(level.getBlockEntity(pluginPos) instanceof ExtensionTransferAddonBlockEntity plugin)) return null;
 
-        return TransferAddonBlock.attachedFace(plugin.getBlockState()) == side ? plugin : null;
+        return ExtensionTransferAddonBlock.attachedFace(plugin.getBlockState()) == side ? plugin : null;
     }
 
     /**

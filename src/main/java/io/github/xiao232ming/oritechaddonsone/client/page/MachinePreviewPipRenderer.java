@@ -28,7 +28,7 @@ import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferMode;
 
 /**
- * Draws the transfer preview page's model: every drawn part of the machine, the markings of its configured and
+ * Draws the page model of 传输插件: every drawn part of the machine, the markings of its configured and
  * occupied faces, and the outline of the face the mouse is over.
  * <p>
  * <b>Why this exists at all.</b> Oritech's own preview draws through a picture-in-picture state that carries block

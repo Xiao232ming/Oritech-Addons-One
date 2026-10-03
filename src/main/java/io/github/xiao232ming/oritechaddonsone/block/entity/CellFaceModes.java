@@ -15,7 +15,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * The per-<b>cell-face</b> transfer settings of 传输插件: which <em>individual face of an individual cell</em> of the
  * machine structure moves items in which direction (see {@link TransferMode}) and whether it moves them by itself
- * (automation, see {@code TransferPreviewAddonBlockEntity#serverTickTransfer()}).
+ * (automation, see {@code TransferAddonBlockEntity#serverTickTransfer()}).
  * <p>
  * <b>Why a cell and a direction.</b> {@link TransferFaceModes} keys its settings by {@link Direction} alone, because an
  * Extension Addon configures the six faces of one block. This plugin's page draws the machine's whole assembled
@@ -256,7 +256,7 @@ public final class CellFaceModes {
     /**
      * True while the given offset could name a cell of a machine: the range one entry can express. The server checks
      * it as well as the machine's own part list, so an offset that is in range but not part of the structure is
-     * refused too (see {@code TransferPreviewAddonBlockEntity#setTransferConfig}).
+     * refused too (see {@code TransferAddonBlockEntity#setTransferConfig}).
      */
     public static boolean isCellOffsetInRange(Vec3i cell) {
         return inRange(cell.getX()) && inRange(cell.getY()) && inRange(cell.getZ());

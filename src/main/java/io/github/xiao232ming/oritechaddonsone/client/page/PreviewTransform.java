@@ -4,7 +4,7 @@ import org.joml.Matrix4f;
 import org.joml.Vector3f;
 
 /**
- * The one transform the transfer preview page's model is drawn with, and the inverse its picking ray is built
+ * The one transform the page model of 传输插件 is drawn with, and the inverse its picking ray is built
  * from.
  * <p>
  * <b>Why this exists.</b> The model is not drawn by the page: the picture-in-picture pipeline draws it from the

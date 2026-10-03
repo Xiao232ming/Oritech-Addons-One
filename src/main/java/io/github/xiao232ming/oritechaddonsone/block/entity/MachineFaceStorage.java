@@ -46,7 +46,7 @@ import rearth.oritech.util.MachineAddonController;
  * neighbour's inventory up ({@link #storageAt}) and moving one stack between two handlers ({@link #move}).
  * They are static and need no face of their own, which is what lets the placed transfer addon move items
  * between a machine and the containers around the extender it hangs on (see
- * {@code TransferAddonBlockEntity#serverTickTransfer}) with the very same logic a face of this block uses.
+ * {@code ExtensionTransferAddonBlockEntity#serverTickTransfer}) with the very same logic a face of this block uses.
  */
 public final class MachineFaceStorage extends DelegatingInventoryStorage {
 

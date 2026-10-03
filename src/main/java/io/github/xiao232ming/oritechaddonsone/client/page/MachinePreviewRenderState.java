@@ -15,7 +15,7 @@ import org.joml.Matrix3x2f;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferMode;
 
 /**
- * What the transfer preview page hands to the renderer: the machine's block states with their offsets, plus the face
+ * What the page of 传输插件 hands to the renderer: the machine's block states with their offsets, plus the face
  * the mouse is currently over and the part of the machine that face belongs to.
  * <p>
  * Oritech's own preview state ({@code BlockPreviewRenderState}) carries block states only - its renderer draws those
