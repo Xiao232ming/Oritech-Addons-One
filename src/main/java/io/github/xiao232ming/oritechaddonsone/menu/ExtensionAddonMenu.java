@@ -144,6 +144,29 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
     /** One container data slot per face: the transfer mode of that face (see {@link #transferFaceSlot}). */
     private final DataSlot[] transferFaceSlots = new DataSlot[Direction.values().length];
 
+    /** Client side copy of the faces a placed transfer addon hangs on (bitmask). */
+    private int syncedAttachedTransferFaces = 0;
+
+    /**
+     * Container data slot of the faces a placed transfer addon hangs on this block, as a bitmask over
+     * {@link Direction#values()}. The block entity recomputes it every server tick, so publishing it here is
+     * what lets the page draw the gold border of the face the plugin hangs on (and decide whether the page
+     * exists at all) without the client having to look at the world itself.
+     */
+    private final DataSlot attachedTransferFacesSlot = new DataSlot() {
+        @Override
+        public int get() {
+            if (clientSide) return syncedAttachedTransferFaces;
+            var blockEntity = blockEntity();
+            return blockEntity == null ? 0 : blockEntity.attachedTransferFaces();
+        }
+
+        @Override
+        public void set(int value) {
+            syncedAttachedTransferFaces = value;
+        }
+    };
+
     /**
      * Container data slot of one face: the ordinal of the {@link TransferMode} that face transfers with, i.e.
      * {@code 0} while it transfers nothing. Published exactly like the proxy bindings
@@ -355,6 +378,9 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
             transferFaceSlots[face.ordinal()] = createTransferFaceSlot(face);
             addDataSlot(transferFaceSlots[face.ordinal()]);
         }
+
+        // and the faces a placed transfer addon hangs on, which the page marks in gold
+        addDataSlot(attachedTransferFacesSlot);
     }
 
     /** One slot of the player's own inventory; see {@link #playerSlotsActive}. */
@@ -477,9 +503,21 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
         return blockEntity == null ? 0 : blockEntity.transferAddonCount();
     }
 
-    /** True while the Extension Transfer page has anything to show, i.e. while a transfer addon is stored. */
+    /**
+     * True while the Extension Transfer page has anything to show: a transfer addon stored in the plugin
+     * slots, or - on a dock - one placed on the block, which reaches this dock's faces just the same.
+     */
     public boolean hasTransferAddon() {
-        return transferAddonCount() > 0;
+        return transferAddonCount() > 0 || attachedTransferFaces() != 0;
+    }
+
+    /**
+     * Faces of this block a placed transfer addon hangs on, as a bitmask over {@link Direction#values()}; the
+     * page draws its gold border from this. Read from the block entity's container data slot, so the client
+     * sees what the server found.
+     */
+    public int attachedTransferFaces() {
+        return attachedTransferFacesSlot.get();
     }
 
     /**

@@ -42,6 +42,7 @@ import io.github.xiao232ming.oritechaddonsone.block.ChunkAnchorAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonType;
 import io.github.xiao232ming.oritechaddonsone.block.PluginAddonBlock;
+import io.github.xiao232ming.oritechaddonsone.block.TransferAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.block.WirelessExtensionAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ChunkAnchorAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEntity;
@@ -175,9 +176,9 @@ public class OritechAddonsOne {
      * Its model and texture are Oritech's inventory proxy addon for now, see
      * {@code models/block/transfer_addon.json}.
      */
-    public static final DeferredBlock<PluginAddonBlock> TRANSFER_ADDON = BLOCKS.registerBlock(
+    public static final DeferredBlock<TransferAddonBlock> TRANSFER_ADDON = BLOCKS.registerBlock(
             "transfer_addon",
-            properties -> new PluginAddonBlock(properties, pluginAddonSettings()),
+            properties -> new TransferAddonBlock(properties, pluginAddonSettings()),
             OritechAddonsOne::blockProperties);
 
     /**

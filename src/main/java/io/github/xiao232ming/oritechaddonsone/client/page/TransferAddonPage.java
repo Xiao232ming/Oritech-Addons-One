@@ -1,6 +1,8 @@
 package io.github.xiao232ming.oritechaddonsone.client.page;
 
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -61,11 +63,14 @@ public final class TransferAddonPage implements AddonPage {
     private static final int GOOD = 0xFF2ECC71;
 
     /**
-     * Icon of the tab: Oritech's inventory proxy addon texture, which is also the texture the transfer addon
-     * itself wears for now (see {@code models/block/transfer_addon.json}).
+     * Gold of the border around the face a placed transfer addon hangs on. Bright enough to read over the
+     * blue and the orange of the mode washes it is drawn on top of.
      */
+    private static final int GOLD = 0xFFFFD24A;
+
+    /** Icon of the tab: the light blue arrow ({@code oritechaddonsone:textures/gui/transfer_tab.png}, 16x16). */
     private static final Identifier ICON =
-            Identifier.fromNamespaceAndPath("oritech", "textures/block/machine_inventory_proxy_addon.png");
+            Identifier.fromNamespaceAndPath("oritechaddonsone", "textures/gui/transfer_tab.png");
 
     /** Faces of the block, i.e. the maximum of the counter - there is no per-addon limit. */
     private static final int MAX_FACES = Direction.values().length;
@@ -128,8 +133,15 @@ public final class TransferAddonPage implements AddonPage {
         var textures = FaceTextures.of(menu.addonBlock(), menu.addonBlockState());
         var cells = AddonFaceNet.cells(textures);
 
+        var attached = menu.attachedTransferFaces();
         for (var face : Direction.values()) {
             AddonFaceNet.drawFace(context, graphics, face, cells, textures, washOf(modeOf(menu, face)));
+
+            // The face a placed transfer addon hangs on gets a gold border, so it is clear which face of the
+            // dock this plugin stands on. It is a marker only: the face stays configurable like any other.
+            if ((attached & 1 << face.ordinal()) != 0) {
+                drawGoldBorder(context, graphics, cells, face);
+            }
         }
 
         drawCounter(context, graphics, menu.transferFaces(), MAX_FACES);
@@ -173,6 +185,22 @@ public final class TransferAddonPage implements AddonPage {
             };
             case NONE -> null;
         };
+    }
+
+    /**
+     * Gold border around one face of the net, drawn over that face's own outline: the face of the dock a
+     * placed transfer addon hangs on. Nothing else about the face changes.
+     */
+    private static void drawGoldBorder(AddonPageContext context, GuiGraphicsExtractor graphics,
+            Map<Direction, int[]> cells, Direction face) {
+        int x = context.screenX(AddonFaceNet.localX(cells, face));
+        int y = context.screenY(AddonFaceNet.localY(cells, face));
+        int size = AddonFaceNet.FACE;
+
+        graphics.fill(x, y, x + size, y + 1, GOLD);
+        graphics.fill(x, y + size - 1, x + size, y + size, GOLD);
+        graphics.fill(x, y, x + 1, y + size, GOLD);
+        graphics.fill(x + size - 1, y, x + size, y + size, GOLD);
     }
 
     /** Draws the "Configurable: x/6" counter in the panel's top right corner, as the Item Proxy page does. */
@@ -432,7 +460,7 @@ public final class TransferAddonPage implements AddonPage {
     }
 
     /** The net of the menu's block: the cell of every face, in {@link AddonFaceNet}'s frame. */
-    private static java.util.Map<Direction, int[]> net(ExtensionAddonMenu menu) {
+    private static Map<Direction, int[]> net(ExtensionAddonMenu menu) {
         return AddonFaceNet.cells(FaceTextures.of(menu.addonBlock(), menu.addonBlockState()));
     }
 
@@ -454,7 +482,7 @@ public final class TransferAddonPage implements AddonPage {
 
     /** Language key of a mode name, e.g. {@code gui.oritechaddonsone.transfer.mode.input}. */
     private static String modeKey(TransferMode mode) {
-        return "gui.oritechaddonsone.transfer.mode." + mode.name().toLowerCase(java.util.Locale.ROOT);
+        return "gui.oritechaddonsone.transfer.mode." + mode.name().toLowerCase(Locale.ROOT);
     }
 
     /** The item drawn as the configuration page's icon: the block this menu belongs to. */

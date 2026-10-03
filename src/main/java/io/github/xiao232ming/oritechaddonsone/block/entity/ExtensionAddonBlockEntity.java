@@ -449,18 +449,56 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
      */
     private final TransferFaceModes transferFaces = new TransferFaceModes();
 
+    /**
+     * Faces of this block a placed transfer addon hangs on, as a bitmask over {@link Direction#values()}.
+     * Only a dock can host one (see {@link #scanAttachedTransferFaces()}), so this stays {@code 0} on the
+     * wired addons. The page draws a gold border around these faces and {@link #hasTransferAddon()} counts
+     * them, which is what lets a plugin that is merely placed on a dock work without being put inside.
+     */
+    private int attachedTransferFaces;
+
     /** Number of transfer addons stored in this block (a stack of them counts per item). */
     public int transferAddonCount() {
         return countPlugins(OritechAddonsOne.TRANSFER_ADDON.get());
     }
 
     /**
-     * True while at least one transfer addon is stored, i.e. while the "Extension Transfer" page has
-     * anything to offer. Unlike the inventory proxy there is no per-addon limit here: all six faces may
-     * transfer at the same time.
+     * True while this block has a transfer addon at all - one stored inside, or (on a dock) one placed on it
+     * - i.e. while the "Extension Transfer" page has anything to offer. Unlike the inventory proxy there is
+     * no per-addon limit here: all six faces may transfer at the same time.
      */
     public boolean hasTransferAddon() {
-        return transferAddonCount() > 0;
+        return transferAddonCount() > 0 || attachedTransferFaces != 0;
+    }
+
+    /**
+     * Faces of this block a placed transfer addon hangs on, as a bitmask over {@link Direction#values()};
+     * {@code 0} while none does. The page draws its gold border from this.
+     */
+    public int attachedTransferFaces() {
+        return attachedTransferFaces;
+    }
+
+    /**
+     * Faces of this block a placed transfer addon hangs on. The dock scans its six neighbours; the wired
+     * addons have nothing to scan, because a plugin placed on one of them is an ordinary Oritech addon and
+     * not a way into this block's faces - only a dock's faces are the ones the transfer page shows.
+     */
+    protected int scanAttachedTransferFaces() {
+        return 0;
+    }
+
+    /**
+     * Keeps {@link #attachedTransferFaces} in step with the world, called once per server tick: six block
+     * lookups on a dock, nothing anywhere else. Losing the last attached plugin drops the settings, exactly
+     * like taking the last stored one out of the container does.
+     */
+    private void refreshAttachedTransferFaces() {
+        var mask = scanAttachedTransferFaces();
+        if (mask == attachedTransferFaces) return;
+
+        attachedTransferFaces = mask;
+        reconcileTransferModes();
     }
 
     /** True while this block may transfer the machine's items at all; see {@link #hasTransferAddon()}. */
@@ -505,6 +543,11 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
      */
     public void serverTickTransfer() {
         if (level == null || level.isClientSide()) return;
+
+        // A plugin placed on a dock counts as a transfer addon, so this must run before the early return
+        // below: on the first tick after it is placed nothing is configured yet, but the page has to appear.
+        refreshAttachedTransferFaces();
+
         if (transferFaces.isEmpty() || !canTransferItems()) return;
 
         for (var face : Direction.values()) {
