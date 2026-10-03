@@ -49,7 +49,6 @@ import io.github.xiao232ming.oritechaddonsone.block.WirelessExtensionAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ChunkAnchorAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtenderFaceStorage;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEntity;
-import io.github.xiao232ming.oritechaddonsone.block.entity.MachinePluginStorage;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferPreviewAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.WirelessExtensionAddonBlockEntity;
@@ -197,9 +196,10 @@ public class OritechAddonsOne {
      * whose page configures the faces on a rotatable 3D model of the machine it serves instead of on a cube net.
      * <p>
      * It supports both placements: hung on Oritech's machine extender it acts on the machine that extender was
-     * claimed by, and hung directly on an Oritech machine it acts on that machine - and in both cases the pipe and
-     * hopper side is served by the plugin's own faces (see {@code TransferPreviewAddonBlockEntity}). Because the
-     * machine is a real block of the world, the preview plugin needs its own block entity type
+     * claimed by, and hung directly on an Oritech machine it acts on that machine. In both cases a configured face
+     * means a face of the <b>machine</b> and drives this plugin's own movement only - pipes, hoppers and other mods
+     * connect to the machine itself, which Oritech already offers (see {@code TransferPreviewAddonBlockEntity}).
+     * Because the machine is a real block of the world, the preview plugin needs its own block entity type
      * ({@link #TRANSFER_PREVIEW_ADDON_ENTITY}).
      * <p>
      * Like the transfer addon it is a neutral {@link PluginAddonBlock}, and the Extension Addon Type II accepts it
@@ -496,6 +496,14 @@ public class OritechAddonsOne {
      * machine it works on is reachable through the faces of the extender it hangs on, never through its own
      * (see {@link TransferAddonBlockEntity#getItemLookup}).
      * <p>
+     * <b>传输插件 (the preview plugin) is deliberately not registered at all.</b> A machine that wants pipes
+     * already offers its own faces to them - Oritech registers an item provider for every machine it has - so a
+     * second connection through the plugin would only be a second meaning for the same six directions: the plugin's
+     * page and its automation understand a face as a face of the <em>machine</em>, while a capability on the plugin
+     * would answer for the plugin's own block. Its configured faces therefore drive the plugin's own movement only
+     * (see {@code TransferPreviewAddonBlockEntity#serverTickTransfer()}), and the plugin's block entity answers
+     * {@code null} for every face instead.
+     * <p>
      * The last registration is for Oritech's own addon block entity type, because the machine extender a
      * placed transfer addon hangs on has to be a real connection of its own: Oritech registers no item
      * provider for that type (its addons work through Oritech's own {@code ItemProvider} interface and,
@@ -540,24 +548,6 @@ public class OritechAddonsOne {
                             extenderType.builtInRegistryHolder().getRegisteredName(),
                             blockEntity.getBlockPos(), side);
                     return ExtenderFaceStorage.handlerAt(blockEntity, side);
-                });
-
-        // The preview plugin hung directly on a machine: its own faces are the connection (the machine's own faces
-        // belong to Oritech), so the provider is registered for the plugin's own block entity type - the type that
-        // creates exactly that block - and it answers nowhere else: a plugin on a wall, a plugin whose machine was
-        // broken and a face with no mode all resolve to "no inventory" inside the handler. Registering it for the
-        // machines of Oritech instead would not work at all: Oritech registers its own item provider for those block
-        // entity types, and a type answers with the first provider that returns something.
-        var previewType = TRANSFER_PREVIEW_ADDON_ENTITY.get();
-        event.registerBlockEntity(Capabilities.Item.BLOCK, previewType,
-                (blockEntity, side) -> {
-                    if (!(blockEntity instanceof TransferPreviewAddonBlockEntity plugin)) return null;
-                    if (plugin.servedMachinePos() == null) return null;
-
-                    LOGGER.debug("[transfer] capability: preview plugin provider called for {} ({}), side {}",
-                            previewType.builtInRegistryHolder().getRegisteredName(),
-                            blockEntity.getBlockPos(), side);
-                    return MachinePluginStorage.handlerAt(plugin, side);
                 });
     }
 }

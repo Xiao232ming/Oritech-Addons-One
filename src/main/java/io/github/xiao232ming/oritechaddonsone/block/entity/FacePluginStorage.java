@@ -32,12 +32,13 @@ import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
  * Addon - a pipe inserts into the machine while the mode allows it and extracts out of it while the mode allows
  * it, and never into an output slot nor out of an input one (see {@link MachineSlotRoles}).
  * <p>
- * <b>The two placements this mod supports are two subclasses.</b> A plugin on Oritech's machine extender
- * configures the extender's faces ({@link ExtenderFaceStorage}); a plugin hung directly on a machine configures
- * the faces of the plugin block itself, i.e. of the very block the pipe stands next to
- * ({@link MachinePluginStorage}). Both differ only in the question "which plugin configures this face?" and in
- * the machine the plugin works on, so those are the two functions both of them pass in, while the machine
- * inventory, the slot roles, the mode gating and the handler identity live here once.
+ * <b>One placement, one subclass.</b> A placed 扩展传输插件 on Oritech's machine extender configures the
+ * extender's faces ({@link ExtenderFaceStorage}), so that is the placement this class serves today: it is told
+ * which plugin configures a face and which machine that plugin works on, while the machine inventory, the slot
+ * roles, the mode gating and the handler identity live here once. 传输插件, the preview plugin, deliberately
+ * answers no item capability at all ({@code TransferPreviewAddonBlockEntity#getItemLookup}) - its configured faces
+ * drive only its own automation, and a machine that wants pipes offers them its own faces - so there is no second
+ * subclass any more.
  * <p>
  * <b>The side is read the way Oritech's pipes ask it.</b> Oritech checks a neighbour with
  * {@code level.getCapability(Capabilities.Item.BLOCK, neighbourPos, direction.getOpposite())}, i.e. the context
@@ -86,11 +87,10 @@ public class FacePluginStorage extends DelegatingInventoryStorage {
     private static final Map<BlockPos, AtomicLong> LAST_DIAGNOSTIC = new ConcurrentHashMap<>();
 
     /**
-     * Which plugin configures one face of the host, i.e. the question the two placements answer differently.
+     * Which plugin configures one face of the host, i.e. the one question a placement has to answer.
      * Implementations read the world on every call - a plugin can be broken or placed at any time, and
-     * NeoForge's own invalidation (see {@code TransferAddonBlockEntity} and
-     * {@code TransferPreviewAddonBlockEntity}) is what makes a pipe ask again - so a stale answer can never be
-     * served from here.
+     * NeoForge's own invalidation (see {@code TransferAddonBlockEntity}) is what makes a pipe ask again - so a
+     * stale answer can never be served from here.
      */
     @FunctionalInterface
     public interface FaceLookup {
@@ -136,9 +136,8 @@ public class FacePluginStorage extends DelegatingInventoryStorage {
     private final Direction face;
 
     /**
-     * Creates the handler of one face. Protected, not private: the two placements are the two subclasses of this
-     * class (see {@link ExtenderFaceStorage} and {@link MachinePluginStorage}), and the factory in
-     * {@link #handlerAt} only ever calls one of them.
+     * Creates the handler of one face. Protected, not private: a placement is a subclass of this class (see
+     * {@link ExtenderFaceStorage}), and the factory in {@link #handlerAt} only ever calls one of them.
      */
     protected FacePluginStorage(BlockEntity host, Direction face, FaceLookup lookup, MachineLookup machine) {
         super(() -> machineStorage(host, machine), () -> lookup.modeOf(host, face) != TransferMode.NONE);
@@ -161,13 +160,11 @@ public class FacePluginStorage extends DelegatingInventoryStorage {
      * second per host position (see {@link #DIAGNOSTIC_INTERVAL_NANOS}) and only while debug logging is on, so a
      * pipe that asks every tick cannot drown the log.
      *
-     * @param host    the block entity a plugin hangs on - Oritech's machine extender, or a machine one of this
-     *                mod's preview plugins is attached to
+     * @param host    the block entity a placed extension transfer plugin hangs on - Oritech's machine extender
      * @param face    the face of that host the pipe asked for, or {@code null} while it asked without a side
      * @param lookup  which plugin configures a face of that host, see {@link FaceLookup}
      * @param machine which machine the plugin on that host works on, see {@link MachineLookup}
-     * @param create  the concrete handler of this placement, see {@link ExtenderFaceStorage} and
-     *                {@link MachinePluginStorage}
+     * @param create  the concrete handler of this placement, see {@link ExtenderFaceStorage}
      */
     @Nullable
     public static FacePluginStorage handlerAt(BlockEntity host, @Nullable Direction face, FaceLookup lookup,

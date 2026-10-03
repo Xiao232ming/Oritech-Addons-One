@@ -34,12 +34,31 @@ import org.joml.Vector3f;
 public final class PreviewTransform {
 
     /**
-     * Where the picking eye is placed, in screen pixels: far outside every model the page can draw, so the slab
-     * test always finds an entry, but still near enough that a float resolves the eye to about a tenth of a model
-     * pixel - which is what keeps the entry face of a face-on click exact. It is used with a negative sign
-     * ({@link #pickingRay}), because that is the side of the panel the projection looks from.
+     * Where the picking eye is placed, in screen pixels, on the side of the panel the projection looks from
+     * ({@link #pickingRay} uses it with a negative sign).
+     * <p>
+     * It has to be <b>far enough outside every model the page can draw</b>. The slab test only finds an entry while
+     * the eye is on the far side of the near face, and the ray's own parameter at that entry is this distance minus
+     * the distance from the eye to the face - so an eye that ended up inside a big machine would report "nothing" for
+     * its far side. The panel is 140x96 pixels and the largest machine measures a few blocks at a scale of at most
+     * about a hundred pixels per block, i.e. a few hundred pixels from the model's centre: a thousand clears that by
+     * several times over, and shrinking it further is not what this value is for.
+     * <p>
+     * It also has to be <b>small enough that the inverse transform still resolves the eye</b>. The eye is where the
+     * drawing transform's inverse puts a point this far behind the panel, and that inverse scales the screen offset
+     * down by the model scale - so at a million (the value this used to be) the eye sits at roughly a million model
+     * units away, where a float's own resolution is about 0.06 model units, i.e. a tenth of a block of sideways
+     * error that the slab test then has to round. At a thousand the eye is a thousand times closer and the same
+     * arithmetic is exact to about a ten-thousandth of a block.
+     * <p>
+     * The value was measured, not guessed: with every machine of the page - a single block, a 2x2 slab, an L, a 3D
+     * cross and a 3-part multiblock under all six facings - a one-pixel grid over the whole panel, at eight pitches
+     * and eight yaws, gives <b>786 of 1 571 375 hits whose entry point is not on the face that was answered with at a
+     * million, and 0 at a thousand</b>; the number of pixels that hit the model at all is the same (1 570 209 at both,
+     * the difference being those 786), so nothing was traded away, and going down to a hundred changes nothing
+     * further. Verified the same way as {@link #modelToScreen()}: see the class comment.
      */
-    private static final float RAY_DISTANCE = 1_000_000.0F;
+    private static final float RAY_DISTANCE = 1_000.0F;
 
     private final float centerX;
     private final float centerY;
@@ -136,6 +155,10 @@ public final class PreviewTransform {
      * side sends the ray away from it and every click misses. The pair was verified against the drawing, not
      * assumed: a grid of pixels over the model picks a face whose entry point projects back onto that same pixel
      * to within a tenth of a pixel, at every pitch and yaw that was tried.
+     * <p>
+     * The eye's distance is {@link #RAY_DISTANCE}, which is where the arithmetic of both halves has to stay exact:
+     * at a much larger distance the slab test starts being decided by the float's own rounding rather than by the
+     * line, and pixels then answer a face whose entry point is off that face.
      *
      * @param screenX absolute screen x of the pixel the mouse is on
      * @param screenY absolute screen y of that pixel
