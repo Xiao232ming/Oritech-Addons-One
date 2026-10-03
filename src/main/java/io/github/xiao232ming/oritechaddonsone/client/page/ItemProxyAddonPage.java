@@ -320,7 +320,7 @@ public final class ItemProxyAddonPage implements AddonPage {
 
         // the header is painted last, so the title icon stays on top of every slot cell of a machine whose
         // GUI starts above the configuration panel
-        header(graphics, context, placed, face, font);
+        header(graphics, context, placed);
 
         graphics.pose().popPose();
     }
@@ -409,14 +409,13 @@ public final class ItemProxyAddonPage implements AddonPage {
     }
 
     /**
-     * The header of the configuration page: the addon's own item as an icon with the face it is being
-     * configured for next to it. Oritech puts the same icon in the same place - a {@code 28x28}
-     * {@code PANEL} widget with three pixels of padding, centred above its panel by
-     * {@code OritechWidgetScreen#addTitle()}. Called inside the page's translated pose, so the icon is
-     * placed relative to the configuration panel.
+     * The header of the configuration page: the addon's own item as an icon, and nothing else. Oritech puts
+     * the same icon in the same place - a {@code 28x28} {@code PANEL} widget with three pixels of padding,
+     * centred above its panel by {@code OritechWidgetScreen#addTitle()}. Called inside the page's translated
+     * pose, so the icon is placed relative to the configuration panel.
      */
-    private static void header(GuiGraphics graphics, AddonPageContext context, ProxyPickerState.Placed placed,
-            Direction face, net.minecraft.client.gui.Font font) {
+    private static void header(GuiGraphics graphics, AddonPageContext context,
+            ProxyPickerState.Placed placed) {
         int left = placed.iconX() - placed.innerX();
         int top = placed.iconY() - placed.innerY();
 
@@ -427,10 +426,6 @@ public final class ItemProxyAddonPage implements AddonPage {
                 .render(graphics, 0, 0, 0f);
 
         graphics.renderItem(icon(context.menu()), left + ICON_PADDING, top + ICON_PADDING);
-
-        var text = faceName(face);
-        graphics.drawString(font, text, left + ICON_SIZE + 4, top + (ICON_SIZE - 8) / 2,
-                AddonPanelStyle.PANEL_TEXT, false);
     }
 
     // ------------------------------------------------------------------ clicks
@@ -523,8 +518,8 @@ public final class ItemProxyAddonPage implements AddonPage {
         var face = faceAt(net(menu), mouseX, mouseY);
         if (face == null) return List.of();
 
-        // Only whether that face proxies something. Its name stands in the configuration page's header, and
-        // the slot it proxies is read off the dark plate there.
+        // Only whether that face proxies something. Which face it is, is the cell the mouse is on, and which
+        // slot it proxies is read off the dark plate of that face's configuration page.
         return List.of(menu.isProxyFaceConfigured(face)
                 ? Component.translatable("gui.oritechaddonsone.proxy.face.configured")
                 : Component.translatable("gui.oritechaddonsone.proxy.face.unconfigured"));
@@ -600,11 +595,6 @@ public final class ItemProxyAddonPage implements AddonPage {
     /** The net of the menu's block: the cell of every face, in the frame {@link #cells(FaceTextures)} builds. */
     private static Map<Direction, int[]> net(ExtensionAddonMenu menu) {
         return cells(FaceTextures.of(menu.addonBlock(), menu.addonBlockState()));
-    }
-
-    /** Translation key of a face name, e.g. {@code gui.oritechaddonsone.proxy.side.north}. */
-    private static Component faceName(Direction face) {
-        return Component.translatable("gui.oritechaddonsone.proxy.side." + face.getName());
     }
 
     /** The item drawn as the configuration page's icon: the block this menu belongs to. */
