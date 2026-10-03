@@ -1,7 +1,6 @@
 package io.github.xiao232ming.oritechaddonsone.client.page;
 
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 import net.minecraft.client.Minecraft;
@@ -68,10 +67,11 @@ public final class TransferAddonPage implements AddonPage {
     private static final int GOOD = 0xFF2ECC71;
 
     /**
-     * Gold of the border around the face a placed transfer addon hangs on. Bright enough to read over the
-     * blue and the orange of the mode washes it is drawn on top of.
+     * Gold of the border around the face a placed transfer addon hangs on, and the two mode colours - shared with
+     * the 3D preview page of 传输插件 through {@link TransferFaceStyle}, so a player who learned on the net what
+     * blue and orange mean sees the same colours on that model.
      */
-    private static final int GOLD = 0xFFFFD24A;
+    private static final int GOLD = TransferFaceStyle.GOLD;
 
     /** Icon of the tab: the light blue arrow ({@code oritechaddonsone:textures/gui/transfer_tab.png}, 16x16). */
     private static final Identifier ICON =
@@ -81,19 +81,7 @@ public final class TransferAddonPage implements AddonPage {
     private static final int MAX_FACES = Direction.values().length;
 
     /** The modes the picker offers, in the order its plates are laid out. */
-    private static final List<TransferMode> MODES =
-            List.of(TransferMode.INPUT, TransferMode.OUTPUT, TransferMode.BOTH);
-
-    // ------------------------------------------------------------------ mode colours
-
-    /** Translucent blue of a face that takes items in. */
-    private static final int INPUT_FILL = 0x553B82F6;
-    private static final int INPUT_EDGE = 0xFF2563EB;
-    private static final int INPUT_EDGE_DARK = 0xFF1D4ED8;
-    /** Translucent orange of a face that gives items out. */
-    private static final int OUTPUT_FILL = 0x55F59E0B;
-    private static final int OUTPUT_EDGE = 0xFFD97706;
-    private static final int OUTPUT_EDGE_DARK = 0xFFB45309;
+    private static final List<TransferMode> MODES = TransferFaceStyle.MODES;
 
     // ------------------------------------------------------------------ picker geometry
 
@@ -157,40 +145,12 @@ public final class TransferAddonPage implements AddonPage {
     }
 
     /**
-     * The wash of one face by its mode: blue while it takes items in, orange while it gives them out, and half
-     * blue half orange - the input half on the left, the output half on the right - while it does both. A face
-     * that transfers nothing carries no wash at all.
+     * The wash of one face by its mode, from the shared {@link TransferFaceStyle}: blue while it takes items in,
+     * orange while it gives them out, half blue half orange while it does both, nothing while it transfers nothing.
      */
     @Nullable
     private static AddonFaceNet.Wash washOf(TransferMode mode) {
-        return switch (mode) {
-            case INPUT -> (graphics, x, y, size) -> {
-                graphics.fill(x, y, x + size, y + size, INPUT_FILL);
-                graphics.fill(x, y, x + size, y + 1, INPUT_EDGE);
-                graphics.fill(x, y + size - 1, x + size, y + size, INPUT_EDGE_DARK);
-                graphics.fill(x, y, x + 1, y + size, INPUT_EDGE);
-                graphics.fill(x + size - 1, y, x + size, y + size, INPUT_EDGE_DARK);
-            };
-            case OUTPUT -> (graphics, x, y, size) -> {
-                graphics.fill(x, y, x + size, y + size, OUTPUT_FILL);
-                graphics.fill(x, y, x + size, y + 1, OUTPUT_EDGE);
-                graphics.fill(x, y + size - 1, x + size, y + size, OUTPUT_EDGE_DARK);
-                graphics.fill(x, y, x + 1, y + size, OUTPUT_EDGE);
-                graphics.fill(x + size - 1, y, x + size, y + size, OUTPUT_EDGE_DARK);
-            };
-            case BOTH -> (graphics, x, y, size) -> {
-                // Half blue, half orange: the input half on the left, the output half on the right. The two
-                // halves meet directly - no line is drawn between them, the colours are the whole marker.
-                int half = size / 2;
-                graphics.fill(x, y, x + half, y + size, INPUT_FILL);
-                graphics.fill(x + half, y, x + size, y + size, OUTPUT_FILL);
-                graphics.fill(x, y, x + size, y + 1, INPUT_EDGE);
-                graphics.fill(x, y + size - 1, x + size, y + size, OUTPUT_EDGE_DARK);
-                graphics.fill(x, y, x + 1, y + size, INPUT_EDGE);
-                graphics.fill(x + size - 1, y, x + size, y + size, OUTPUT_EDGE_DARK);
-            };
-            case NONE -> null;
-        };
+        return TransferFaceStyle.wash(mode);
     }
 
     /**
@@ -201,14 +161,10 @@ public final class TransferAddonPage implements AddonPage {
      */
     private static void drawGoldBorder(AddonPageContext context, GuiGraphicsExtractor graphics,
             Map<Direction, int[]> cells, Direction face) {
-        int x = context.screenX(AddonFaceNet.localX(cells, face));
-        int y = context.screenY(AddonFaceNet.localY(cells, face));
-        int size = AddonFaceNet.FACE;
-
-        graphics.fill(x, y, x + size, y + 1, GOLD);
-        graphics.fill(x, y + size - 1, x + size, y + size, GOLD);
-        graphics.fill(x, y, x + 1, y + size, GOLD);
-        graphics.fill(x + size - 1, y, x + size, y + size, GOLD);
+        TransferFaceStyle.drawGoldBorder(graphics,
+                context.screenX(AddonFaceNet.localX(cells, face)),
+                context.screenY(AddonFaceNet.localY(cells, face)),
+                AddonFaceNet.FACE);
     }
 
     /** Draws the "Configurable: x/6" counter in the panel's top right corner, as the Item Proxy page does. */
@@ -517,7 +473,7 @@ public final class TransferAddonPage implements AddonPage {
 
     /** Language key of a mode name, e.g. {@code gui.oritechaddonsone.transfer.mode.input}. */
     private static String modeKey(TransferMode mode) {
-        return "gui.oritechaddonsone.transfer.mode." + mode.name().toLowerCase(Locale.ROOT);
+        return TransferFaceStyle.modeKey(mode);
     }
 
     /** The item drawn as the configuration page's icon: the block this menu belongs to. */

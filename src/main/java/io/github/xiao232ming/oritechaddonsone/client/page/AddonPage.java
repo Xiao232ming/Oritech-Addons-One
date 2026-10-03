@@ -77,6 +77,34 @@ public interface AddonPage {
     }
 
     /**
+     * Called while a mouse button is held and moved over the panel, with the mouse coordinates relative to the
+     * panel's top left corner and the movement since the last event. Returns {@code true} to consume the drag.
+     * <p>
+     * A page that does not draw a draggable control keeps the default and the drag reaches vanilla's slot logic
+     * unchanged - exactly like {@link #mouseClicked}. A page that <em>does</em> use it has to remember that its own
+     * drag started (in {@link #mouseClicked}, by hit testing its control) and forget it in
+     * {@link #mouseReleased}: a drag is forwarded for the whole window, so a page that rotated on every drag
+     * anywhere would steal the drag from a slot the player is moving items across.
+     * <p>
+     * The 3D preview page is the one page that uses this today: it rotates its model while the player drags over
+     * it. The screen's own page host is an {@code AbstractContainerScreen}, whose widgets know nothing about our
+     * pages, so a page cannot be given a widget's own drag handling - this hook is what stands in for it.
+     */
+    default boolean mouseDragged(AddonPageContext context, double mouseX, double mouseY, double dragX,
+            double dragY, int button) {
+        return false;
+    }
+
+    /**
+     * Called when a mouse button is released anywhere, with the mouse coordinates relative to the panel's top left
+     * corner. It is the counterpart of {@link #mouseDragged} and exists so a page can end its own drag even when
+     * the movement left the page's control - the draggable 3D preview does exactly that. The return value is
+     * ignored: a release is always observed, whether or not the page consumed the drag before it.
+     */
+    default void mouseReleased(AddonPageContext context, double mouseX, double mouseY, int button) {
+    }
+
+    /**
      * Tooltip lines for this page's own controls at the given position (panel relative), or an empty list
      * while nothing of this page is hovered. The screen hands them to the frame it extracts after the
      * item tooltip, so a page can explain a control of its own - for example a slot that is still empty

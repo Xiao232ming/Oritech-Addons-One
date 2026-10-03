@@ -95,5 +95,18 @@
   "gui.oritechaddonsone.transfer.mode.both": "Input + Output",
   "gui.oritechaddonsone.transfer.mode.none": "Not set",
   "gui.oritechaddonsone.transfer.automation": "Automation",
-  "gui.oritechaddonsone.transfer.occupied": "The plugin itself stands on this face - no pipe or hopper can be here"
+  "gui.oritechaddonsone.transfer.occupied": "The plugin itself stands on this face - no pipe or hopper can be here",
+  "block.oritechaddonsone.transfer_preview_addon": "Transfer Preview Addon",
+  "container.oritechaddonsone.transfer_preview_addon": "Transfer Preview Addon",
+  "tooltip.oritechaddonsone.transfer_preview_addon.desc": "Feed and empty the machine through its faces, configured on a 3D preview of the machine",
+  "gui.oritechaddonsone.page.transfer_preview": "Transfer Preview",
+  "gui.oritechaddonsone.page.transfer_preview.tooltip": "A rotatable 3D model of the machine this plugin serves: drag to turn it, click a face to choose whether it feeds the machine, empties it, or both",
+  "gui.oritechaddonsone.preview.hint": "Drag to rotate - click a face to configure it",
+  "gui.oritechaddonsone.preview.no_machine": "The machine this plugin serves is not loaded",
+  "gui.oritechaddonsone.transfer.side.north": "North",
+  "gui.oritechaddonsone.transfer.side.south": "South",
+  "gui.oritechaddonsone.transfer.side.east": "East",
+  "gui.oritechaddonsone.transfer.side.west": "West",
+  "gui.oritechaddonsone.transfer.side.up": "Up",
+  "gui.oritechaddonsone.transfer.side.down": "Down"
 }

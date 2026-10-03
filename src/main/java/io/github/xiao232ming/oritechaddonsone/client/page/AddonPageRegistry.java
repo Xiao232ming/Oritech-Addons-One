@@ -40,6 +40,13 @@ public final class AddonPageRegistry {
     /** The Extension Transfer page: the face net and what each face does with the machine's items. */
     private static final AddonPage TRANSFER = new TransferAddonPage();
 
+    /**
+     * The page of 传输插件: the machine the plugin serves as a rotatable 3D model, the faces configurable on it. It is
+     * the only page of that plugin, and it never appears for any other block - the plugin is not a container of
+     * plugins and has no machine of its own to wire up (see {@link #pages(ExtensionAddonMenu)}).
+     */
+    private static final AddonPage TRANSFER_PREVIEW = new TransferPreviewAddonPage();
+
     private AddonPageRegistry() {
     }
 
@@ -47,13 +54,15 @@ public final class AddonPageRegistry {
      * All pages of the given menu, in tab order.
      * <p>
      * The list is per menu and not a constant, because a page can depend on what the block holds - see
-     * {@link #pages(boolean, boolean)} - and because one block has exactly one page: a transfer addon that is
-     * <b>placed</b> on an Oritech machine extender is not a container of plugins, so its GUI shows the
-     * transfer page of the extender's faces and nothing else. The screen compares this list with the pages it
-     * currently shows on every container tick, so taking the last inventory proxy or transfer addon out
-     * removes its tab right away and putting one in adds it right away, without reopening the GUI.
+     * {@link #pages(boolean, boolean)} - and because two blocks have exactly one page: a transfer addon that is
+     * <b>placed</b> on an Oritech machine extender is not a container of plugins, so its GUI shows the transfer page
+     * of the extender's faces and nothing else, and 传输插件 shows the 3D preview of the machine it serves and nothing
+     * else. The screen compares this list with the pages it currently shows on every container tick, so taking the
+     * last inventory proxy or transfer addon out removes its tab right away and putting one in adds it right away,
+     * without reopening the GUI.
      */
     public static List<AddonPage> pages(ExtensionAddonMenu menu) {
+        if (menu.previewOnly()) return List.of(TRANSFER_PREVIEW);
         if (menu.transferOnly()) return List.of(TRANSFER);
 
         return pages(menu.hasInventoryProxy(), menu.hasTransferAddon());
@@ -98,6 +107,14 @@ public final class AddonPageRegistry {
     /** The Extension Transfer page instance. */
     public static AddonPage transferPage() {
         return TRANSFER;
+    }
+
+    /**
+     * The transfer preview page instance, the only page of 传输插件. The screen compares against it to recognise the
+     * page that drags its own model and that hides the player inventory while it is shown.
+     */
+    public static AddonPage transferPreviewPage() {
+        return TRANSFER_PREVIEW;
     }
 
     /** True while the given page is the Item Proxy page. */
