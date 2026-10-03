@@ -37,10 +37,11 @@ public final class ProxyPickerState {
     /**
      * Slot the open picker has bound, until the menu's own binding catches up.
      * <p>
-     * The binding travels to the server and comes back with the block entity's data, so it is one tick
-     * old when {@code ExtensionAddonMenu#proxySlotOf} first answers - the dark plate of the selected cell
-     * would light up three frames after the click, which reads as a flicker. The page therefore draws this
-     * one first and falls back to the menu, and it is dropped with the picker it belongs to.
+     * The binding travels to the server, which writes it into the block entity, and it comes back through
+     * that face's container data slot - so it is one tick old when
+     * {@code ExtensionAddonMenu#proxySlotOf} first answers, and the dark plate of the selected cell would
+     * light up three frames after the click, which reads as a flicker. The page therefore draws this one
+     * first and falls back to the menu, and it is dropped with the picker it belongs to.
      */
     @Nullable
     private static Integer pendingSlot;

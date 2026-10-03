@@ -98,6 +98,45 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
         }
     };
 
+    /** Client side copy of the per-face proxy bindings, one value per {@link Direction#values()} entry. */
+    private final int[] syncedProxyFaces = new int[Direction.values().length];
+    /** One container data slot per face: the proxy binding of that face (see {@link #proxyFaceSlot}). */
+    private final DataSlot[] proxyFaceSlots = new DataSlot[Direction.values().length];
+
+    /**
+     * Container data slot of one face: the machine slot that face proxies plus one, or {@code 0} while the
+     * face proxies nothing - container data only carries non-negative values, hence the offset.
+     * <p>
+     * The bindings live in the block entity's save data, which only the server writes, and the addons are
+     * plain block entities rather than networked ones, so nothing of them reaches a client on its own. The
+     * server therefore publishes one value per face here and vanilla keeps the client's copy up to date,
+     * exactly like {@link #targetChunkForceLoadedSlot}. That is what makes the page's counter, its green
+     * face markers and the selection plate of an already configured face correct on the client, and what
+     * keeps a binding visible when the configuration page of that face is reopened.
+     */
+    private DataSlot proxyFaceSlot(Direction face) {
+        return proxyFaceSlots[face.ordinal()];
+    }
+
+    /** Creates the container data slot of one face; see {@link #proxyFaceSlot(Direction)}. */
+    private DataSlot createProxyFaceSlot(Direction face) {
+        return new DataSlot() {
+            @Override
+            public int get() {
+                if (clientSide) return syncedProxyFaces[face.ordinal()];
+                var blockEntity = blockEntity();
+                if (blockEntity == null) return 0;
+                var slot = blockEntity.proxyFaces().slotOf(face);
+                return slot == null ? 0 : slot + 1;
+            }
+
+            @Override
+            public void set(int value) {
+                syncedProxyFaces[face.ordinal()] = value;
+            }
+        };
+    }
+
     /** Server side constructor. */
     public ExtensionAddonMenu(int containerId, Inventory inventory, ExtensionAddonBlockEntity blockEntity) {
         this(containerId, inventory, blockEntity, blockEntity.getBlockPos(), blockEntity.pluginType(),
@@ -267,6 +306,13 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
         }
 
         addDataSlot(targetChunkForceLoadedSlot);
+
+        // One data slot per face, so the client's page sees the bindings the server wrote: the counter, the
+        // green marker on a configured face and the selection plate all read them (see #proxyFaceSlot).
+        for (var face : Direction.values()) {
+            proxyFaceSlots[face.ordinal()] = createProxyFaceSlot(face);
+            addDataSlot(proxyFaceSlots[face.ordinal()]);
+        }
     }
 
     /** One slot of the player's own inventory; see {@link #playerSlotsActive}. */
@@ -355,21 +401,29 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
 
     /** True while the given face of the addon is bound to a machine inventory slot. */
     public boolean isProxyFaceConfigured(Direction face) {
-        var blockEntity = blockEntity();
-        return blockEntity != null && blockEntity.proxyFaces().isConfigured(face);
+        return proxySlotOf(face) != null;
     }
 
-    /** Slot the given face proxies, or {@code null} while it proxies nothing. */
+    /**
+     * Slot the given face proxies, or {@code null} while it proxies nothing.
+     * <p>
+     * Read from that face's container data slot ({@link #proxyFaceSlot}), not from the block entity
+     * directly: the server side answers the live binding, the client the copy the container keeps in sync,
+     * so an open page sees the binding the moment the server has written it.
+     */
     @Nullable
     public Integer proxySlotOf(Direction face) {
-        var blockEntity = blockEntity();
-        return blockEntity == null ? null : blockEntity.proxyFaces().slotOf(face);
+        var value = proxyFaceSlot(face).get();
+        return value <= 0 ? null : value - 1;
     }
 
     /** Number of currently configured faces, i.e. the "x" of the page's counter. */
     public int configuredProxyFaces() {
-        var blockEntity = blockEntity();
-        return blockEntity == null ? 0 : blockEntity.proxyFaces().configuredFaces();
+        var count = 0;
+        for (var face : Direction.values()) {
+            if (proxySlotOf(face) != null) count++;
+        }
+        return count;
     }
 
     /** The block this addon is, used by the Item Proxy page to draw its six faces. */

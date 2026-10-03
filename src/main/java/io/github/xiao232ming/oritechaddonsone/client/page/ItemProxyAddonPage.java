@@ -43,11 +43,12 @@ import io.github.xiao232ming.oritechaddonsone.network.ProxyNetworking;
  * per <b>face</b>, so the net doubles as the face selector.
  * <ul>
  *     <li>the net is drawn from the block's own per-face textures (see {@link FaceTextures}),</li>
- *     <li>a left click on an unconfigured face opens the configuration page of that face, which is
- *     Oritech's own inventory proxy page: the machine's GUI slots as framed cells with Oritech's own
- *     selection plate inside every cell - the plate of the slot the face is bound to is the dark, sunken
- *     one - plus the same prompt and the same click-to-select interaction (see {@link #drawPicker}),</li>
- *     <li>a right click on any face - or a left click on a configured one - removes the binding again,</li>
+ *     <li>a left click on a face opens the configuration page of that face, which is Oritech's own
+ *     inventory proxy page: the machine's GUI slots as framed cells with Oritech's own selection plate
+ *     inside every cell - the plate of the slot the face is bound to is the dark, sunken one - plus the
+ *     same prompt and the same click-to-select interaction (see {@link #drawPicker}). A face that is
+ *     already bound opens with that binding selected, so the page shows what the face proxies right now,</li>
+ *     <li>a right click on a configured face removes its binding again,</li>
  *     <li>the panel's top right corner shows the counter {@code 可配置数: x/x} / {@code Configurable: x/x}:
  *     configured faces out of the number of stored inventory proxy addons, which is the maximum. It sits on
  *     the panel's title row and is right aligned to {@link ExtensionAddonLayout#counterRight()} - the free
@@ -449,17 +450,22 @@ public final class ItemProxyAddonPage implements AddonPage {
         var face = faceAt(menu, mouseX, mouseY);
         if (face == null) return false;
 
-        // right click, or a left click on an already configured face: stop proxying on that face
-        if (button == 1 || menu.isProxyFaceConfigured(face)) {
-            if (menu.isProxyFaceConfigured(face)) {
+        var configured = menu.isProxyFaceConfigured(face);
+
+        // a right click on a configured face stops proxying on that face
+        if (button == 1) {
+            if (configured) {
                 ProxyPickerState.close();
                 send(new ProxyNetworking.ClearFace(menu.position(), ProxyNetworking.faceIndex(face)));
             }
             return true;
         }
 
-        // a face can only be configured while there is a free inventory proxy addon for it
-        if (menu.configuredProxyFaces() >= menu.inventoryProxyCount()) return true;
+        // A left click opens the configuration page of that face. A face that already proxies something may
+        // always be opened again - the page then shows that binding as the dark, selected plate, so the
+        // player sees what is configured before changing it - while a face that proxies nothing needs a free
+        // inventory proxy addon to be configurable at all.
+        if (!configured && menu.configuredProxyFaces() >= menu.inventoryProxyCount()) return true;
 
         ProxyPickerState.open(menu.position(), face);
         send(new ProxyNetworking.RequestPicker(menu.position(), ProxyNetworking.faceIndex(face)));
@@ -535,11 +541,12 @@ public final class ItemProxyAddonPage implements AddonPage {
         var lines = new ArrayList<Component>(2);
         lines.add(Component.translatable("gui.oritechaddonsone.proxy.face", faceName(face)));
 
-        var configured = menu.proxySlotOf(face);
-        if (configured == null) {
-            lines.add(Component.translatable("gui.oritechaddonsone.proxy.face.unconfigured"));
+        // the face name and whether it proxies anything - nothing else, so the tooltip stays a one glance
+        // answer (which slot it proxies is shown on the configuration page, not here)
+        if (menu.isProxyFaceConfigured(face)) {
+            lines.add(Component.translatable("gui.oritechaddonsone.proxy.face.configured"));
         } else {
-            lines.add(Component.translatable("gui.oritechaddonsone.proxy.face.configured", configured));
+            lines.add(Component.translatable("gui.oritechaddonsone.proxy.face.unconfigured"));
         }
         return lines;
     }
