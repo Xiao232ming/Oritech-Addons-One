@@ -13,7 +13,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEntity;
-import io.github.xiao232ming.oritechaddonsone.block.entity.TransferMode;
+import io.github.xiao232ming.oritechaddonsone.block.entity.TransferFaceModes;
 
 /**
  * The packet of the Extension Transfer page.
@@ -34,15 +34,15 @@ public final class TransferNetworking {
         event.registrar("1").playToServer(SetTransferMode.TYPE, SetTransferMode.CODEC, SetTransferMode::handle);
     }
 
-    /** Sets the transfer mode of one face of the addon at {@code pos}. */
-    public record SetTransferMode(BlockPos pos, int face, int mode) implements CustomPacketPayload {
+    /** Sets what one face of the addon at {@code pos} does: the mode and its automation flag (packed). */
+    public record SetTransferMode(BlockPos pos, int face, int value) implements CustomPacketPayload {
 
         public static final Type<SetTransferMode> TYPE =
                 new Type<>(ResourceLocation.fromNamespaceAndPath(OritechAddonsOne.MODID, "transfer_set_mode"));
         public static final StreamCodec<RegistryFriendlyByteBuf, SetTransferMode> CODEC = StreamCodec.composite(
                 BlockPos.STREAM_CODEC, SetTransferMode::pos,
                 ByteBufCodecs.VAR_INT, SetTransferMode::face,
-                ByteBufCodecs.VAR_INT, SetTransferMode::mode,
+                ByteBufCodecs.VAR_INT, SetTransferMode::value,
                 SetTransferMode::new);
 
         @Override
@@ -59,15 +59,16 @@ public final class TransferNetworking {
             var face = ProxyNetworking.faceOf(packet.face());
             if (face == null) return;
 
-            var mode = TransferMode.byOrdinal(packet.mode());
-            if (!addon.setTransferMode(face, mode)) {
-                OritechAddonsOne.LOGGER.debug("[transfer] refused mode {} for {} face {} (no transfer addon?)",
-                        mode, packet.pos(), face);
+            var mode = TransferFaceModes.modeOf(packet.value());
+            var automation = TransferFaceModes.automationOf(packet.value());
+            if (!addon.setTransferConfig(face, mode, automation)) {
+                OritechAddonsOne.LOGGER.debug("[transfer] refused {} for {} face {} (no transfer addon?)",
+                        packet.value(), packet.pos(), face);
                 return;
             }
 
-            OritechAddonsOne.LOGGER.debug("[transfer] {} face {} -> {} ({} face(s) configured)",
-                    packet.pos(), face, mode, addon.transferModes().configuredFaces());
+            OritechAddonsOne.LOGGER.debug("[transfer] {} face {} -> {} (automation {}, {} face(s) configured)",
+                    packet.pos(), face, mode, automation, addon.transferModes().configuredFaces());
         }
     }
 }

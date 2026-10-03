@@ -473,16 +473,115 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
     }
 
     /**
-     * Sets what one face does with the machine's items, or clears it again with
-     * {@link TransferMode#NONE}. Refused on the client and while no transfer addon is stored.
+     * Sets what one face does with the machine's items and whether it does it on its own, or clears the face
+     * again with {@link TransferMode#NONE}. Refused on the client and while no transfer addon is stored.
      */
-    public boolean setTransferMode(Direction face, TransferMode mode) {
+    public boolean setTransferConfig(Direction face, TransferMode mode, boolean automation) {
         if (level == null || level.isClientSide() || face == null || mode == null) return false;
         if (mode != TransferMode.NONE && !canTransferItems()) return false;
 
-        transferFaces.set(face, mode);
+        transferFaces.set(face, mode, automation);
         setChanged();
         return true;
+    }
+
+    // ------------------------------------------------------------------ automation of the transfer faces
+
+    /**
+     * How many items automation moves per face and tick. Eight is a fast but unremarkable rate - a hopper
+     * moves one item, an Oritech item pipe up to a stack - and it keeps a face that is fed and emptied at the
+     * same time from starving its own other direction.
+     */
+    private static final int AUTOMATION_ITEMS_PER_TICK = 8;
+
+    /**
+     * Moves items for every face whose automation is switched on. Polled once per server tick by
+     * {@link ExtensionAddonBlock#getTicker} (and by the wireless dock's own ticker).
+     * <p>
+     * Cheap while nothing is automated: without a configured face - the common case - it returns immediately,
+     * and a face whose automation is off simply keeps offering its inventory to pipes instead of moving items
+     * itself.
+     */
+    public void serverTickTransfer() {
+        if (level == null || level.isClientSide()) return;
+        if (transferFaces.isEmpty() || !canTransferItems()) return;
+
+        for (var face : Direction.values()) {
+            var mode = transferFaces.modeOf(face);
+            if (mode == TransferMode.NONE || !transferFaces.automationOf(face)) continue;
+
+            var machine = MachineFaceStorage.machineStorage(this);
+            if (machine == null) continue;
+
+            // The face the machine itself sits on has no container to trade with: moving "machine to
+            // neighbour" there would shuffle the machine's own items through its own inventory, so it is
+            // skipped. All the other faces are free.
+            if (worldPosition.relative(face).equals(connectedMachinePos())) continue;
+
+            var neighbour = neighbourStorage(face);
+            if (neighbour == null) continue;
+
+            // The mode names the direction as seen from the machine, so "input" fills the machine from the
+            // container on that side and "output" empties the machine into it.
+            if (mode.allowsExtract()) move(machine, neighbour);
+            if (mode.allowsInsert()) move(neighbour, machine);
+        }
+    }
+
+    /**
+     * The item storage of the block outside one face of this block - the container automation moves items
+     * with - or {@code null} while there is none (air, a machine without an inventory, an unloaded chunk).
+     * The side is asked for as the neighbour's own face pointing back at this block, which is what Oritech's
+     * own item pipe asks with (see {@code ItemPipeInterfaceEntity}, which does
+     * {@code ItemApi.BLOCK.find(world, sourcePos, direction)} with the direction pointing from the neighbour
+     * back at the pipe).
+     */
+    @Nullable
+    private ItemApi.InventoryStorage neighbourStorage(Direction face) {
+        if (level == null) return null;
+
+        var neighbourPos = worldPosition.relative(face);
+        if (!level.isLoaded(neighbourPos)) return null;
+
+        return ItemApi.BLOCK.find(level, neighbourPos, face.getOpposite());
+    }
+
+    /**
+     * Moves up to {@link #AUTOMATION_ITEMS_PER_TICK} items of one stack from {@code from} to {@code to}, if the
+     * target takes any of it, and stops after that one stack.
+     * <p>
+     * Oritech's {@code ItemApi.InventoryStorage} has no transaction: both sides are therefore asked first and
+     * really moved afterwards. The target is asked how much it would take with a simulated insert, the source
+     * with a simulated extract, and only then is exactly that amount taken out and put in. Whatever the target
+     * ends up refusing (it can only refuse because something else filled it in between) is handed straight back
+     * to the source, so no item can be lost even then.
+     */
+    private static void move(ItemApi.InventoryStorage from, ItemApi.InventoryStorage to) {
+        if (!from.supportsExtraction() || !to.supportsInsertion()) return;
+
+        for (int slot = 0; slot < from.getSlotCount(); slot++) {
+            var stack = from.getStackInSlot(slot);
+            if (stack.isEmpty()) continue;
+
+            // dry run: how much would the target take of this stack, and how much can the source give?
+            var offered = stack.copyWithCount(Math.min(stack.getCount(), AUTOMATION_ITEMS_PER_TICK));
+            var wanted = to.insert(offered, true);
+            if (wanted <= 0) continue;
+
+            var takeable = from.extractFromSlot(offered.copyWithCount(wanted), slot, true);
+            if (takeable <= 0) continue;
+
+            var extracted = from.extractFromSlot(offered.copyWithCount(takeable), slot, false);
+            if (extracted <= 0) continue;
+
+            var inserted = to.insert(offered.copyWithCount(extracted), false);
+            if (inserted < extracted) {
+                // the target changed its mind in between: give the refused items back to where they came from
+                from.insert(offered.copyWithCount(extracted - inserted), false);
+            }
+
+            return;
+        }
     }
 
     /**

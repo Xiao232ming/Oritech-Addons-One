@@ -193,6 +193,8 @@ public class ExtensionAddonBlock extends MachineAddonBlock implements AddonDetai
         return (tickLevel, pos, tickState, blockEntity) -> {
             if (blockEntity instanceof ExtensionAddonBlockEntity pluginEntity) {
                 pluginEntity.serverTickRedstone();
+                // faces of the transfer page whose automation is on move their items here
+                pluginEntity.serverTickTransfer();
             }
         };
     }

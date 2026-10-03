@@ -20,6 +20,7 @@ import io.github.xiao232ming.oritechaddonsone.Config;
 import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonType;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEntity;
+import io.github.xiao232ming.oritechaddonsone.block.entity.TransferFaceModes;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferMode;
 import io.github.xiao232ming.oritechaddonsone.block.entity.WirelessExtensionAddonBlockEntity;
 
@@ -159,7 +160,10 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
             public int get() {
                 if (clientSide) return syncedTransferFaces[face.ordinal()];
                 var blockEntity = blockEntity();
-                return blockEntity == null ? 0 : blockEntity.transferModes().modeOf(face).ordinal();
+                if (blockEntity == null) return 0;
+
+                var modes = blockEntity.transferModes();
+                return TransferFaceModes.pack(modes.modeOf(face), modes.automationOf(face));
             }
 
             @Override
@@ -483,7 +487,15 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
      * the server wrote; {@link TransferMode#NONE} while that face transfers nothing.
      */
     public TransferMode transferMode(Direction face) {
-        return TransferMode.byOrdinal(transferFaceSlot(face).get());
+        return TransferFaceModes.modeOf(transferFaceSlot(face).get());
+    }
+
+    /**
+     * True while that face moves its items by itself instead of only offering them to pipes, i.e. the
+     * automation switch of the configuration page. Read from the same container data slot as the mode.
+     */
+    public boolean transferAutomation(Direction face) {
+        return TransferFaceModes.automationOf(transferFaceSlot(face).get());
     }
 
     /** Number of faces that transfer something, i.e. the "x" of the transfer page's counter. */
