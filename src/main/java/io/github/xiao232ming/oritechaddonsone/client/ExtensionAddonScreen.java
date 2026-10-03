@@ -11,6 +11,7 @@ import io.github.xiao232ming.oritechaddonsone.client.page.AddonPageRegistry;
 import io.github.xiao232ming.oritechaddonsone.client.page.AddonTabStrip;
 import io.github.xiao232ming.oritechaddonsone.client.page.ProxyPickerState;
 import io.github.xiao232ming.oritechaddonsone.client.page.TransferPickerState;
+import io.github.xiao232ming.oritechaddonsone.client.page.TransferPreviewPickerState;
 import io.github.xiao232ming.oritechaddonsone.client.page.TransferPreviewState;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonLayout;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonMenu;
@@ -90,7 +91,7 @@ public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddon
         // the preview plugin's whole GUI is its 3D page: the player inventory stays out of it the way it stays out
         // of the modal step below, so nothing is drawn over the panel and no click can reach a slot behind it
         this.pageDrags = page == AddonPageRegistry.transferPreviewPage();
-        // leaving one of the two picking pages closes whatever picker was open on it, so coming back starts
+        // leaving one of the picking pages closes whatever picker was open on it, so coming back starts
         // fresh
         if (page != AddonPageRegistry.proxyPage()) {
             ProxyPickerState.close();
@@ -98,12 +99,18 @@ public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddon
         if (page != AddonPageRegistry.transferPage()) {
             TransferPickerState.close();
         }
-        // The Item Proxy and Extension Transfer pages' configuration panels are opaque modal steps over the
-        // whole panel, and the player inventory is drawn after the page - so the inventory is hidden while
+        // the 3D preview page has its own modal state, because it can be shown next to the cube net page of the
+        // same block: the guard above must not close the preview's modal the frame it opens
+        if (page != AddonPageRegistry.transferPreviewPage()) {
+            TransferPreviewPickerState.close();
+        }
+        // The Item Proxy, Extension Transfer and 传输插件 pages' configuration panels are opaque modal steps over
+        // the whole panel, and the player inventory is drawn after the page - so the inventory is hidden while
         // one of those panels is open, which is what makes the panel read as a full page like Oritech's own
         // inventory proxy screen. The slot positions, their ids and everything the server sees are untouched.
         var modalOpen = ProxyPickerState.isOpen(this.menu.position())
-                || TransferPickerState.isOpen(this.menu.position());
+                || TransferPickerState.isOpen(this.menu.position())
+                || TransferPreviewPickerState.isOpen(this.menu.position());
         this.menu.setPlayerSlotsActive(!modalOpen && !this.menu.previewOnly());
     }
 
@@ -141,6 +148,7 @@ public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddon
         super.removed();
         ProxyPickerState.clear();
         TransferPickerState.clear();
+        TransferPreviewPickerState.clear();
         // only this GUI's own model: another addon screen can be open at the same time
         TransferPreviewState.clear(this.menu.position());
     }

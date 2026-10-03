@@ -21,7 +21,6 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
 import org.jetbrains.annotations.Nullable;
-import org.joml.Matrix3f;
 import org.joml.Vector3f;
 
 import rearth.oritech.api.screen.UIComponent;
@@ -48,11 +47,14 @@ import rearth.oritech.util.MultiblockMachineController;
  * What Oritech's 1.21.1 widget cannot do is what the preview page is for: its {@code rotation} field is private with
  * no setter, its X rotation is a constant, it has no picking helper of any kind, and its centre and scale are private
  * as well. So this class keeps its own pitch and yaw (the defaults are Oritech's own 30 and 225 degrees), computes
- * the centre and the scale with Oritech's formula, and adds <b>face picking</b>: the winning axis of the ray/slab
- * test against a block's cube is the face the ray entered through, and half a unit further along the ray that axis is
- * outside the block again - which turns "which face is it" into a comparison of the entry point against the box the
- * test already built, instead of a rounding argument. The axis order is the model's own: x runs east/west, y up/down
- * and z south/north, which is what makes the answer a {@link Direction} of the world the model is of.
+ * the centre and the scale with Oritech's formula, and adds <b>face picking</b>.
+ * <p>
+ * <b>The picking is not a second copy of the drawing any more.</b> It used to be a hand written inverse of the
+ * widget's own chain which left the negated Y, the panel's centre and its z out, so its model-space ray was mirrored
+ * against the model the player saw. Both halves now come from one {@link PreviewTransform}: {@link #renderContent}
+ * draws with that composition, {@link #faceAt} picks with its inverse, and the face is read off the axis whose slab
+ * gave the near intersection - which is exact for a click on the middle of a face, where a comparison of the entry
+ * point against the box edges would be a tie between all three axes.
  * <p>
  * <b>The model is only the machine.</b> The page's model never contains the machine's addons, the indicators of its
  * open addon slots or the plugin block itself, so this widget holds one state and entity rather than a list of blocks
@@ -76,12 +78,16 @@ import rearth.oritech.util.MultiblockMachineController;
  */
 public final class FacePreviewWidget extends UIComponent {
 
-    /** Distance the picking ray starts at; far enough to be outside any model. */
-    private static final float RAY_DISTANCE = 1000000.0F;
-
     /** Pitch and yaw the model is drawn with; Oritech's own defaults. */
     private static final float DEFAULT_PITCH = 30.0F;
     private static final float DEFAULT_YAW = 225.0F;
+
+    /**
+     * The z the model is translated to before it is drawn: Oritech's own 400, which keeps the model in front of the
+     * GUI's own geometry. {@link PreviewTransform} has to undo it as well, which is why it is a named constant here
+     * instead of a literal buried in the drawing code.
+     */
+    private static final float PLANE_Z = 400.0F;
 
     /** Translucent white of the hover highlight: white, at the alpha Oritech uses for its own placement ghost. */
     private static final int HIGHLIGHT_COLOR = 0x55FFFFFF;
@@ -206,6 +212,10 @@ public final class FacePreviewWidget extends UIComponent {
      * Draws the machine inside the panel with Oritech's own recipe for this branch - see the class comment for the
      * exact transform and why the Y scale is negative - and then the hover highlight on the face the mouse is over,
      * still inside that same pose.
+     * <p>
+     * The transform it applies is the one {@link PreviewTransform} describes and
+     * {@link PreviewTransform#modelToScreen()} builds: the widget never writes that chain out a second time, so the
+     * drawing and the picking cannot drift apart.
      */
     @Override
     protected void renderContent(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
@@ -227,7 +237,8 @@ public final class FacePreviewWidget extends UIComponent {
 
         var bufferSource = client.renderBuffers().bufferSource();
         graphics.pose().pushPose();
-        graphics.pose().translate(cx + cw / 2.0F, cy + ch / 2.0F, 400.0F);
+        // the composition PreviewTransform#modelToScreen describes, applied to the pose the GUI already has
+        graphics.pose().translate(cx + cw / 2.0F, cy + ch / 2.0F, PLANE_Z);
         graphics.pose().scale(scale, -scale, scale);
         graphics.pose().mulPose(Axis.XP.rotationDegrees(pitch));
         graphics.pose().mulPose(Axis.YP.rotationDegrees(yaw));
@@ -459,100 +470,90 @@ public final class FacePreviewWidget extends UIComponent {
     }
 
     /**
+     * The transform of the frame this widget is about to draw - the same numbers
+     * {@link #renderContent(GuiGraphics, int, int, float)} applies to the pose, built through the one class that
+     * describes them ({@link PreviewTransform}), so the picking and the drawing cannot disagree.
+     */
+    private PreviewTransform transform() {
+        return PreviewTransform.of(contentX() + contentWidth() * 0.5F, contentY() + contentHeight() * 0.5F, PLANE_Z,
+                renderedScale, pitch, yaw);
+    }
+
+    /**
      * The face of the model under the given absolute screen coordinates, or {@code null} while the mouse is not over
      * the machine.
      * <p>
-     * The transform is the exact inverse of the one {@link #renderContent} draws with: the mouse is turned back into
-     * the model's rotated space (undoing the Y flip the render applies), a ray is started far in front of the model
-     * and pointed along the GUI's -Z, that ray is rotated back into the model's own space, and the machine's own box
-     * along it is picked with the usual slab test.
+     * The ray is {@link PreviewTransform#pickingRay} of this frame's own drawing transform - the very composition
+     * {@link #renderContent} applies to the pose - so the ray of a pixel and the model drawn at that pixel cannot
+     * disagree. The machine's own box is then picked with the usual slab test, and the face is read off the axis whose
+     * slab gave the near intersection: for an axis aligned box that axis <em>is</em> the entry face, and reading it
+     * off the entry point instead would make a click on the middle of a face a three way tie of its edges.
      */
     @Nullable
     private Hit faceAt(double mouseX, double mouseY) {
         if (!isOverModel(mouseX, mouseY)) return null;
         if (state == null || renderedScale <= 0.0F) return null;
 
-        float screenX = ((float) mouseX - (contentX() + contentWidth() * 0.5F)) / renderedScale;
-        float screenY = -((float) mouseY - (contentY() + contentHeight() * 0.5F)) / renderedScale;
-        var inverse = new Matrix3f()
-                .rotateX((float) Math.toRadians(pitch))
-                .rotateY((float) Math.toRadians(yaw))
-                .invert();
-        var origin = inverse.transform(new Vector3f(screenX, screenY, RAY_DISTANCE));
-        var direction = inverse.transform(new Vector3f(0.0F, 0.0F, -1.0F));
+        var ray = transform().pickingRay((float) mouseX, (float) mouseY);
+        if (ray == null) return null;
 
-        float distance = entryDistance(origin, direction);
-        if (distance < 0.0F) return null;
-
-        var face = entryFace(origin, direction, distance);
-        return face == null ? null : new Hit(Vec3i.ZERO, face);
+        return entryHit(ray.origin(), ray.direction(), Vec3i.ZERO);
     }
 
     /**
-     * Distance from the ray origin to the machine's box, along the ray, or {@code -1} while the ray misses it. The box
-     * is the block's own cube around {@code -center}, i.e. the volume the renderer draws the machine into.
+     * The hit of the ray with one block's box, or {@code null} while it misses it: the face the ray entered through.
+     * The box is the block's own cube around {@code -center}, i.e. the volume the widget draws the machine into.
+     * <p>
+     * This is Oritech's own slab test, repeated here because it is private and because this class needs the winning
+     * axis as well: for an axis aligned box the axis whose slab gives the latest near intersection is the face the ray
+     * was still outside of when it reached the box, which is the definition of the entry face.
      */
-    private float entryDistance(Vector3f origin, Vector3f direction) {
-        var minimums = new float[] {-centerX - 0.5F, -centerY - 0.5F, -centerZ - 0.5F};
-        var origins = new float[] {origin.x, origin.y, origin.z};
+    @Nullable
+    private Hit entryHit(Vector3f origin, Vector3f direction, Vec3i offset) {
+        var minimums = new float[] {
+                offset.getX() - centerX - 0.5F,
+                offset.getY() - centerY - 0.5F,
+                offset.getZ() - centerZ - 0.5F};
         var directions = new float[] {direction.x, direction.y, direction.z};
 
         float near = 0.0F;
         float far = Float.POSITIVE_INFINITY;
+        int nearAxis = -1;
         for (int axis = 0; axis < 3; axis++) {
+            float originOnAxis = componentGet(origin, axis);
             if (Math.abs(directions[axis]) < 1.0E-6F) {
-                if (origins[axis] < minimums[axis] || origins[axis] > minimums[axis] + 1.0F) return -1.0F;
+                if (originOnAxis < minimums[axis] || originOnAxis > minimums[axis] + 1.0F) return null;
                 continue;
             }
 
-            float first = (minimums[axis] - origins[axis]) / directions[axis];
-            float second = (minimums[axis] + 1.0F - origins[axis]) / directions[axis];
-            near = Math.max(near, Math.min(first, second));
+            float first = (minimums[axis] - originOnAxis) / directions[axis];
+            float second = (minimums[axis] + 1.0F - originOnAxis) / directions[axis];
+            float axisNear = Math.min(first, second);
+            if (axisNear > near) {
+                near = axisNear;
+                nearAxis = axis;
+            }
             far = Math.min(far, Math.max(first, second));
-            if (far < near) return -1.0F;
+            if (far < near) return null;
         }
-        return near;
+        if (nearAxis < 0) return null;
+
+        // the face is the side of that axis the ray came from, which its sign names
+        float sign = directions[nearAxis];
+        var face = switch (nearAxis) {
+            case 0 -> sign > 0.0F ? Direction.WEST : Direction.EAST;
+            case 1 -> sign > 0.0F ? Direction.DOWN : Direction.UP;
+            default -> sign > 0.0F ? Direction.NORTH : Direction.SOUTH;
+        };
+        return new Hit(offset, face);
     }
 
-    /**
-     * The face the ray entered the machine's box through, read from the entry point: half a unit further along the
-     * ray that axis has left the block again, and the direction the ray points tells which of the two sides - the
-     * entry point sits on the opposite one.
-     */
-    @Nullable
-    private Direction entryFace(Vector3f origin, Vector3f direction, float distance) {
-        var minimums = new float[] {-centerX - 0.5F, -centerY - 0.5F, -centerZ - 0.5F};
-        var point = new float[] {
-                origin.x + direction.x * distance,
-                origin.y + direction.y * distance,
-                origin.z + direction.z * distance};
-
-        for (int axis = 0; axis < 3; axis++) {
-            float ahead = point[axis] + directionGet(direction, axis) * 0.5F;
-            if (ahead >= minimums[axis] + 1.0F) {
-                return switch (axis) {
-                    case 0 -> direction.x > 0.0F ? Direction.WEST : Direction.EAST;
-                    case 1 -> direction.y > 0.0F ? Direction.DOWN : Direction.UP;
-                    default -> direction.z > 0.0F ? Direction.NORTH : Direction.SOUTH;
-                };
-            }
-            if (ahead <= minimums[axis]) {
-                return switch (axis) {
-                    case 0 -> direction.x > 0.0F ? Direction.EAST : Direction.WEST;
-                    case 1 -> direction.y > 0.0F ? Direction.UP : Direction.DOWN;
-                    default -> direction.z > 0.0F ? Direction.SOUTH : Direction.NORTH;
-                };
-            }
-        }
-        return null;
-    }
-
-    /** Component of a direction on one axis; the array form the slab test uses. */
-    private static float directionGet(Vector3f direction, int axis) {
+    /** Component of a vector on one axis; the array form the slab test uses. */
+    private static float componentGet(Vector3f vector, int axis) {
         return switch (axis) {
-            case 0 -> direction.x;
-            case 1 -> direction.y;
-            default -> direction.z;
+            case 0 -> vector.x;
+            case 1 -> vector.y;
+            default -> vector.z;
         };
     }
 
