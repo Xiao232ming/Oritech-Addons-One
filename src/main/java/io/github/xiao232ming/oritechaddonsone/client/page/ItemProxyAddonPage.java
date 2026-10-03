@@ -13,9 +13,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.block.state.properties.BlockStateProperties;
-import net.minecraft.world.level.block.state.properties.Property;
 
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 
@@ -26,7 +23,6 @@ import rearth.oritech.api.screen.OritechSurface;
 import rearth.oritech.api.screen.widgets.ItemSlotWidget;
 import rearth.oritech.api.screen.widgets.SurfaceWidget;
 
-import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.client.AddonPanelStyle;
 import io.github.xiao232ming.oritechaddonsone.client.FaceTextures;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonLayout;
@@ -141,17 +137,19 @@ public final class ItemProxyAddonPage implements AddonPage {
     private static final int NET_Y = ExtensionAddonLayout.PROXY_NET_Y;
 
     /**
-     * Cell of every face inside the net for a block whose port faces north, in face units. The net is the
-     * usual cross: the front in the middle, top above it, bottom below it, and the four sides in a row, so
-     * the addon reads like an unfolded cardboard box. "North" is the cell the model calls the port face.
+     * Cell of every face inside the net, in face units, in the one frame the page always draws: the addon's
+     * interface face ({@link FaceTextures#front()}) in the middle, the face opposite it at the right end of
+     * the row, and the four remaining faces around them - the viewer's right and left next to the middle,
+     * the other two above and below it. Every cell therefore carries the texture its own face really uses
+     * (see {@link FaceTextures}), and the net reads like the block unfolded from the side the player looks
+     * at, whatever direction the block was placed in.
      */
-    private static final Map<Direction, int[]> NET_CELLS = Map.of(
-            Direction.NORTH, new int[]{1, 1},
-            Direction.EAST, new int[]{2, 1},
-            Direction.SOUTH, new int[]{3, 1},
-            Direction.WEST, new int[]{0, 1},
-            Direction.UP, new int[]{1, 0},
-            Direction.DOWN, new int[]{1, 2});
+    private static final int[] CELL_FRONT = {1, 1};
+    private static final int[] CELL_BACK = {3, 1};
+    private static final int[] CELL_RIGHT = {2, 1};
+    private static final int[] CELL_LEFT = {0, 1};
+    private static final int[] CELL_UP = {1, 0};
+    private static final int[] CELL_DOWN = {1, 2};
 
     @Override
     public String id() {
@@ -180,7 +178,7 @@ public final class ItemProxyAddonPage implements AddonPage {
             double mouseX, double mouseY) {
         var menu = context.menu();
         var textures = FaceTextures.of(menu.addonBlock(), menu.addonBlockState());
-        var cells = cells(menu);
+        var cells = cells(textures);
 
         for (var face : Direction.values()) {
             drawFace(context, graphics, face, cells, textures, menu.isProxyFaceConfigured(face));
@@ -447,7 +445,7 @@ public final class ItemProxyAddonPage implements AddonPage {
         // that slot and leaves the page open, any other click closes it again
         if (openFace != null) return handlePickerClick(context, menu, openFace, mouseX, mouseY, button);
 
-        var face = faceAt(menu, mouseX, mouseY);
+        var face = faceAt(net(menu), mouseX, mouseY);
         if (face == null) return false;
 
         var configured = menu.isProxyFaceConfigured(face);
@@ -535,7 +533,7 @@ public final class ItemProxyAddonPage implements AddonPage {
             return List.of();
         }
 
-        var face = faceAt(menu, mouseX, mouseY);
+        var face = faceAt(net(menu), mouseX, mouseY);
         if (face == null) return List.of();
 
         var lines = new ArrayList<Component>(2);
@@ -563,62 +561,45 @@ public final class ItemProxyAddonPage implements AddonPage {
     }
 
     /**
-     * Cell of every face inside the net, rotated so the cell the model calls the port face is where the
-     * player sees it: for a standing addon the net shows its front first, a flat one starts at the up face.
+     * Cell of every face inside the net, in the fixed frame the {@code CELL_*} constants describe: the
+     * interface face in the middle and the five other faces around it.
+     * <p>
+     * The frame is built around the interface face instead of rotating the drawing, which is what keeps the
+     * net looking the same whatever direction the addon was placed in while every cell still shows the
+     * texture its own face really has.
      */
-    private static Map<Direction, int[]> cells(ExtensionAddonMenu menu) {
-        var steps = rotationSteps(menu);
-        var cells = new EnumMap<Direction, int[]>(Direction.class);
+    private static Map<Direction, int[]> cells(FaceTextures textures) {
+        var front = textures.front();
+        var right = rightOf(front);
+        var up = upOf(front);
 
-        for (var face : Direction.values()) {
-            var cell = NET_CELLS.get(face);
-            var x = cell[0];
-            var y = cell[1];
-            for (int i = 0; i < steps; i++) {
-                // rotate the cross a quarter turn clockwise around its centre (1,1)
-                var rotatedX = 1 - (y - 1);
-                var rotatedY = 1 + (x - 1);
-                x = rotatedX;
-                y = rotatedY;
-            }
-            cells.put(face, new int[]{x, y});
-        }
+        var cells = new EnumMap<Direction, int[]>(Direction.class);
+        cells.put(front, CELL_FRONT);
+        cells.put(front.getOpposite(), CELL_BACK);
+        cells.put(right, CELL_RIGHT);
+        cells.put(right.getOpposite(), CELL_LEFT);
+        cells.put(up, CELL_UP);
+        cells.put(up.getOpposite(), CELL_DOWN);
         return cells;
     }
 
-    /** Quarter turns the net is rotated by, so the port face of the model lands on the net's front cell. */
-    private static int rotationSteps(ExtensionAddonMenu menu) {
-        var state = menu.addonBlockState();
-        if (state == null) return 0;
-
-        if (property(state, BlockStateProperties.FACING) != null) {
-            // the wireless dock is a full cube rotated to its facing
-            return steps(state.getValue(BlockStateProperties.FACING));
-        }
-
-        if (property(state, ExtensionAddonBlock.PLACEMENT) != null
-                && property(state, ExtensionAddonBlock.HORIZONTAL_FACING) != null) {
-            // the flat addon shows its port on the up face, which the net puts above the front
-            if (state.getValue(ExtensionAddonBlock.PLACEMENT) != ExtensionAddonBlock.Placement.VERTICAL) return 0;
-            return steps(state.getValue(ExtensionAddonBlock.HORIZONTAL_FACING));
-        }
-        return 0;
+    /**
+     * The direction to the viewer's right while they look at the given interface face from outside, i.e. the
+     * face that goes into the cell right of the middle.
+     */
+    private static Direction rightOf(Direction front) {
+        // A vertical interface face (a flat addon) has no inherent right; the four faces around it all carry
+        // the side texture, so east is as good as any and keeps the frame deterministic.
+        return front.getAxis().isVertical() ? Direction.EAST : front.getCounterClockWise();
     }
 
-    private static int steps(Direction facing) {
-        return switch (facing) {
-            case NORTH -> 0;
-            case EAST -> 1;
-            case SOUTH -> 2;
-            case WEST -> 3;
-            default -> 0;
+    /** The direction the viewer sees above the given interface face, i.e. the cell above the middle one. */
+    private static Direction upOf(Direction front) {
+        return switch (front) {
+            case UP -> Direction.NORTH;
+            case DOWN -> Direction.SOUTH;
+            default -> Direction.UP;
         };
-    }
-
-    /** Value of a block state property, or {@code null} while the state does not carry it. */
-    @Nullable
-    private static <T extends Comparable<T>> T property(BlockState state, Property<T> property) {
-        return state.hasProperty(property) ? state.getValue(property) : null;
     }
 
     /**
@@ -626,14 +607,18 @@ public final class ItemProxyAddonPage implements AddonPage {
      * relative, so this reads the very same panel relative rectangles {@link #drawFace} draws.
      */
     @Nullable
-    private static Direction faceAt(ExtensionAddonMenu menu, double mouseX, double mouseY) {
-        var cells = cells(menu);
+    private static Direction faceAt(Map<Direction, int[]> cells, double mouseX, double mouseY) {
         for (var face : Direction.values()) {
             double x = localFaceX(cells, face);
             double y = localFaceY(cells, face);
             if (mouseX >= x && mouseX < x + FACE && mouseY >= y && mouseY < y + FACE) return face;
         }
         return null;
+    }
+
+    /** The net of the menu's block: the cell of every face, in the frame {@link #cells(FaceTextures)} builds. */
+    private static Map<Direction, int[]> net(ExtensionAddonMenu menu) {
+        return cells(FaceTextures.of(menu.addonBlock(), menu.addonBlockState()));
     }
 
     /** Translation key of a face name, e.g. {@code gui.oritechaddonsone.proxy.side.north}. */
