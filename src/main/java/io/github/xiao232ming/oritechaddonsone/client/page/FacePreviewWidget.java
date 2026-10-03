@@ -4,32 +4,40 @@ import java.util.ArrayList;
 import java.util.List;
 
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix3f;
 import org.joml.Vector3f;
 
 import rearth.oritech.api.screen.widgets.BlockPreviewWidget;
-import rearth.oritech.client.ui.render.BlockPreviewRenderState;
 import rearth.oritech.util.Geometry;
 import rearth.oritech.util.MultiblockMachineController;
 
 /**
- * The 3D model of the transfer preview page: Oritech's rotating block preview with the one addition the preview
- * needs and the stock widget does not have - it reports <b>which face</b> a click landed on.
+ * The 3D model of the transfer preview page: one machine, drawn through a picture-in-picture state of this mod's own
+ * so that a translucent highlight can be drawn on the face the mouse is over (see {@link MachinePreviewPipRenderer}).
  * <p>
- * {@link BlockPreviewWidget#findBlockAt(double, double)} answers which <em>block</em> of the model a point is over,
- * but it throws the winning axis of its ray/slab test away, so a page could only ever tell "the machine" from "not
- * the machine". This widget keeps that axis: the face the ray entered the block through is the axis whose
- * {@code min(first, second)} produced the near hit, and half a unit further along the ray that axis is outside the
- * block again - which turns "which face is it" into a comparison of the entry point against the box the ray test
- * already built, instead of a rounding argument. The axis order of model space is the one Oritech's own renderer
- * uses - x runs east/west, y up/down and z south/north - which is what makes the answer a {@link Direction} of the
- * world the model is of.
+ * It replaces the drawing half of Oritech's {@link BlockPreviewWidget} for three reasons, all of them because the
+ * widget's model lives in private fields of that class:
+ * <ul>
+ * <li>the page's model is <b>one</b> machine and never a list of blocks, so the widget keeps one state and entity
+ * instead of Oritech's block list,</li>
+ * <li>the hover highlight needs the face the mouse is over to be drawn <em>in</em> the model's render pass, which means
+ * submitting this mod's state rather than Oritech's,</li>
+ * <li>and it needs that face plus the block it belongs to, which Oritech's widget never keeps.</li>
+ * </ul>
+ * The picking is the part that stays: {@link BlockPreviewWidget#findBlockAt(double, double)} answers which
+ * <em>block</em> of the model a point is over, but it throws the winning axis of its ray/slab test away, so a page
+ * could only ever tell "the machine" from "not the machine". This widget keeps that axis: the face the ray entered the
+ * block through is the axis whose {@code min(first, second)} produced the near hit, and half a unit further along the
+ * ray that axis is outside the block again - which turns "which face is it" into a comparison of the entry point
+ * against the box the ray test already built, instead of a rounding argument. The axis order of model space is the one
+ * Oritech's own renderer uses - x runs east/west, y up/down and z south/north - which is what makes the answer a
+ * {@link Direction} of the world the model is of.
  * <p>
  * <b>It is asked in absolute screen coordinates.</b> A page of this mod draws inside {@code extractBackground} of an
  * {@code AbstractContainerScreen} and maps the panel onto the screen itself, so it renders the widget at the pixel
@@ -40,10 +48,9 @@ import rearth.oritech.util.MultiblockMachineController;
  * absolute frame, so on a two hundred pixel wide panel it can only ever be true left of the panel and would report
  * a hovered face for a mouse the page never drew a model under.
  * <p>
- * The centre and the scale the picking needs are <b>not</b> recomputed here: they are taken from the render state
- * the widget submits (see {@link #appendRenderEntries}), i.e. from the numbers this frame was really drawn with.
- * That is what keeps "what the player sees" and "what the player clicks" the same thing, and it inherits everything
- * Oritech folds into those numbers - the extra blocks of a multiblock machine's core, for one.
+ * The centre and the scale the picking needs are the very numbers this widget submits its frame with, so "what the
+ * player sees" and "what the player clicks" stay the same thing, and everything Oritech folds into those numbers is
+ * inherited - the extra blocks of a multiblock machine's core, for one.
  */
 public final class FacePreviewWidget extends BlockPreviewWidget {
 
@@ -51,11 +58,18 @@ public final class FacePreviewWidget extends BlockPreviewWidget {
     private static final float RAY_DISTANCE = 1000000.0F;
 
     /**
-     * The pitch and yaw this widget is drawn with. The stock widget's own fields are private, so the page keeps its
+     * The pitch and yaw this widget is drawn with. The stock widget's own fields are private, so the widget keeps its
      * own copy through {@link #withRotation}: it is the value of the last call, which is the value the render uses.
      */
     private float pitch;
     private float yaw;
+
+    /** The machine this widget draws, or {@code null} while it has none to draw. */
+    @Nullable
+    private BlockState state;
+    /** The machine's block entity, or {@code null} while its block has none. */
+    @Nullable
+    private BlockEntity entity;
 
     /** Centre of the model in the model's own space, as the last drawn frame used it. */
     private final Vector3f center = new Vector3f();
@@ -63,7 +77,7 @@ public final class FacePreviewWidget extends BlockPreviewWidget {
     /** Scale the last drawn frame used, or {@code 0} while nothing has been drawn yet. */
     private float renderedScale;
 
-    /** Face the last drawn frame had under the mouse, or {@code null} while it was outside the widget. */
+    /** Face the last drawn frame had under the mouse, or {@code null} while it was outside the model. */
     @Nullable
     private Direction hoveredFace;
 
@@ -83,8 +97,8 @@ public final class FacePreviewWidget extends BlockPreviewWidget {
     }
 
     /**
-     * Rotates the model and remembers the rotation, which the picking test then uses - the page calls this once per
-     * frame with the drag it accumulated.
+     * Rotates the model and remembers the rotation, which the picking and the highlight test then use - the page calls
+     * this once per frame with the drag it accumulated.
      */
     @Override
     public BlockPreviewWidget withRotation(float xRotation, float yRotation) {
@@ -103,90 +117,60 @@ public final class FacePreviewWidget extends BlockPreviewWidget {
         return yaw;
     }
 
-    /**
-     * Captures the centre and the scale of the frame that is about to be submitted, so the picking tests against the
-     * very same numbers the renderer is given. The two are worked out exactly like the stock widget works them out -
-     * including the core positions of a multiblock machine - because this override is the only place the resolved
-     * values pass by a subclass.
-     */
-    @Override
-    protected void appendRenderEntries(List<BlockPreviewRenderState.Entry> entries) {
-        super.appendRenderEntries(entries);
-
-        var positions = new ArrayList<Vec3i>();
-        for (var entry : entries) {
-            positions.addAll(previewPositions(entry));
-        }
-        if (positions.isEmpty()) return;
-
-        float minX = Float.POSITIVE_INFINITY;
-        float minY = Float.POSITIVE_INFINITY;
-        float minZ = Float.POSITIVE_INFINITY;
-        float maxX = Float.NEGATIVE_INFINITY;
-        float maxY = Float.NEGATIVE_INFINITY;
-        float maxZ = Float.NEGATIVE_INFINITY;
-        for (var position : positions) {
-            minX = Math.min(minX, position.getX() - 0.5F);
-            minY = Math.min(minY, position.getY() - 0.5F);
-            minZ = Math.min(minZ, position.getZ() - 0.5F);
-            maxX = Math.max(maxX, position.getX() + 0.5F);
-            maxY = Math.max(maxY, position.getY() + 0.5F);
-            maxZ = Math.max(maxZ, position.getZ() + 0.5F);
-        }
-
-        center.set((minX + maxX) * 0.5F, (minY + maxY) * 0.5F, (minZ + maxZ) * 0.5F);
-
-        float xSin = Math.abs((float) Math.sin(Math.toRadians(pitch)));
-        float xCos = Math.abs((float) Math.cos(Math.toRadians(pitch)));
-        float horizontalRadius = 0.0F;
-        float verticalRadius = 0.0F;
-        for (var position : positions) {
-            float horizontal = (float) Math.hypot(Math.abs(position.getX() - center.x) + 0.5F,
-                    Math.abs(position.getZ() - center.z) + 0.5F);
-            float vertical = Math.abs(position.getY() - center.y) + 0.5F;
-            horizontalRadius = Math.max(horizontalRadius, horizontal);
-            verticalRadius = Math.max(verticalRadius, vertical * xCos + horizontal * xSin);
-        }
-        if (horizontalRadius <= 0.0F || verticalRadius <= 0.0F) {
-            renderedScale = 0.0F;
-            return;
-        }
-
-        float widthScale = contentWidth() * 0.5F / horizontalRadius;
-        float heightScale = contentHeight() * 0.5F / verticalRadius;
-        renderedScale = Math.min(widthScale, heightScale) * 0.98F;
+    /** Sets the one machine this widget draws; the model is measured again from it. */
+    public void setMachine(BlockState state, @Nullable BlockEntity entity) {
+        this.state = state;
+        this.entity = entity;
     }
 
     /**
-     * The positions one model block really covers: its own cell, plus - exactly like the stock widget - the core
-     * positions of a multiblock machine, rotated into the offset's own frame. Without this a machine whose model is
-     * made of several blocks would be measured too small here while the renderer measures it correctly.
-     */
-    private static List<Vec3i> previewPositions(BlockPreviewRenderState.Entry entry) {
-        var positions = new ArrayList<Vec3i>();
-        positions.add(entry.offset());
-
-        if (entry.entity() instanceof MultiblockMachineController multiblock) {
-            Direction facing = multiblock.getFacingForMultiblock();
-            for (Vec3i relativeOffset : multiblock.getCorePositions()) {
-                positions.add(Geometry.rotatePosition(relativeOffset, facing).offset(entry.offset()));
-            }
-        }
-        return positions;
-    }
-
-    /**
-     * Draws the model and remembers which of its faces the mouse is over - the page's face marker is read from there,
-     * and the picking uses the rotation and the numbers this very frame was drawn with.
+     * Remembers which of the model's faces the mouse is over, then draws the model - the page's face marker is read
+     * from the remembered face, and the model submits that same face to be highlighted (see
+     * {@link MachinePreviewPipRenderer}).
+     * <p>
+     * The hover is worked out <b>before</b> the model is drawn, from the rotation and the scale of the previous frame:
+     * the page sets the rotation and then renders in one call, so the previous frame's scale is this frame's as well,
+     * and taking the hover first means the model of this very frame carries the highlight the mouse just moved to
+     * instead of the one it was on a frame ago.
      */
     @Override
     public void render(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
-        super.render(graphics, mouseX, mouseY, delta);
         var hovered = faceAt(mouseX, mouseY);
         this.hoveredFace = hovered == null ? null : hovered.face();
+        super.render(graphics, mouseX, mouseY, delta);
     }
 
-    /** Face the last drawn frame had under the mouse, or {@code null} while it was outside the widget. */
+    /**
+     * Submits the model of this frame: the machine plus, while the mouse is on it, the face to highlight.
+     * <p>
+     * It takes the place of Oritech's own content, which draws its private block list - a list this widget never fills
+     * - and is therefore the one place the model's numbers are worked out. The rotation it submits is the one the page
+     * set ({@link #withRotation}) and not the stock widget's own field, because the stock widget's automatic spin is
+     * never used here: the player turns this model by dragging it.
+     */
+    @Override
+    protected void renderContent(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
+        BlockState machineState = state;
+        if (machineState == null) {
+            this.renderedScale = 0.0F;
+            this.hoveredFace = null;
+            return;
+        }
+
+        measure();
+        if (renderedScale <= 0.0F) return;
+
+        int cx = contentX();
+        int cy = contentY();
+        int width = contentWidth();
+        int height = contentHeight();
+
+        graphics.submitPictureInPictureRenderState(MachinePreviewRenderState.of(
+                machineState, entity, hoveredFace, pitch, yaw, center.x, center.y, center.z, delta,
+                cx, cy, cx + width, cy + height, renderedScale, graphics.pose(), graphics.peekScissorStack()));
+    }
+
+    /** Face the last drawn frame had under the mouse, or {@code null} while it was outside the model. */
     @Nullable
     public Direction hoveredFace() {
         return hoveredFace;
@@ -245,7 +229,7 @@ public final class FacePreviewWidget extends BlockPreviewWidget {
     private Hit faceAt(double mouseX, double mouseY) {
         if (!isOverModel(mouseX, mouseY)) return null;
 
-        var blocks = getBlocks();
+        var blocks = blocks();
         if (blocks.isEmpty() || renderedScale <= 0.0F) return null;
 
         float screenX = ((float) mouseX - (contentX() + contentWidth() * 0.5F)) / renderedScale;
@@ -257,7 +241,7 @@ public final class FacePreviewWidget extends BlockPreviewWidget {
         var origin = inverse.transform(new Vector3f(screenX, screenY, RAY_DISTANCE));
         var direction = inverse.transform(new Vector3f(0.0F, 0.0F, -1.0F));
 
-        BlockPreviewWidget.BlockEntry closest = null;
+        BlockEntry closest = null;
         float closestDistance = Float.POSITIVE_INFINITY;
         for (var entry : blocks) {
             float distance = entryDistance(origin, direction, entry.offset());
@@ -270,6 +254,85 @@ public final class FacePreviewWidget extends BlockPreviewWidget {
 
         var face = entryFace(origin, direction, closestDistance, closest.offset());
         return face == null ? null : new Hit(closest.offset(), face);
+    }
+
+    /** The one block of this model, as the picking and the measuring both want it. */
+    private List<BlockEntry> blocks() {
+        BlockState machineState = state;
+        if (machineState == null) return List.of();
+
+        return List.of(new BlockEntry(machineState, entity, Vec3i.ZERO));
+    }
+
+    /**
+     * Works out the centre and the scale of the model, exactly like the stock widget works them out for the frame it
+     * is about to submit - including the core positions of a multiblock machine, because the renderer measures the
+     * machine's whole model and a single cell would otherwise be measured too small here.
+     */
+    private void measure() {
+        var positions = new ArrayList<Vec3i>();
+        for (var entry : blocks()) {
+            positions.addAll(previewPositions(entry));
+        }
+        if (positions.isEmpty()) {
+            renderedScale = 0.0F;
+            return;
+        }
+
+        float minX = Float.POSITIVE_INFINITY;
+        float minY = Float.POSITIVE_INFINITY;
+        float minZ = Float.POSITIVE_INFINITY;
+        float maxX = Float.NEGATIVE_INFINITY;
+        float maxY = Float.NEGATIVE_INFINITY;
+        float maxZ = Float.NEGATIVE_INFINITY;
+        for (var position : positions) {
+            minX = Math.min(minX, position.getX() - 0.5F);
+            minY = Math.min(minY, position.getY() - 0.5F);
+            minZ = Math.min(minZ, position.getZ() - 0.5F);
+            maxX = Math.max(maxX, position.getX() + 0.5F);
+            maxY = Math.max(maxY, position.getY() + 0.5F);
+            maxZ = Math.max(maxZ, position.getZ() + 0.5F);
+        }
+
+        center.set((minX + maxX) * 0.5F, (minY + maxY) * 0.5F, (minZ + maxZ) * 0.5F);
+
+        float xSin = Math.abs((float) Math.sin(Math.toRadians(pitch)));
+        float xCos = Math.abs((float) Math.cos(Math.toRadians(pitch)));
+        float horizontalRadius = 0.0F;
+        float verticalRadius = 0.0F;
+        for (var position : positions) {
+            float horizontal = (float) Math.hypot(Math.abs(position.getX() - center.x) + 0.5F,
+                    Math.abs(position.getZ() - center.z) + 0.5F);
+            float vertical = Math.abs(position.getY() - center.y) + 0.5F;
+            horizontalRadius = Math.max(horizontalRadius, horizontal);
+            verticalRadius = Math.max(verticalRadius, vertical * xCos + horizontal * xSin);
+        }
+        if (horizontalRadius <= 0.0F || verticalRadius <= 0.0F) {
+            renderedScale = 0.0F;
+            return;
+        }
+
+        float widthScale = contentWidth() * 0.5F / horizontalRadius;
+        float heightScale = contentHeight() * 0.5F / verticalRadius;
+        renderedScale = Math.min(widthScale, heightScale) * 0.98F;
+    }
+
+    /**
+     * The positions one model block really covers: its own cell, plus - exactly like the stock widget - the core
+     * positions of a multiblock machine, rotated into the offset's own frame. Without this a machine whose model is
+     * made of several blocks would be measured too small here while the renderer measures it correctly.
+     */
+    private static List<Vec3i> previewPositions(BlockEntry entry) {
+        var positions = new ArrayList<Vec3i>();
+        positions.add(entry.offset());
+
+        if (entry.entity() instanceof MultiblockMachineController multiblock) {
+            Direction facing = multiblock.getFacingForMultiblock();
+            for (Vec3i relativeOffset : multiblock.getCorePositions()) {
+                positions.add(Geometry.rotatePosition(relativeOffset, facing).offset(entry.offset()));
+            }
+        }
+        return positions;
     }
 
     /**
