@@ -5,6 +5,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.level.Level;
 
 import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.item.ItemResource;
@@ -31,9 +32,15 @@ import io.github.xiao232ming.oritechaddonsone.block.TransferAddonBlock;
  * face of an Extension Addon - a pipe inserts into the machine while the mode allows it and extracts out of it
  * while the mode allows it.
  * <p>
- * <b>The two views share one configuration.</b> The mode of a face is the plugin's
- * ({@link TransferFaceModes}), read on every single call, so the GUI, the automation and this handler can
- * never disagree; nothing is cached here but the identity of the handler itself.
+ * <b>The plugin configures the whole extender, not one face.</b> The transfer page is opened on the plugin,
+ * but what it sets is a mode per face of the extender ({@link TransferFaceModes}), so a face is a connection
+ * when <em>that</em> face has a mode - never because the plugin happens to hang on it. The face the plugin
+ * occupies is therefore never a connection: a pipe cannot stand there, and the plugin's own faces answer
+ * empty (see {@link TransferAddonBlockEntity#getItemLookup}).
+ * <p>
+ * <b>The two views share one configuration.</b> The mode of a face is read on every single call, so the GUI,
+ * the automation and this handler can never disagree; nothing is cached here but the identity of the handler
+ * itself.
  * <p>
  * <b>One object per position and face, forever.</b> NeoForge caches the handler a position and face answer
  * with (and {@code BlockCapabilityCache} keeps that answer until the level invalidates the position), so the
@@ -42,9 +49,9 @@ import io.github.xiao232ming.oritechaddonsone.block.TransferAddonBlock;
  * not for staleness. It is keyed by the position and grows only where a pipe really asked an extender with a
  * plugin on it, which keeps it tiny in practice.
  * <p>
- * <b>Fail safe:</b> a face without a plugin, a plugin that was taken away, a face with no mode, an extender no
- * machine has claimed and an unloaded chunk all resolve to "no inventory" - this handler then reports zero
- * slots and accepts or offers nothing instead of crashing, exactly like {@link MachineFaceStorage}.
+ * <b>Fail safe:</b> a face with no mode, an extender no plugin hangs on, an extender no machine has claimed
+ * and an unloaded chunk all resolve to "no inventory" - this handler then reports zero slots and accepts or
+ * offers nothing instead of crashing, exactly like {@link MachineFaceStorage}.
  */
 public final class ExtenderFaceStorage extends DelegatingInventoryStorage {
 
@@ -67,10 +74,10 @@ public final class ExtenderFaceStorage extends DelegatingInventoryStorage {
     /**
      * The handler of one face of the extender at {@code extender}, or {@code null} while that face is not an
      * item connection at all. That is the case while the extender is asked without a side - a machine
-     * extender has no inventory of its own, only faces a plugin configured - and while no transfer plugin
-     * hangs on the extender or the plugin does not configure this face. {@code null} is also what the
-     * capability provider answers with, so a pipe sees the extender as "nothing here" until a plugin really
-     * offers something on that face.
+     * extender has no inventory of its own, only faces a plugin configured - and while the queried face has
+     * no mode, which includes every face of an extender no transfer plugin hangs on. {@code null} is also
+     * what the capability provider answers with, so a pipe sees the extender as "nothing here" until a plugin
+     * really offers something on that face.
      * <p>
      * Only extender faces can answer this way: the plugin itself offers an empty inventory, so the machine is
      * reachable at exactly one place, and the same items cannot be found at two.
@@ -91,37 +98,52 @@ public final class ExtenderFaceStorage extends DelegatingInventoryStorage {
     }
 
     /**
-     * The transfer plugin that hangs on the extender at {@code face}, i.e. the plugin whose host is the
-     * extender and whose attachment faces this very face of it, or {@code null} while there is none.
+     * The mode the given face of the extender transfers with, or {@link TransferMode#NONE} while it transfers
+     * nothing.
+     * <p>
+     * The mode is the <b>plugin's</b>, not the face's own: a placed transfer plugin owns one mode per face of
+     * the extender it hangs on (the transfer page configures the extender through it), so this asks the
+     * plugin on the extender - whichever face it hangs on - what it was told about {@code face}. That is the
+     * whole point of the lookup: the plugin occupies one of the six faces, and the connections are the other
+     * five, so a face can only ever be a connection while a plugin elsewhere on the same extender is
+     * configured for it.
+     * <p>
+     * More than one plugin may hang on the same extender. Each of them carries its own modes, and only the
+     * plugin a mode was set on knows it, so a face counts as configured when <em>any</em> of them configures
+     * it - scanning every plugin and not only the first one is what keeps such an extender working.
+     */
+    private static TransferMode transferMode(AddonBlockEntity extender, Direction face) {
+        var level = extender.getLevel();
+        if (level == null || level.isClientSide()) return TransferMode.NONE;
+
+        for (var side : Direction.values()) {
+            var plugin = pluginAt(extender, level, side);
+            if (plugin == null || !plugin.canTransferItems()) continue;
+
+            var mode = plugin.transferModes().modeOf(face);
+            if (mode != TransferMode.NONE) return mode;
+        }
+
+        return TransferMode.NONE;
+    }
+
+    /**
+     * The transfer plugin hanging on the given face of the extender, i.e. the neighbour whose attachment
+     * points back at this very extender, or {@code null} while there is none.
      * <p>
      * The plugin is looked up through the world on every call and not remembered: a plugin can be broken or
      * placed at any time, and NeoForge's own invalidation (see {@code TransferAddonBlockEntity}) is what makes
      * a pipe ask again - the answer itself has to be correct whenever it is asked.
      */
     @Nullable
-    private static TransferAddonBlockEntity pluginAt(AddonBlockEntity extender, Direction face) {
-        var level = extender.getLevel();
-        if (level == null || level.isClientSide()) return null;
-
-        var pluginPos = extender.getBlockPos().relative(face);
+    private static TransferAddonBlockEntity pluginAt(AddonBlockEntity extender, Level level, Direction side) {
+        var pluginPos = extender.getBlockPos().relative(side);
         if (!level.isLoaded(pluginPos)) return null;
         if (!(level.getBlockEntity(pluginPos) instanceof TransferAddonBlockEntity plugin)) return null;
 
-        // The plugin has to hang on this very extender: a plugin that stands on a wall somewhere else must
-        // not turn the extender's faces into a way into a machine.
-        return TransferAddonBlock.attachedFace(plugin.getBlockState()) == face ? plugin : null;
-    }
-
-    /**
-     * The mode the plugin that hangs on the extender at {@code face} transfers with, or
-     * {@link TransferMode#NONE} while nothing is configurable there. Read through the plugin, which is the
-     * owner of the modes - so a face of the extender and the face of an Extension Addon at the same place do
-     * exactly the same thing.
-     */
-    private static TransferMode transferMode(AddonBlockEntity extender, Direction face) {
-        var plugin = pluginAt(extender, face);
-        if (plugin == null || !plugin.canTransferItems()) return TransferMode.NONE;
-        return plugin.transferModes().modeOf(face);
+        // The plugin has to hang on this very extender: a plugin that stands on a machine or a wall
+        // somewhere else must not turn this extender's faces into a way into a machine.
+        return TransferAddonBlock.attachedFace(plugin.getBlockState()) == side.getOpposite() ? plugin : null;
     }
 
     /**

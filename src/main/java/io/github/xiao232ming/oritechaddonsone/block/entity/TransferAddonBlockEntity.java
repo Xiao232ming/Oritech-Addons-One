@@ -282,6 +282,11 @@ public class TransferAddonBlockEntity extends ExtensionAddonBlockEntity {
      * pipes, for one, keeps a {@code null} answer until the level invalidates the position - so the plugin
      * invalidates the extender's position whenever it appears, disappears or is configured.
      * <p>
+     * The invalidation is per <b>position</b>, and deliberately so: {@code Level#invalidateCapabilities} has
+     * no notion of a face, and the extender's answer changes for all of them at once - the plugin holds one
+     * mode per face of the extender, and whether any plugin hangs there at all is what can turn any of those
+     * faces into a connection.
+     * <p>
      * Cheap and harmless while the plugin hangs on something else: the host is checked by block identity
      * first, so no other block is ever invalidated, and the extender's own position is a position
      * NeoForge's capability system knows.
@@ -296,8 +301,8 @@ public class TransferAddonBlockEntity extends ExtensionAddonBlockEntity {
     }
 
     /**
-     * The plugin appeared in the world: the extender it hangs on now answers for this face, so the cached
-     * answer it gave a pipe before - usually "no inventory" - has to be dropped.
+     * The plugin appeared in the world: the extender it hangs on may now answer on every one of its faces,
+     * so the cached answers it gave the pipes before - usually "no inventory" - have to be dropped.
      */
     @Override
     public void clearRemoved() {
@@ -306,7 +311,7 @@ public class TransferAddonBlockEntity extends ExtensionAddonBlockEntity {
     }
 
     /**
-     * The plugin is gone: the extender's face stops offering the machine. The handler would already answer
+     * The plugin is gone: the extender's faces stop offering the machine. The handlers would already answer
      * empty, but a pipe that cached "no capability" earlier would never ask again without this.
      */
     @Override
