@@ -20,6 +20,7 @@ import rearth.oritech.api.screen.Insets;
 import rearth.oritech.api.screen.OritechSurface;
 import rearth.oritech.api.screen.widgets.SurfaceWidget;
 
+import io.github.xiao232ming.oritechaddonsone.block.entity.TransferFaceModes;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferMode;
 import io.github.xiao232ming.oritechaddonsone.client.AddonPanelStyle;
 import io.github.xiao232ming.oritechaddonsone.client.FaceTextures;
@@ -55,6 +56,9 @@ public final class TransferAddonPage implements AddonPage {
 
     private static final String LABEL_KEY = "gui.oritechaddonsone.page." + ID;
     private static final String PROMPT_KEY = "gui.oritechaddonsone.transfer.prompt";
+    private static final String AUTOMATION_KEY = "gui.oritechaddonsone.transfer.automation";
+    /** Colour of the green tick and of the "this face does something" state, as on the other pages. */
+    private static final int GOOD = 0xFF2ECC71;
 
     /**
      * Icon of the tab: Oritech's inventory proxy addon texture, which is also the texture the transfer addon
@@ -88,6 +92,10 @@ public final class TransferAddonPage implements AddonPage {
     private static final int BUTTON_GAP = 14;
     /** Y of the three mode plates inside the configuration page. */
     private static final int BUTTON_Y = 30;
+    /** The automation row below them: a checkbox, the gap to its label, and the row's y. */
+    private static final int AUTOMATION_BOX = 10;
+    private static final int AUTOMATION_GAP = 4;
+    private static final int AUTOMATION_Y = 60;
     /** Frame drawn around the configuration page, as on the Item Proxy page. */
     private static final int PANEL_FRAME = 2;
 
@@ -153,15 +161,14 @@ public final class TransferAddonPage implements AddonPage {
                 graphics.fill(x + size - 1, y, x + size, y + size, OUTPUT_EDGE_DARK);
             };
             case BOTH -> (graphics, x, y, size) -> {
+                // Half blue, half orange: the input half on the left, the output half on the right. The two
+                // halves meet directly - no line is drawn between them, the colours are the whole marker.
                 int half = size / 2;
                 graphics.fill(x, y, x + half, y + size, INPUT_FILL);
                 graphics.fill(x + half, y, x + size, y + size, OUTPUT_FILL);
-                graphics.fill(x, y, x + half, y + 1, INPUT_EDGE);
-                graphics.fill(x, y + size - 1, x + half, y + size, INPUT_EDGE_DARK);
+                graphics.fill(x, y, x + size, y + 1, INPUT_EDGE);
+                graphics.fill(x, y + size - 1, x + size, y + size, OUTPUT_EDGE_DARK);
                 graphics.fill(x, y, x + 1, y + size, INPUT_EDGE);
-                graphics.fill(x + half - 1, y, x + half, y + size, INPUT_EDGE_DARK);
-                graphics.fill(x + half, y, x + size, y + 1, OUTPUT_EDGE);
-                graphics.fill(x + half, y + size - 1, x + size, y + size, OUTPUT_EDGE_DARK);
                 graphics.fill(x + size - 1, y, x + size, y + size, OUTPUT_EDGE_DARK);
             };
             case NONE -> null;
@@ -196,6 +203,7 @@ public final class TransferAddonPage implements AddonPage {
 
         drawPanel(graphics);
         drawPlates(graphics, font, menu, face, placed, mouseX, mouseY);
+        drawAutomation(graphics, font, menu, face, placed, mouseX, mouseY);
         prompt(graphics, font);
         header(graphics, context, placed);
 
@@ -228,6 +236,57 @@ public final class TransferAddonPage implements AddonPage {
             graphics.text(font, text, x + (BUTTON_WIDTH - font.width(text)) / 2, y + (BUTTON_HEIGHT - 8) / 2,
                     AddonPanelStyle.PANEL_TEXT, false);
         }
+    }
+
+    /**
+     * The automation row of the configuration page: Oritech's dark checkbox and its label, centred under the
+     * three mode plates. With automation on the face moves items by itself - towards the container on that
+     * side for "output", from it for "input", both for "input + output" (see
+     * {@code ExtensionAddonBlockEntity#serverTickTransfer}).
+     * <p>
+     * The row is dimmed and refuses clicks while the face has no direction yet: a face that transfers nothing
+     * has nothing to move on its own, so the switch only becomes meaningful together with a mode.
+     */
+    private static void drawAutomation(GuiGraphicsExtractor graphics, Font font, ExtensionAddonMenu menu,
+            Direction face, AddonPickerPanel.Placed placed, double mouseX, double mouseY) {
+        var enabled = modeOf(menu, face) != TransferMode.NONE;
+        var on = automationOf(menu, face);
+        var label = Component.translatable(AUTOMATION_KEY).getString();
+
+        int boxX = automationBoxX(font, label);
+        int y = AUTOMATION_Y;
+
+        // the box itself: a dark sunken plate, filled green while automation is on - the same "dark means
+        // chosen" language the mode plates use, in the opposite direction
+        var surface = enabled && isOverAutomation(placed, mouseX, mouseY)
+                ? OritechSurface.PANEL_DARK_HOVER : OritechSurface.PANEL_DARK;
+        surface.render(graphics, boxX, y, AUTOMATION_BOX, AUTOMATION_BOX);
+        if (on) {
+            graphics.fill(boxX + 2, y + 2, boxX + AUTOMATION_BOX - 2, y + AUTOMATION_BOX - 2, GOOD);
+        }
+
+        graphics.text(font, label, boxX + AUTOMATION_BOX + AUTOMATION_GAP, y + 1,
+                enabled ? AddonPanelStyle.PANEL_TEXT : AddonPanelStyle.PANEL_TEXT_DIM, false);
+    }
+
+    /** Left edge of the automation checkbox, centring the box and its label in the configuration page. */
+    private static int automationBoxX(Font font, String label) {
+        int row = AUTOMATION_BOX + AUTOMATION_GAP + font.width(label);
+        return (AddonPickerPanel.WIDTH - row) / 2;
+    }
+
+    /**
+     * True while the given panel relative mouse position is on the automation row. The whole row is the hit
+     * area, so a click on the label toggles the switch as well.
+     */
+    private static boolean isOverAutomation(AddonPickerPanel.Placed placed, double mouseX, double mouseY) {
+        var font = Minecraft.getInstance().font;
+        var label = Component.translatable(AUTOMATION_KEY).getString();
+        var row = AUTOMATION_BOX + AUTOMATION_GAP + font.width(label);
+
+        double x = placed.innerX() + automationBoxX(font, label);
+        double y = placed.innerY() + AUTOMATION_Y;
+        return mouseX >= x && mouseX < x + row && mouseY >= y && mouseY < y + AUTOMATION_BOX;
     }
 
     /** The prompt line of the configuration page, centred in Oritech's panel at its own y. */
@@ -269,7 +328,7 @@ public final class TransferAddonPage implements AddonPage {
         if (button == 1) {
             if (menu.transferMode(face) != TransferMode.NONE) {
                 TransferPickerState.close();
-                send(menu.position(), face, TransferMode.NONE);
+                send(menu.position(), face, TransferMode.NONE, false);
             }
             return true;
         }
@@ -301,8 +360,22 @@ public final class TransferAddonPage implements AddonPage {
             // page neither closes nor sends a mode the server already has
             if (mode == currentMode(menu, face)) return true;
 
-            TransferPickerState.select(mode);
-            send(menu.position(), face, mode);
+            // picking a direction keeps the automation switch of the face as it is
+            var automation = automationOf(menu, face);
+            TransferPickerState.select(mode, automation);
+            send(menu.position(), face, mode, automation);
+            return true;
+        }
+
+        // The automation switch: it only toggles, the direction is kept, so a face can be switched between
+        // "offers its inventory to pipes" and "moves the items by itself" without picking the mode again.
+        if (isOverAutomation(placed, mouseX, mouseY)) {
+            var mode = currentMode(menu, face);
+            if (mode == TransferMode.NONE) return true;
+
+            var automation = !automationOf(menu, face);
+            TransferPickerState.select(mode, automation);
+            send(menu.position(), face, mode, automation);
             return true;
         }
 
@@ -335,16 +408,25 @@ public final class TransferAddonPage implements AddonPage {
         return null;
     }
 
-    /** The mode a face has right now, including a mode the open picker set a moment ago. */
+    /** The mode a face has right now, including what the open configuration page set a moment ago. */
     private static TransferMode modeOf(ExtensionAddonMenu menu, Direction face) {
-        if (TransferPickerState.isOpen(menu.position(), face)) {
-            var pending = TransferPickerState.pendingMode();
-            if (pending != null) return pending;
-        }
-        return menu.transferMode(face);
+        var pending = pending(menu, face);
+        return pending != null ? pending.mode() : menu.transferMode(face);
     }
 
-    /** The mode the server already knows for this face, i.e. without the picker's pending value. */
+    /** True while a face moves its items by itself, including what the open page set a moment ago. */
+    private static boolean automationOf(ExtensionAddonMenu menu, Direction face) {
+        var pending = pending(menu, face);
+        return pending != null ? pending.automation() : menu.transferAutomation(face);
+    }
+
+    /** What the open configuration page of this face set a moment ago, or {@code null} while it is closed. */
+    @Nullable
+    private static TransferPickerState.Pending pending(ExtensionAddonMenu menu, Direction face) {
+        return TransferPickerState.isOpen(menu.position(), face) ? TransferPickerState.pending() : null;
+    }
+
+    /** The mode the server already knows for this face, i.e. without the page's pending value. */
     private static TransferMode currentMode(ExtensionAddonMenu menu, Direction face) {
         return menu.transferMode(face);
     }
@@ -381,9 +463,13 @@ public final class TransferAddonPage implements AddonPage {
         return block == null ? ItemStack.EMPTY : new ItemStack(block);
     }
 
-    /** Tells the server what a face should do. The page is client only, so this is the one place it talks back. */
-    private static void send(BlockPos pos, Direction face, TransferMode mode) {
+    /**
+     * Tells the server what a face should do. The page is client only, so this is the one place it talks
+     * back; the direction and the automation flag travel as the one packed value the block entity and the menu
+     * use for a face.
+     */
+    private static void send(BlockPos pos, Direction face, TransferMode mode, boolean automation) {
         ClientPacketDistributor.sendToServer(new TransferNetworking.SetTransferMode(
-                pos, ProxyNetworking.faceIndex(face), mode.ordinal()));
+                pos, ProxyNetworking.faceIndex(face), TransferFaceModes.pack(mode, automation)));
     }
 }

@@ -93,5 +93,6 @@
   "gui.oritechaddonsone.transfer.mode.input": "Input",
   "gui.oritechaddonsone.transfer.mode.output": "Output",
   "gui.oritechaddonsone.transfer.mode.both": "Input + Output",
-  "gui.oritechaddonsone.transfer.mode.none": "Not set"
+  "gui.oritechaddonsone.transfer.mode.none": "Not set",
+  "gui.oritechaddonsone.transfer.automation": "Automation"
 }

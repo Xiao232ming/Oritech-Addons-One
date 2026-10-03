@@ -93,5 +93,6 @@
   "gui.oritechaddonsone.transfer.mode.input": "输入",
   "gui.oritechaddonsone.transfer.mode.output": "输出",
   "gui.oritechaddonsone.transfer.mode.both": "输入输出",
-  "gui.oritechaddonsone.transfer.mode.none": "未设置"
+  "gui.oritechaddonsone.transfer.mode.none": "未设置",
+  "gui.oritechaddonsone.transfer.automation": "自动化"
 }

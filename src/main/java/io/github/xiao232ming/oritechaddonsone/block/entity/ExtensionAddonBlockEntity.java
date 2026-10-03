@@ -23,9 +23,11 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.transfer.energy.EnergyHandler;
 import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.item.ItemResource;
+import net.neoforged.neoforge.transfer.transaction.Transaction;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -472,16 +474,112 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
     }
 
     /**
-     * Sets what one face does with the machine's items, or clears it again with
-     * {@link TransferMode#NONE}. Refused on the client and while no transfer addon is stored.
+     * Sets what one face does with the machine's items and whether it does it on its own, or clears the face
+     * again with {@link TransferMode#NONE}. Refused on the client and while no transfer addon is stored.
      */
-    public boolean setTransferMode(Direction face, TransferMode mode) {
+    public boolean setTransferConfig(Direction face, TransferMode mode, boolean automation) {
         if (level == null || level.isClientSide() || face == null || mode == null) return false;
         if (mode != TransferMode.NONE && !canTransferItems()) return false;
 
-        transferFaces.set(face, mode);
+        transferFaces.set(face, mode, automation);
         setChanged();
         return true;
+    }
+
+    // ------------------------------------------------------------------ automation of the transfer faces
+
+    /**
+     * How many items automation moves per face and tick. Eight is a fast but unremarkable rate - a hopper
+     * moves one item, an Oritech item pipe up to a stack - and it keeps a face that is fed and emptied at the
+     * same time from starving its own other direction.
+     */
+    private static final int AUTOMATION_ITEMS_PER_TICK = 8;
+
+    /**
+     * Moves items for every face whose automation is switched on. Polled once per server tick by
+     * {@link ExtensionAddonBlock#getTicker} (and by the wireless dock's own ticker).
+     * <p>
+     * Cheap while nothing is automated: without a configured face - the common case - it returns immediately,
+     * and a face whose automation is off simply keeps offering its inventory to pipes instead of moving items
+     * itself.
+     */
+    public void serverTickTransfer() {
+        if (level == null || level.isClientSide()) return;
+        if (transferFaces.isEmpty() || !canTransferItems()) return;
+
+        for (var face : Direction.values()) {
+            var mode = transferFaces.modeOf(face);
+            if (mode == TransferMode.NONE || !transferFaces.automationOf(face)) continue;
+
+            var machine = MachineFaceStorage.machineStorage(this);
+            if (machine == null) continue;
+
+            // The face the machine itself sits on has no container to trade with: moving "machine to
+            // neighbour" there would shuffle the machine's own items through its own inventory, so it is
+            // skipped. All the other faces are free.
+            if (worldPosition.relative(face).equals(connectedMachinePos())) continue;
+
+            var neighbour = neighbourStorage(face);
+            if (neighbour == null) continue;
+
+            // The mode names the direction as seen from the machine, so "input" fills the machine from the
+            // container on that side and "output" empties the machine into it.
+            if (mode.allowsExtract()) move(machine, neighbour);
+            if (mode.allowsInsert()) move(neighbour, machine);
+        }
+    }
+
+    /**
+     * The item storage of the block outside one face of this block - the container automation moves items
+     * with - or {@code null} while there is none (air, a machine without an inventory, an unloaded chunk).
+     * The side is asked for as the neighbour's own face pointing back at this block, which is what a pipe
+     * would ask with.
+     */
+    @Nullable
+    private ResourceHandler<ItemResource> neighbourStorage(Direction face) {
+        if (level == null) return null;
+
+        var neighbourPos = worldPosition.relative(face);
+        if (!level.isLoaded(neighbourPos)) return null;
+
+        var state = level.getBlockState(neighbourPos);
+        var blockEntity = level.getBlockEntity(neighbourPos);
+        return level.getCapability(Capabilities.Item.BLOCK, neighbourPos, state, blockEntity, face.getOpposite());
+    }
+
+    /**
+     * Moves up to {@link #AUTOMATION_ITEMS_PER_TICK} items of one stack from {@code from} to {@code to}, if the
+     * target takes any of it, and stops after that one stack.
+     * <p>
+     * Both halves run in a transaction, so nothing can be lost: the target is first asked how much it would
+     * take (that transaction is closed without committing, i.e. rolled back), and only then is exactly that
+     * amount extracted and re-inserted. The step is committed only while the two amounts match; if the
+     * inventory changed in between (another pipe, a target that filled up) the whole step rolls back instead
+     * of dropping items on the floor.
+     */
+    private static void move(ResourceHandler<ItemResource> from, ResourceHandler<ItemResource> to) {
+        for (int slot = 0; slot < from.size(); slot++) {
+            var resource = from.getResource(slot);
+            if (resource.isEmpty()) continue;
+
+            int wanted;
+            try (var probe = Transaction.openRoot()) {
+                wanted = to.insert(resource, AUTOMATION_ITEMS_PER_TICK, probe);
+            }
+            if (wanted <= 0) continue;
+
+            try (var transaction = Transaction.openRoot()) {
+                int extracted = from.extract(slot, resource, wanted, transaction);
+                if (extracted <= 0) continue;
+
+                int inserted = to.insert(resource, extracted, transaction);
+                if (inserted != extracted) continue;
+
+                transaction.commit();
+            }
+
+            return;
+        }
     }
 
     /**

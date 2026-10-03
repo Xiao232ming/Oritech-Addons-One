@@ -247,6 +247,9 @@ public class WirelessExtensionAddonBlockEntity extends ExtensionAddonBlockEntity
         if (level == null || level.isClientSide()) return;
 
         serverTickRedstone();
+        // faces of the transfer page whose automation is on move their items here, exactly like on a wired
+        // addon: the machine is the linked one, so nothing else is needed
+        serverTickTransfer();
 
         if (linkedMachine == null) return;
 
