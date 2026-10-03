@@ -581,9 +581,11 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
             if (neighbour == null) continue;
 
             // The mode names the direction as seen from the machine, so "input" fills the machine from the
-            // container on that side and "output" empties the machine into it.
-            if (mode.allowsExtract()) MachineFaceStorage.move(machine, neighbour);
-            if (mode.allowsInsert()) MachineFaceStorage.move(neighbour, machine);
+            // container on that side and "output" empties the machine into it. The machine itself is passed
+            // along as the owner of the machine side, so both directions respect which of its slots are
+            // inputs and which are outputs (see MachineSlotRoles) instead of moving anything anywhere.
+            if (mode.allowsExtract()) MachineFaceStorage.move(machine, this, neighbour, null);
+            if (mode.allowsInsert()) MachineFaceStorage.move(neighbour, null, machine, this);
         }
     }
 

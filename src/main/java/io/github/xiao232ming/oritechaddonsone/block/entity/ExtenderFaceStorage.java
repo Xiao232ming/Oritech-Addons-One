@@ -7,6 +7,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
 
 import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.item.ItemResource;
@@ -274,6 +275,24 @@ public final class ExtenderFaceStorage extends DelegatingInventoryStorage {
         return machineStorage(extender, face) == null ? 0 : super.size();
     }
 
+    /**
+     * The machine block entity this face reaches into, or {@code null} while that machine cannot be resolved.
+     * It is the same block {@link #machineStorage(AddonBlockEntity, Direction)} takes the inventory from, so
+     * the roles asked of it - see {@link MachineSlotRoles} - always belong to the inventory this face
+     * exposes.
+     */
+    @Nullable
+    private BlockEntity machine() {
+        var level = extender.getLevel();
+        if (level == null) return null;
+
+        var machinePos = extender.getControllerPos();
+        if (machinePos == null || machinePos.equals(extender.getBlockPos())) return null;
+        if (!level.isLoaded(machinePos)) return null;
+
+        return level.getBlockEntity(machinePos);
+    }
+
     /** True while the given slot belongs to the machine inventory this face reaches into. */
     private boolean covers(int index) {
         return index >= 0 && index < size();
@@ -299,30 +318,63 @@ public final class ExtenderFaceStorage extends DelegatingInventoryStorage {
         return covers(index) && super.isValid(index, resource);
     }
 
+    /**
+     * Indexed insert of a pipe or a hopper: gated by the face's mode (an OUTPUT face takes nothing) and by
+     * the machine's slot roles ({@link MachineSlotRoles}) - an INPUT face fills the machine's input slots
+     * and never a slot Oritech reserved for its results. The roles are asked of the machine this face
+     * reaches into, which is resolved from the extender exactly like the inventory itself.
+     */
     @Override
     public int insert(int index, ItemResource resource, int amount, TransactionContext transaction) {
         if (!allowsInsert() || !covers(index)) return 0;
+        if (!MachineSlotRoles.allowsInsertAt(machine(), index)) return 0;
         return super.insert(index, resource, amount, transaction);
     }
 
     /**
-     * Index-free insert of a pipe or a hopper. The mode gates it here as well as in the indexed overload, so
-     * a caller that only knows the handler cannot fill the machine through an output-only face.
+     * Index-free insert of a pipe or a hopper. The mode gates it here as well as in the indexed overload -
+     * so a caller that only knows the handler cannot fill the machine through an output-only face - and the
+     * slots are walked here so the machine's roles are respected for a caller that names no slot.
      */
     @Override
     public int insert(ItemResource resource, int amount, TransactionContext transaction) {
-        return allowsInsert() ? super.insert(resource, amount, transaction) : 0;
+        if (!allowsInsert()) return 0;
+
+        // without a machine block entity there are no roles to respect, and the indexed overload would
+        // answer 0 for every slot - the machine's own item lookup decides, exactly as it did before
+        var machine = machine();
+        if (machine == null) return super.insert(resource, amount, transaction);
+
+        var inserted = 0;
+        for (var index = 0; index < super.size() && inserted < amount; index++) {
+            inserted += insert(index, resource, amount - inserted, transaction);
+        }
+        return inserted;
     }
 
+    /** Indexed extract, gated like {@link #insert(int, ItemResource, int, TransactionContext)}. */
     @Override
     public int extract(int index, ItemResource resource, int amount, TransactionContext transaction) {
         if (!allowsExtract() || !covers(index)) return 0;
+        if (!MachineSlotRoles.allowsExtractAt(machine(), index)) return 0;
         return super.extract(index, resource, amount, transaction);
     }
 
-    /** Index-free extract, gated exactly like {@link #extract(int, ItemResource, int, TransactionContext)}. */
+    /**
+     * Index-free extract, gated exactly like {@link #extract(int, ItemResource, int, TransactionContext)}:
+     * an OUTPUT face offers the machine's own output slots and nothing else.
+     */
     @Override
     public int extract(ItemResource resource, int amount, TransactionContext transaction) {
-        return allowsExtract() ? super.extract(resource, amount, transaction) : 0;
+        if (!allowsExtract()) return 0;
+
+        var machine = machine();
+        if (machine == null) return super.extract(resource, amount, transaction);
+
+        var extracted = 0;
+        for (var index = 0; index < super.size() && extracted < amount; index++) {
+            extracted += extract(index, resource, amount - extracted, transaction);
+        }
+        return extracted;
     }
 }

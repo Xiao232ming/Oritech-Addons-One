@@ -251,6 +251,12 @@ public class TransferAddonBlockEntity extends ExtensionAddonBlockEntity {
         var skipped = TransferAddonBlock.attachedFace(getBlockState());
         var machinePos = attachedMachinePos();
 
+        // The machine's own block entity, known here because the machine sits behind the extender and not
+        // behind the plugin: the movement is told about it so that the machine's slot roles can be respected
+        // - an INPUT face fills the input slots only and an OUTPUT face empties the output slots only, never
+        // the other way round (see MachineSlotRoles). A handler alone does not carry that knowledge.
+        var machineEntity = level.isLoaded(machinePos) ? level.getBlockEntity(machinePos) : null;
+
         for (var face : Direction.values()) {
             if (face == skipped) continue;
 
@@ -263,8 +269,8 @@ public class TransferAddonBlockEntity extends ExtensionAddonBlockEntity {
             var neighbour = MachineFaceStorage.storageAt(level, hostPos, face);
             if (neighbour == null) continue;
 
-            if (mode.allowsExtract()) MachineFaceStorage.move(machine, neighbour);
-            if (mode.allowsInsert()) MachineFaceStorage.move(neighbour, machine);
+            if (mode.allowsExtract()) MachineFaceStorage.move(machine, machineEntity, neighbour, null);
+            if (mode.allowsInsert()) MachineFaceStorage.move(neighbour, null, machine, machineEntity);
         }
     }
 
