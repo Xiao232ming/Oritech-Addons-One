@@ -36,6 +36,7 @@ import io.github.xiao232ming.oritechaddonsone.item.ExtensionAddonItem;
 import io.github.xiao232ming.oritechaddonsone.item.PluginAddonItem;
 import rearth.oritech.block.blocks.addons.MachineAddonBlock;
 import rearth.oritech.block.entity.addons.AddonBlockEntity;
+import rearth.oritech.init.BlockEntitiesContent;
 
 import io.github.xiao232ming.oritechaddonsone.addon.StorageBonusHolder;
 import io.github.xiao232ming.oritechaddonsone.block.ChunkAnchorAddonBlock;
@@ -45,6 +46,7 @@ import io.github.xiao232ming.oritechaddonsone.block.PluginAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.block.TransferAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.block.WirelessExtensionAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ChunkAnchorAddonBlockEntity;
+import io.github.xiao232ming.oritechaddonsone.block.entity.ExtenderFaceStorage;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.WirelessExtensionAddonBlockEntity;
@@ -452,6 +454,17 @@ public class OritechAddonsOne {
      * A placed transfer addon is registered for the item capability as well, but with an empty answer: the
      * machine it works on is reachable through the faces of the extender it hangs on, never through its own
      * (see {@link TransferAddonBlockEntity#getItemLookup}).
+     * <p>
+     * The last registration is for Oritech's own addon block entity type, because the machine extender a
+     * placed transfer addon hangs on has to be a real connection of its own: Oritech registers no item
+     * provider for that type (its addons work through Oritech's own {@code ItemProvider} interface and,
+     * for the inventory proxy, as a face of the addon itself), so without this provider a pipe or a hopper
+     * asking the extender would be told "no inventory" and the modes the transfer page sets on the
+     * extender's faces would reach nothing but the plugin's own automation. The provider answers for every
+     * addon of Oritech's block entity type and still offers something on exactly one kind of block - a
+     * machine extender with a placed transfer plugin on the asked face (see
+     * {@link ExtenderFaceStorage#handlerAt}), which is why registering it for the shared type is safe:
+     * every other addon answers {@code null}, exactly as it did before.
      */
     private void registerCapabilities(RegisterCapabilitiesEvent event) {
         event.registerBlockEntity(Capabilities.Energy.BLOCK, EXTENSION_ADDON_ENTITY.get(),
@@ -465,5 +478,10 @@ public class OritechAddonsOne {
                 (blockEntity, side) -> blockEntity.getItemLookup(side));
         event.registerBlockEntity(Capabilities.Item.BLOCK, TRANSFER_ADDON_ENTITY.get(),
                 (blockEntity, side) -> blockEntity.getItemLookup(side));
+
+        // Oritech's machine extender: a face with a placed transfer plugin on it is the connection the
+        // transfer page configures, so a pipe can fill or empty the machine behind the extender through it
+        event.registerBlockEntity(Capabilities.Item.BLOCK, BlockEntitiesContent.ADDON.get(),
+                ExtenderFaceStorage::handlerAt);
     }
 }

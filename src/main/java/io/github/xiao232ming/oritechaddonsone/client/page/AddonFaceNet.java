@@ -135,10 +135,16 @@ public final class AddonFaceNet {
 
         var texture = textures.face(face);
         // The flat addon's model samples its side textures from the lower half of the 16x16 texture while the
-        // net draws the full sprite, so those faces are drawn mirrored. A mirror is the same rectangle with
-        // the V range swapped, which this blit overload - (x0, y0, x1, y1, u0, u1, v0, v1) - takes directly.
-        // Passing the arguments of the 1.21.1 overload (0f, 0f, 1f, 1f) here asked for a zero area UV slice
-        // and drew nothing at all, which is what left the four horizontal faces of a flat addon blank.
+        // net draws the full sprite, so those faces are drawn mirrored.
+        // <p>
+        // That mirror is asked for with the texture coordinates and never with the pose: the overload below
+        // is (x0, y0, x1, y1, u0, u1, v0, v1), its v range runs top to bottom, and (1, 0) as the v range
+        // therefore samples the very same sprite upside down while the quad keeps its size, its place and -
+        // this is the point - its winding. The 1.21.1 form mirrors the pose instead (scale(1, -1, 1)), which
+        // mirrors the vertex positions and with them the winding of the quad; the GUI render pipelines are
+        // built without withCull(false), so such a quad is culled and the face comes out blank. The blit
+        // overloads of the two branches also do not take the same numbers: the 1.21.1 one measures u and v
+        // in texels, this one in normalized texture coordinates, so its arguments cannot be reused here.
         if (texture.flipVertically()) {
             graphics.blit(texture.texture(), x, y, x + FACE, y + FACE, 0f, 1f, 1f, 0f);
         } else {
