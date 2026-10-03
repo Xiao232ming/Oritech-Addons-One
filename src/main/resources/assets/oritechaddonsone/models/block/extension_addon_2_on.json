@@ -10,7 +10,7 @@
       "from": [0, 0, 0],
       "to": [16, 16, 8],
       "faces": {
-        "north": { "uv": [0, 0, 16, 16], "texture": "#port" },
+        "north": { "uv": [0, 0, 16, 16], "texture": "#side" },
         "east": { "uv": [0, 0, 8, 16], "texture": "#side" },
         "south": { "uv": [0, 0, 16, 16], "texture": "#port" },
         "west": { "uv": [0, 0, 8, 16], "texture": "#side" },
