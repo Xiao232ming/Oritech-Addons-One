@@ -59,10 +59,13 @@ public final class ExtensionTransferAddonPage implements AddonPage {
     public static final String ID = "extension_transfer";
 
     private static final String LABEL_KEY = "gui.oritechaddonsone.page." + ID;
-    private static final String PROMPT_KEY = "gui.oritechaddonsone.extension_transfer.prompt";
-    private static final String AUTOMATION_KEY = "gui.oritechaddonsone.extension_transfer.automation";
+    // The three texts this page draws are the ones the shared transfer modal uses: it configures a face
+    // through the very same mode plates, so the prompt, the automation label and the occupied-face tooltip
+    // are the same words for both transfer pages and are not duplicated as extension_transfer.* keys.
+    private static final String PROMPT_KEY = "gui.oritechaddonsone.transfer.prompt";
+    private static final String AUTOMATION_KEY = "gui.oritechaddonsone.transfer.automation";
     /** Tooltip of the face the plugin block itself occupies, i.e. the face drawn with the gold border. */
-    private static final String OCCUPIED_KEY = "gui.oritechaddonsone.extension_transfer.occupied";
+    private static final String OCCUPIED_KEY = "gui.oritechaddonsone.transfer.occupied";
     /** Colour of the green tick and of the "this face does something" state, as on the other pages. */
     private static final int GOOD = 0xFF2ECC71;
 
