@@ -1,6 +1,5 @@
 package io.github.xiao232ming.oritechaddonsone.client.page;
 
-import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -345,9 +344,8 @@ public final class ItemProxyAddonPage implements AddonPage {
      * <p>
      * The plate is 10x10 but the whole 16x16 cell is both the hover area and the hit area, so the plate
      * lights up - and binds - for a click anywhere on its cell, the same rectangle
-     * {@link ProxyPickerState#isOverSlot} tests and the tooltip speaks about. Oritech's own
-     * {@code ButtonWidget} would answer only its own ten pixels, which would leave the frame of the cell
-     * dead while the tooltip still calls it that slot.
+     * {@link ProxyPickerState#isOverSlot} tests. Oritech's own {@code ButtonWidget} would answer only its
+     * own ten pixels, which would leave the frame of the cell dead.
      */
     private void drawSlots(GuiGraphics graphics, ExtensionAddonMenu menu, Direction face,
             List<int[]> slots, ProxyPickerState.Placed placed, double mouseX, double mouseY) {
@@ -517,37 +515,19 @@ public final class ItemProxyAddonPage implements AddonPage {
     @Override
     public List<Component> tooltipAt(AddonPageContext context, double mouseX, double mouseY) {
         var menu = context.menu();
-        var openFace = openFace(menu);
 
-        if (openFace != null) {
-            var slots = ProxyPickerState.layout(menu.position(), openFace);
-            if (slots == null || slots.isEmpty()) return List.of();
-
-            var placed = ProxyPickerState.place(context, slots);
-            for (var slot : slots) {
-                if (ProxyPickerState.isOverSlot(placed, slot, mouseX, mouseY)) {
-                    // the slot index and the face it belongs to, so the click is unambiguous
-                    return List.of(Component.translatable("gui.oritechaddonsone.proxy.picker.slot", slot[0]),
-                            Component.translatable("gui.oritechaddonsone.proxy.face", faceName(openFace)));
-                }
-            }
-            return List.of();
-        }
+        // The configuration page's cells explain nothing: the plate already says which slot is taken, and
+        // Oritech's own screen shows no tooltip on them either.
+        if (openFace(menu) != null) return List.of();
 
         var face = faceAt(net(menu), mouseX, mouseY);
         if (face == null) return List.of();
 
-        var lines = new ArrayList<Component>(2);
-        lines.add(Component.translatable("gui.oritechaddonsone.proxy.face", faceName(face)));
-
-        // the face name and whether it proxies anything - nothing else, so the tooltip stays a one glance
-        // answer (which slot it proxies is shown on the configuration page, not here)
-        if (menu.isProxyFaceConfigured(face)) {
-            lines.add(Component.translatable("gui.oritechaddonsone.proxy.face.configured"));
-        } else {
-            lines.add(Component.translatable("gui.oritechaddonsone.proxy.face.unconfigured"));
-        }
-        return lines;
+        // Only whether that face proxies something. Its name stands in the configuration page's header, and
+        // the slot it proxies is read off the dark plate there.
+        return List.of(menu.isProxyFaceConfigured(face)
+                ? Component.translatable("gui.oritechaddonsone.proxy.face.configured")
+                : Component.translatable("gui.oritechaddonsone.proxy.face.unconfigured"));
     }
 
     // ------------------------------------------------------------------ helpers
