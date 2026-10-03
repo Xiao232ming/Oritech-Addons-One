@@ -202,14 +202,13 @@ public final class ItemProxyAddonPage implements AddonPage {
         int y = context.screenY(localFaceY(cells, face));
 
         var texture = textures.face(face);
+        // The flat addon's model samples its side textures from the lower half of the 16x16 texture while the
+        // net draws the full sprite, so those faces are drawn mirrored. A mirror is the same rectangle with
+        // the V range swapped, which this blit overload - (x0, y0, x1, y1, u0, u1, v0, v1) - takes directly.
+        // Passing the arguments of the 1.21.1 overload (0f, 0f, 1f, 1f) here asked for a zero area UV slice
+        // and drew nothing at all, which is what left the four horizontal faces of a flat addon blank.
         if (texture.flipVertically()) {
-            // the flat addon models sample the side textures from the lower half of their texture; the net
-            // draws the full 16x16 sprite, so the flip is a vertical mirror around the face's own centre
-            graphics.pose().pushMatrix();
-            graphics.pose().translate(x, y + FACE);
-            graphics.pose().scale(1f, -1f);
-            graphics.blit(texture.texture(), 0, 0, FACE, FACE, 0f, 0f, 1f, 1f);
-            graphics.pose().popMatrix();
+            graphics.blit(texture.texture(), x, y, x + FACE, y + FACE, 0f, 1f, 1f, 0f);
         } else {
             graphics.blit(texture.texture(), x, y, x + FACE, y + FACE, 0f, 1f, 0f, 1f);
         }
