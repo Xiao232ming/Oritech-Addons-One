@@ -483,7 +483,6 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
 
         proxyFaces.bind(face, slot);
         setChanged();
-        syncProxyToClient();
         return true;
     }
 
@@ -494,7 +493,6 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
 
         proxyFaces.unbind(face);
         setChanged();
-        syncProxyToClient();
         return true;
     }
 
@@ -510,13 +508,6 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
 
         proxyFaces.clear();
         setChanged();
-        syncProxyToClient();
-    }
-
-    /** Tells the client that the bindings changed, so an open GUI redraws the net right away. */
-    private void syncProxyToClient() {
-        if (level == null) return;
-        level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), net.minecraft.world.level.block.Block.UPDATE_CLIENTS);
     }
 
     /** Polled while a pipe or hopper reads/writes through one of our faces; today only persists the state. */
