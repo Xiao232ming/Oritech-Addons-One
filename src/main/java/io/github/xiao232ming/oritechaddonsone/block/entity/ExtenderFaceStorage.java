@@ -8,6 +8,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntity;
 
 import net.neoforged.neoforge.items.IItemHandler;
 
@@ -303,6 +305,24 @@ public final class ExtenderFaceStorage extends DelegatingInventoryStorage {
         return machineStorage(extender, face) == null ? 0 : super.getSlotCount();
     }
 
+    /**
+     * The machine block entity this face reaches into, or {@code null} while that machine cannot be resolved.
+     * It is the same block {@link #machineStorage(AddonBlockEntity, Direction)} takes the inventory from, so
+     * the roles asked of it - see {@link MachineSlotRoles} - always belong to the inventory this face
+     * exposes.
+     */
+    @Nullable
+    private BlockEntity machine() {
+        var level = extender.getLevel();
+        if (level == null) return null;
+
+        var machinePos = extender.getControllerPos();
+        if (machinePos == null || machinePos.equals(extender.getBlockPos())) return null;
+        if (!level.isLoaded(machinePos)) return null;
+
+        return level.getBlockEntity(machinePos);
+    }
+
     /** True while the given slot belongs to the machine inventory this face reaches into. */
     private boolean covers(int index) {
         return index >= 0 && index < getSlotCount();
@@ -318,25 +338,64 @@ public final class ExtenderFaceStorage extends DelegatingInventoryStorage {
         return covers(index) ? super.getSlotLimit(index) : 0;
     }
 
+    /**
+     * Index-free insert of a pipe or a hopper. The mode gates it here as well as in the indexed overload -
+     * so a caller that only knows the storage cannot fill the machine through an output-only face - and the
+     * slots are walked here, because the machine's slot roles ({@link MachineSlotRoles}) decide which ones
+     * may be filled at all: an INPUT face fills the machine's input slots and never a slot Oritech reserved
+     * for its results.
+     */
     @Override
     public int insert(ItemStack inserted, boolean simulate) {
-        return allowsInsert() ? super.insert(inserted, simulate) : 0;
+        if (!allowsInsert()) return 0;
+
+        // without a machine block entity there are no roles to respect, and the indexed overload would
+        // answer 0 for every slot - the machine's own storage decides, exactly as it did before
+        var machine = machine();
+        if (machine == null) return super.insert(inserted, simulate);
+
+        var insertedTo = 0;
+        for (var index = 0; index < super.getSlotCount() && insertedTo < inserted.getCount(); index++) {
+            insertedTo += insertToSlot(inserted.copyWithCount(inserted.getCount() - insertedTo), index, simulate);
+        }
+        return insertedTo;
     }
 
+    /**
+     * Indexed insert of a pipe or a hopper: gated by the face's mode (an OUTPUT face takes nothing) and by
+     * the machine's slot roles ({@link MachineSlotRoles}). The roles are asked of the machine this face
+     * reaches into, which is resolved from the extender exactly like the machine's own storage is.
+     */
     @Override
     public int insertToSlot(ItemStack inserted, int index, boolean simulate) {
         if (!allowsInsert() || !covers(index)) return 0;
+        if (!MachineSlotRoles.allowsInsertAt(machine(), index)) return 0;
         return super.insertToSlot(inserted, index, simulate);
     }
 
+    /**
+     * Index-free extract, gated like {@link #insert(ItemStack, boolean)}: an OUTPUT face offers the
+     * machine's own output slots and nothing else.
+     */
     @Override
     public int extract(ItemStack extracted, boolean simulate) {
-        return allowsExtract() ? super.extract(extracted, simulate) : 0;
+        if (!allowsExtract()) return 0;
+
+        var machine = machine();
+        if (machine == null) return super.extract(extracted, simulate);
+
+        var extractedFrom = 0;
+        for (var index = 0; index < super.getSlotCount() && extractedFrom < extracted.getCount(); index++) {
+            extractedFrom += extractFromSlot(extracted.copyWithCount(extracted.getCount() - extractedFrom), index, simulate);
+        }
+        return extractedFrom;
     }
 
+    /** Indexed extract, gated like {@link #insertToSlot(ItemStack, int, boolean)}. */
     @Override
     public int extractFromSlot(ItemStack extracted, int index, boolean simulate) {
         if (!allowsExtract() || !covers(index)) return 0;
+        if (!MachineSlotRoles.allowsExtractAt(machine(), index)) return 0;
         return super.extractFromSlot(extracted, index, simulate);
     }
 

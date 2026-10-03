@@ -17,8 +17,11 @@ import rearth.oritech.api.item.containers.DelegatingInventoryStorage;
  * <ul>
  *     <li>its <b>transfer mode</b> (the Extension Transfer page, see {@link TransferFaceModes}): the machine's
  *     whole inventory, where {@link TransferMode#INPUT} accepts items, {@link TransferMode#OUTPUT} offers
- *     them and {@link TransferMode#BOTH} does both,</li>
- *     <li>its <b>proxy binding</b> (the Item Proxy page, see {@link ProxyFaceBindings}): Oritech's own
+ *     them and {@link TransferMode#BOTH} does both - each of them restricted to the machine's own slot roles
+ *     (see {@link MachineSlotRoles}), so an INPUT face fills the machine's input slots and only those, an
+ *     OUTPUT face empties its output slots and only those, and BOTH never inserts into an output slot nor
+ *     extracts from an input one,</li>
+ *     <li>its <b>proxy binding</b> (the Item Proxy page, see {@code ProxyFaceBindings}): Oritech's own
  *     inventory proxy mechanism, i.e. the machine's inventory with every slot but the bound one answering
  *     "empty".</li>
  * </ul>
@@ -93,6 +96,27 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
     }
 
     /**
+     * Position of the machine an addon works on, or {@code null} while this block does not work on one. The
+     * one place the machine position is derived from the addon, so the inventory
+     * ({@link #machineStorage(BlockEntity)}) and the slot roles of that inventory
+     * ({@link MachineSlotRoles}) can never be looked up for two different machines.
+     */
+    @Nullable
+    static BlockPos machinePos(BlockEntity owner) {
+        return owner instanceof ExtensionAddonBlockEntity addon ? addon.connectedMachinePos() : null;
+    }
+
+    /**
+     * Level the machine an addon works on lives in, or {@code null} while this block does not work on one.
+     * A placed transfer addon is in the same world as the machine behind its extender, so the addon's own
+     * level is the machine's level in both cases.
+     */
+    @Nullable
+    static Level machineLevel(BlockEntity owner) {
+        return owner instanceof ExtensionAddonBlockEntity addon ? addon.getLevel() : null;
+    }
+
+    /**
      * The item storage of the block outside one face of the block at {@code pos} - the container automation
      * moves items with - or {@code null} while there is none (air, a machine without an inventory, an
      * unloaded chunk). The side is asked for as the neighbour's own face pointing back at that block, which
@@ -112,24 +136,43 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
 
     /**
      * Moves up to {@link #ITEMS_PER_TICK} items of one stack from {@code from} to {@code to}, if the target
-     * takes any of it, and stops after that one stack.
+     * takes any of it, and stops after that one stack. It is the
+     * {@link #move(ItemApi.InventoryStorage, BlockEntity, ItemApi.InventoryStorage, BlockEntity) four
+     * argument form} without owners, i.e. for two storages whose machines are not known here.
+     */
+    public static void move(ItemApi.InventoryStorage from, ItemApi.InventoryStorage to) {
+        move(from, null, to, null);
+    }
+
+    /**
+     * The full form of {@link #move(ItemApi.InventoryStorage, ItemApi.InventoryStorage)}, for a caller that
+     * knows which machines it is moving between - the automation of a face, which holds the machine and the
+     * container next to their storages.
      * <p>
      * Oritech's {@code ItemApi.InventoryStorage} has no transaction: both sides are therefore asked first and
      * really moved afterwards. The target is asked how much it would take with a simulated insert, the source
      * with a simulated extract, and only then is exactly that amount taken out and put in. Whatever the target
      * ends up refusing (it can only refuse because something else filled it in between) is handed straight back
      * to the source, so no item can be lost even then.
+     * <p>
+     * The owners are what make the machine's slot roles ({@link MachineSlotRoles}) enforceable here: an item
+     * is only taken out of a slot the source may give away and only put into a slot the target may take it
+     * in - never out of a machine's input slot and never into one of its output slots. A {@code null} owner
+     * is a container with no roles to respect: a chest, a pipe, another mod's inventory.
      */
-    public static void move(ItemApi.InventoryStorage from, ItemApi.InventoryStorage to) {
+    public static void move(ItemApi.InventoryStorage from, @Nullable BlockEntity fromOwner,
+            ItemApi.InventoryStorage to, @Nullable BlockEntity toOwner) {
         if (!from.supportsExtraction() || !to.supportsInsertion()) return;
 
         for (int slot = 0; slot < from.getSlotCount(); slot++) {
+            if (!MachineSlotRoles.allowsExtractAt(fromOwner, slot)) continue;
+
             var stack = from.getStackInSlot(slot);
             if (stack.isEmpty()) continue;
 
             // dry run: how much would the target take of this stack, and how much can the source give?
             var offered = stack.copyWithCount(Math.min(stack.getCount(), ITEMS_PER_TICK));
-            var wanted = to.insert(offered, true);
+            var wanted = acceptedBy(to, toOwner, offered);
             if (wanted <= 0) continue;
 
             var takeable = from.extractFromSlot(offered.copyWithCount(wanted), slot, true);
@@ -138,7 +181,7 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
             var extracted = from.extractFromSlot(offered.copyWithCount(takeable), slot, false);
             if (extracted <= 0) continue;
 
-            var inserted = to.insert(offered.copyWithCount(extracted), false);
+            var inserted = insertInto(to, toOwner, offered.copyWithCount(extracted), false);
             if (inserted < extracted) {
                 // the target changed its mind in between: give the refused items back to where they came from
                 from.insert(offered.copyWithCount(extracted - inserted), false);
@@ -146,6 +189,34 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
 
             return;
         }
+    }
+
+    /**
+     * How much of {@code offered} the target would take right now, counting only the slots a machine target
+     * may take it in. It is the same simulated insert {@link #move} has always made, just with the machine's
+     * slot roles respected; a target that is not a machine - a chest, a pipe, another mod's inventory - has
+     * no roles and is asked exactly as before.
+     */
+    private static int acceptedBy(ItemApi.InventoryStorage to, @Nullable BlockEntity toOwner, ItemStack offered) {
+        return insertInto(to, toOwner, offered, true);
+    }
+
+    /**
+     * Inserts into the target, skipping the slots Oritech reserved for its outputs while the target is a
+     * machine whose roles are known. The candidate slots are tried one at a time because a role is a
+     * property of a slot while Oritech's storage only offers the whole-inventory insert as an alternative.
+     */
+    private static int insertInto(ItemApi.InventoryStorage to, @Nullable BlockEntity toOwner, ItemStack offered,
+            boolean simulate) {
+        var roles = toOwner == null ? null : MachineSlotRoles.of(toOwner);
+        if (roles == null) return to.insert(offered, simulate);
+
+        var inserted = 0;
+        for (var slot = 0; slot < to.getSlotCount() && inserted < offered.getCount(); slot++) {
+            if (!MachineSlotRoles.allowsInsertAt(toOwner, slot)) continue;
+            inserted += to.insertToSlot(offered.copyWithCount(offered.getCount() - inserted), slot, simulate);
+        }
+        return inserted;
     }
 
     /** The mode this face transfers with, or {@link TransferMode#NONE} while it transfers nothing. */
@@ -247,29 +318,67 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
         return covers(index) ? super.getSlotLimit(index) : 0;
     }
 
+    /**
+     * Index-free insert of a pipe or a hopper. The mode gates it (an OUTPUT face takes nothing) and the
+     * slots are walked here, because the machine's slot roles ({@link MachineSlotRoles}) decide which ones
+     * may be filled at all - an INPUT face fills the machine's input slots and never a slot Oritech reserved
+     * for its results. Walking the slots keeps the indexed overload the single place both gates live in.
+     */
     @Override
     public int insert(ItemStack inserted, boolean simulate) {
         if (!allowsInsert()) return 0;
+
         var proxy = proxyIndex();
-        return proxy < 0 ? super.insert(inserted, simulate) : super.insertToSlot(inserted, proxy, simulate);
+        if (proxy >= 0) return insertToSlot(inserted, proxy, simulate);
+
+        var supported = machineStorage(owner);
+        if (supported == null) return 0;
+
+        var insertedTo = 0;
+        for (var index = 0; index < supported.getSlotCount() && insertedTo < inserted.getCount(); index++) {
+            insertedTo += insertToSlot(inserted.copyWithCount(inserted.getCount() - insertedTo), index, simulate);
+        }
+        return insertedTo;
     }
 
+    /**
+     * Index-free extract, gated like {@link #insert(ItemStack, boolean)}: an OUTPUT face offers the
+     * machine's own output slots and never its ingredients.
+     */
     @Override
     public int extract(ItemStack extracted, boolean simulate) {
         if (!allowsExtract()) return 0;
+
         var proxy = proxyIndex();
-        return proxy < 0 ? super.extract(extracted, simulate) : super.extractFromSlot(extracted, proxy, simulate);
+        if (proxy >= 0) return extractFromSlot(extracted, proxy, simulate);
+
+        var supported = machineStorage(owner);
+        if (supported == null) return 0;
+
+        var extractedFrom = 0;
+        for (var index = 0; index < supported.getSlotCount() && extractedFrom < extracted.getCount(); index++) {
+            extractedFrom += extractFromSlot(extracted.copyWithCount(extracted.getCount() - extractedFrom), index, simulate);
+        }
+        return extractedFrom;
     }
 
+    /**
+     * Indexed insert of a pipe or a hopper. Two gates run here: the face's mode (an OUTPUT face takes
+     * nothing) and the machine's slot roles ({@link MachineSlotRoles}) - an INPUT face fills the machine's
+     * input slots and never a slot Oritech reserved for its results. The item proxy behaviour, which has no
+     * mode, is only gated by the role of its one bound slot, which is what keeps a face bound to an output
+     * slot from pushing items into it.
+     */
     @Override
     public int insertToSlot(ItemStack inserted, int index, boolean simulate) {
-        if (!allowsInsert() || !covers(index)) return 0;
+        if (!allowsInsert() || !covers(index) || !MachineSlotRoles.allowsInsertAt(owner, index)) return 0;
         return super.insertToSlot(inserted, index, simulate);
     }
 
+    /** Indexed extract, gated like {@link #insertToSlot(ItemStack, int, boolean)}. */
     @Override
     public int extractFromSlot(ItemStack extracted, int index, boolean simulate) {
-        if (!allowsExtract() || !covers(index)) return 0;
+        if (!allowsExtract() || !covers(index) || !MachineSlotRoles.allowsExtractAt(owner, index)) return 0;
         return super.extractFromSlot(extracted, index, simulate);
     }
 
