@@ -100,7 +100,7 @@
   "container.oritechaddonsone.transfer_preview_addon": "传输插件",
   "tooltip.oritechaddonsone.transfer_preview_addon.desc": "通过它的面为机器输入输出物品，并在机器的 3D 预览上配置",
   "gui.oritechaddonsone.page.transfer_preview": "传输预览",
-  "gui.oritechaddonsone.page.transfer_preview.tooltip": "所服务机器的可旋转 3D 模型：拖动可旋转，点击某个面选择它向机器输入、从机器输出，还是双向",
+  "gui.oritechaddonsone.page.transfer_preview.tooltip": "所服务机器的可旋转 3D 模型：拖动可旋转，点击某个面打开它的传输设置",
   "gui.oritechaddonsone.preview.hint": "拖动旋转模型 —— 点击某个面进行配置",
   "gui.oritechaddonsone.preview.no_machine": "该插件所服务的机器未加载",
   "gui.oritechaddonsone.transfer.side.north": "北",
