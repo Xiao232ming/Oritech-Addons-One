@@ -79,12 +79,14 @@ import io.github.xiao232ming.oritechaddonsone.block.entity.TransferMode;
  * to be the same cells, or a click would be answered where nothing is drawn and the highlight of a face the player
  * really sees on a part would be painted on the wrong part.
  * <p>
- * <b>The machine's core blocks are not part of the model.</b> A machine core ({@link MachineCoreBlock}) is the tier
- * block inside an assembled machine, Oritech hides it itself once the machine uses it
- * ({@code MachineCoreBlock#getRenderShape(BlockState)} answers {@code INVISIBLE} for such a core), and it owns no
- * inventory - the inventory the page and the automation work on belongs to the controller, which sits in a cell of its
- * own. So {@link #visibleBlocks()} - the list the measuring, the drawing, the picking and the markings all read - is
- * {@link #blocks()} without the cores, and a core can neither be seen nor clicked.
+ * <b>The machine's core blocks are not drawn, but they are still part of the machine.</b> A machine core
+ * ({@link MachineCoreBlock}) is the tier block inside an assembled machine, Oritech hides it itself once the machine
+ * uses it ({@code MachineCoreBlock#getRenderShape(BlockState)} answers {@code INVISIBLE} for such a core), and it owns
+ * no inventory - the inventory the page and the automation work on belongs to the controller, which sits in a cell of
+ * its own. So {@link #visibleBlocks()} - the list the measuring, the drawing and the model's centre read - is
+ * {@link #blocks()} without the cores, while the <b>picking</b> ({@link #faceAt(double, double)}) and the markings
+ * ({@link #surfaceCell(Direction)}) read {@link #blocks()}: a core is invisible, but the face it turns to the outside
+ * is a surface the player sees and can select, so it must stay clickable and configurable.
  * <p>
  * <b>The centre is the centre of the drawn structure</b> ({@link #calculateSize()}), not of the controller's cell:
  * the drawing, the picking, the markings and the hover all take it from the one {@link PreviewTransform}, so what is
@@ -123,11 +125,18 @@ public final class FacePreviewWidget extends UIComponent {
     /** Distance the hover outline floats off the face, so it never trades depth with the block face behind it. */
     private static final float HIGHLIGHT_LIFT = 0.002F;
 
-    /** How thick the hover outline is, as a factor of the face's half extent. */
-    private static final float HIGHLIGHT_OUTLINE_THICKNESS = 0.14F;
+    /**
+     * The half extent of one cell's face, in model units: a block model is one unit wide and the drawing translates
+     * the pose to the cell's centre, so its face is the square {@code +-0.5} around that origin. Every marking is
+     * expressed in these units (see {@link #drawQuad}).
+     */
+    private static final float FACE_HALF_EXTENT = 0.5F;
 
-    /** How far a marking's edges stay inside the face, so it reads as a marking on the block, not as a lid. */
-    private static final float HIGHLIGHT_INSET = 0.06F;
+    /** How thick the hover outline is, in model units. */
+    private static final float HIGHLIGHT_OUTLINE_THICKNESS = 0.07F;
+
+    /** How far a wash's edges stay inside the face, in model units, so it reads as a marking and not as a lid. */
+    private static final float WASH_INSET = 0.03F;
 
     /**
      * Distance a face's markings float off that face, and the step between two markings on the same face, so the wash
@@ -136,8 +145,8 @@ public final class FacePreviewWidget extends UIComponent {
     private static final float MARKING_LIFT = 0.001F;
     private static final float MARKING_STEP = 0.001F;
 
-    /** Thickness of the gold outline of an occupied face, as a factor of the face's half extent. */
-    private static final float OUTLINE_THICKNESS = 0.1F;
+    /** Thickness of the gold outline of an occupied face, in model units. */
+    private static final float OUTLINE_THICKNESS = 0.05F;
 
     /**
      * One axis of the coordinate frame the markings and the hover outline are built in, per face: {@code [0]} is the
@@ -402,29 +411,28 @@ public final class FacePreviewWidget extends UIComponent {
     private void drawWash(PoseStack poseStack, Direction face, TransferMode mode) {
         if (mode == TransferMode.NONE) return;
 
-        float inset = HIGHLIGHT_INSET;
+        float near = -FACE_HALF_EXTENT + WASH_INSET;
+        float far = FACE_HALF_EXTENT - WASH_INSET;
         if (mode != TransferMode.BOTH) {
-            drawQuad(poseStack, face, -1.0F + inset, 1.0F - inset, -1.0F + inset, 1.0F - inset, MARKING_LIFT,
+            drawQuad(poseStack, face, near, far, near, far, MARKING_LIFT,
                     mode == TransferMode.INPUT ? TransferFaceStyle.INPUT_FILL : TransferFaceStyle.OUTPUT_FILL);
             return;
         }
 
         // half blue, half orange: the input half on the left of the face's horizontal axis and the output half on the
         // right, which is the split the net's cell uses (TransferFaceStyle#wash)
-        float near = -1.0F + inset;
-        float far = 1.0F - inset;
         float middle = 0.0F;
         drawQuad(poseStack, face, near, middle, near, far, MARKING_LIFT, TransferFaceStyle.INPUT_FILL);
         drawQuad(poseStack, face, middle, far, near, far, MARKING_LIFT, TransferFaceStyle.OUTPUT_FILL);
     }
 
     /**
-     * The outline of one face: a frame of {@code thickness} inside the face's own edge, built from the four strips
-     * between the outer and the inner rectangle.
+     * The outline of one face: a frame {@link #OUTLINE_THICKNESS} wide inside the face's own edge, built from the four
+     * strips between the outer and the inner rectangle, all in model units of the cell the pose is translated to.
      */
     private void drawOutline(PoseStack poseStack, Direction face, float lift, float thickness, int color) {
-        float outer = 1.0F;
-        float inner = 1.0F - thickness;
+        float outer = FACE_HALF_EXTENT;
+        float inner = FACE_HALF_EXTENT - thickness;
 
         // the two strips across the face and the two down its sides; the corners are covered by both
         drawQuad(poseStack, face, -outer, outer, inner, outer, lift, color);
@@ -434,9 +442,15 @@ public final class FacePreviewWidget extends UIComponent {
     }
 
     /**
-     * One quad on one face of the part the pose is currently translated to: the rectangle of the face's own
-     * coordinates between {@code uMin}..{@code uMax} and {@code vMin}..{@code vMax}, each in units of the face's half
-     * extent, lifted off the face by {@code lift} along its outward normal.
+     * One quad on one face of the part the pose is currently translated to.
+     * <p>
+     * <b>The units are the block's own.</b> The part is drawn by translating the pose to its cell and then rendering
+     * its block model, which is one model unit wide and centred on that cell - so the cell's face is the square
+     * {@code +-0.5} around the translated origin. This quad is built in exactly that space: {@code uMin}..{@code uMax}
+     * and {@code vMin}..{@code vMax} are in <em>model units</em> (never more than 0.5, the face's half extent), the
+     * axes of {@link #FACE_AXES} are unit vectors, and their product is the vertex, so a marking is the same size and
+     * in the same place as the face it marks. Using those unit axes as if they were half extents is what made the
+     * markings twice the size of a block.
      * <p>
      * It is drawn with {@code RenderType#debugQuads()}, the one render type this branch offers that takes plain vertex
      * colours: its format is {@code POSITION_COLOR}, so a vertex needs nothing but a position and a colour, and it
@@ -457,7 +471,7 @@ public final class FacePreviewWidget extends UIComponent {
         float[] normal = basis(face, 0);
         float[] u = basis(face, 1);
         float[] v = basis(face, 2);
-        float plane = 0.5F + lift;
+        float plane = FACE_HALF_EXTENT + lift;
 
         // counter clockwise seen from outside the face, which is the winding the quad's render type culls by
         float[][] corners = {
@@ -576,8 +590,9 @@ public final class FacePreviewWidget extends UIComponent {
      * it is wide inside the panel at every rotation.
      * <p>
      * The positions are <b>every drawn part</b> of the machine ({@link #visibleBlocks()}), so the centre is the centre
-     * of the structure the player sees rather than of the controller's cell. A core contributes nothing: it is neither
-     * drawn nor clickable, and letting it into the bounding box would only push the model off centre.
+     * of the structure the player sees rather than of the controller's cell. A core contributes nothing: it is not
+     * drawn, and letting it into the bounding box would only push the model off centre - it stays a picking candidate
+     * and a place a marking can land, which is what {@link #blocks()} is for.
      */
     private void calculateSize() {
         var positions = new ArrayList<Vec3i>();
@@ -684,8 +699,9 @@ public final class FacePreviewWidget extends UIComponent {
      * position it was extracted from.
      * <p>
      * <b>A part that is a machine core is marked as such</b> ({@link #isCore}). It is a tier block
-     * ({@link MachineCoreBlock}) that owns no inventory, and Oritech hides it itself once the machine uses it - so it
-     * is dropped from everything the page draws and picks by {@link #visibleBlocks()}.
+     * ({@link MachineCoreBlock}) that owns no inventory, and Oritech hides it itself once the machine uses it - so
+     * {@link #visibleBlocks()} drops it from the drawing and from the measuring, while the picking and the markings
+     * keep it (see {@link #faceAt(double, double)}).
      */
     private List<BlockEntry> blocks() {
         BlockState machineState = state;
@@ -727,9 +743,13 @@ public final class FacePreviewWidget extends UIComponent {
     }
 
     /**
-     * The parts this widget <b>draws and picks</b>: everything in {@link #blocks()} that is not a core. The measuring,
-     * the drawing, the picking and the markings all read this one list, so the model, the clicks and the markings
-     * cannot disagree about which cells the machine has.
+     * The parts this widget <b>draws and measures</b>: everything in {@link #blocks()} that is not a core. The
+     * measuring, the drawing and the model's centre all read this one list, so a hidden core takes no space on the
+     * panel and is never submitted as geometry.
+     * <p>
+     * <b>The picking does not read it</b> (see {@link #faceAt(double, double)}): a core is invisible, but it is still
+     * a block of the machine, so the face it turns to the outside is a surface the player can see and therefore has to
+     * be selectable. The markings follow the same rule ({@link #surfaceCell(Direction)}).
      */
     private List<BlockEntry> visibleBlocks() {
         var visible = new ArrayList<BlockEntry>();
@@ -740,17 +760,21 @@ public final class FacePreviewWidget extends UIComponent {
     }
 
     /**
-     * The cell whose face on the given side is on the machine's outer surface: the cell of {@link #visibleBlocks()}
-     * that lies furthest along that direction. That is where the face the page colours and marks lives, because the
-     * machine is a solid block of cells and the furthest cell along a direction is the one whose face on that side
-     * nothing else covers.
+     * The cell whose face on the given side is on the machine's outer surface: the cell of {@link #blocks()} - cores
+     * included - that lies furthest along that direction. That is where the face the page colours and marks lives,
+     * because the machine is a solid block of cells and the furthest cell along a direction is the one whose face on
+     * that side nothing else covers.
+     * <p>
+     * A hidden core may be that cell: Oritech's cores sit inside an assembled machine but they are ordinary blocks of
+     * it, so the outermost cell on some side can well be one - and then the marking belongs on its face, which is a
+     * face the player sees and can configure even though the block itself is not drawn.
      * <p>
      * Ties - several cells equally far along the direction - are broken towards the middle of the structure, so a
      * marking sits in the middle of that side rather than in a corner it picked for no reason.
      */
     @Nullable
     private Vec3i surfaceCell(Direction face) {
-        var parts = visibleBlocks();
+        var parts = blocks();
         if (parts.isEmpty()) return null;
 
         int axis = face.getAxis() == Direction.Axis.X ? 0 : face.getAxis() == Direction.Axis.Y ? 1 : 2;
@@ -803,10 +827,17 @@ public final class FacePreviewWidget extends UIComponent {
      * <p>
      * The ray is {@link PreviewTransform#pickingRay} of this frame's own drawing transform - the very composition
      * {@link #renderContent} applies to the pose - so the ray of a pixel and the model drawn at that pixel cannot
-     * disagree. Every drawn part is then tested with the usual slab test and the closest entry wins, and the face is
-     * read off the axis whose slab gave the near intersection: for an axis aligned box that axis <em>is</em> the entry
-     * face, and reading it off the entry point instead would make a click on the middle of a face a three way tie of
-     * its edges. A core is not tested at all, so it can neither be clicked nor answer for a face behind it.
+     * disagree. Every candidate part is then tested with the usual slab test and the closest entry wins, and the face
+     * is read off the axis whose slab gave the near intersection: for an axis aligned box that axis <em>is</em> the
+     * entry face, and reading it off the entry point instead would make a click on the middle of a face a three way
+     * tie of its edges.
+     * <p>
+     * <b>The candidates are {@link #blocks()}, cores included</b>, and not the shorter list the drawing uses. A core
+     * is not drawn, but it is a block of the machine all the same, so the face it turns to the outside is a face of
+     * the machine's surface - a face the player sees (nothing is drawn over it) and therefore has to be able to select
+     * and configure like any other. Leaving cores out here is what used to make the top of a machine whose outermost
+     * cell is a core unclickable. The answer is a world {@link Direction} either way, so the page, its modes and its
+     * automation do not care which cell of the machine the click landed on.
      */
     @Nullable
     private Hit faceAt(double mouseX, double mouseY) {
@@ -817,7 +848,7 @@ public final class FacePreviewWidget extends UIComponent {
         if (ray == null) return null;
 
         Hit closest = null;
-        for (var part : visibleBlocks()) {
+        for (var part : blocks()) {
             var hit = entryHit(ray.origin(), ray.direction(), part.offset());
             if (hit != null && (closest == null || hit.distance() < closest.distance())) closest = hit;
         }
