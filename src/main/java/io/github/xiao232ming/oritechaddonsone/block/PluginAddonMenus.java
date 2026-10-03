@@ -63,7 +63,8 @@ public final class PluginAddonMenus {
      * gate on the synced placement (see {@link TransferPreviewAddonBlock#canOpenScreen}), and the
      * server stays the side that opens the menu and that refuses everything for a plugin which serves nothing.
      * <p>
-     * No machine is sent along; a caller that has one calls the four argument overload.
+     * No machine is passed explicitly; this overload resolves it from the block entity itself, so a caller cannot
+     * forget it (see {@link #resolveServedMachine}).
      */
     public static ItemInteractionResult openItemMenu(Level level, BlockPos pos, Player player) {
         return openItemMenu(level, pos, player, null);
@@ -79,6 +80,12 @@ public final class PluginAddonMenus {
      * client, because the answer is built from controller offsets that are plain save data and never leave the
      * server. {@code null} is a real answer here - it means "this block serves no machine", which the page shows as
      * its "no machine" state.
+     * <p>
+     * <b>A {@code null} from the caller is not taken as "no machine" without asking the block.</b> The caller's value
+     * wins when it has one, and otherwise {@link #resolveServedMachine} asks the block entity - which is what makes
+     * every opener of this menu agree. That matters because there is more than one: 传输插件's own block reaches this
+     * method through two hooks, and the second of them used to pass nothing; the page then showed "no machine" for a
+     * plugin whose machine was loaded all along.
      */
     public static ItemInteractionResult openItemMenu(Level level, BlockPos pos, Player player,
             @Nullable BlockPos servedMachine) {
@@ -95,8 +102,27 @@ public final class PluginAddonMenus {
             return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         }
 
-        serverPlayer.openMenu(blockEntity, buffer -> writeMenuData(buffer, blockEntity, pos, servedMachine));
+        serverPlayer.openMenu(blockEntity,
+                buffer -> writeMenuData(buffer, blockEntity, pos,
+                        servedMachine != null ? servedMachine : resolveServedMachine(blockEntity, pos)));
         return ItemInteractionResult.SUCCESS;
+    }
+
+    /**
+     * The machine a block serves, as the block entity itself reports it, or {@code null} while it serves none.
+     * <p>
+     * Only 传输插件 can answer this and only on the server: it is built from the controller offset Oritech writes
+     * into the block it claimed, which is plain save data that never leaves the server (see
+     * {@code TransferPreviewAddonBlockEntity#servedMachinePos()}). Every other addon and the dock serve no machine of
+     * their own through this menu, so for them the answer is {@code null} - which the page reads as its "no machine"
+     * state, exactly as it should.
+     * <p>
+     * It exists so that a caller which has no machine to pass still sends the right one, instead of sending
+     * {@code null} and making the client draw an empty page for a block that does serve something.
+     */
+    @Nullable
+    private static BlockPos resolveServedMachine(ExtensionAddonBlockEntity blockEntity, BlockPos pos) {
+        return blockEntity instanceof TransferPreviewAddonBlockEntity plugin ? plugin.servedMachinePos() : null;
     }
 
     /**
