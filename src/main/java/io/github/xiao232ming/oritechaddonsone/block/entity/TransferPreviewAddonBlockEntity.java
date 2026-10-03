@@ -1,10 +1,7 @@
 package io.github.xiao232ming.oritechaddonsone.block.entity;
 
-import java.util.EnumMap;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -23,35 +20,40 @@ import io.github.xiao232ming.oritechaddonsone.block.TransferPreviewAddonBlock;
 /**
  * Block entity of 传输插件 (the transfer preview plugin), the second transfer plugin of this mod.
  * <p>
- * Its <b>function</b> is exactly the one of {@link TransferAddonBlockEntity}: it makes the machine it serves
- * reachable through the faces of a host, one {@link TransferMode} plus the automation flag per face (see
- * {@link TransferFaceModes}), applied on the server and offered to pipes, hoppers and other mods. What differs is
- * where it may be placed and what its page shows:
+ * Its <b>function</b> is the transfer side of {@link TransferAddonBlockEntity}: one {@link TransferMode} plus the
+ * automation flag per face (see {@link TransferFaceModes}), applied on the server. What differs is what a face
+ * means and what its page shows:
  * <ul>
- *     <li>hung on Oritech's <b>machine extender</b> it acts on the machine that extender was claimed by, and the
- *     connections are the extender's faces - exactly like {@link TransferAddonBlockEntity},</li>
- *     <li>hung <b>directly on an Oritech machine</b> it acts on that machine and its connections are its own six
- *     faces, because the machine's own faces belong to Oritech: the plugin is the one block that can add a
- *     connection there (see {@link MachinePluginStorage}).</li>
+ *     <li>a configured face means a face of the <b>machine</b> the plugin serves in both placements, and it drives
+ *     this plugin's own <b>automation</b> only - with the container outside that face of the machine (see
+ *     {@link #serverTickTransfer()}),</li>
+ *     <li><b>pipes, hoppers and other mods never connect here.</b> A machine that wants them already offers its own
+ *     faces to them, directly from Oritech, so this plugin deliberately registers no item capability at all (see
+ *     {@code OritechAddonsOne#registerCapabilities}): a capability on the plugin would answer for the
+ *     <em>plugin's</em> own block, i.e. a second meaning for the same six directions, and none is needed.</li>
  * </ul>
- * The page of this plugin draws neither of those as a cube net: it renders the machine it serves as a rotatable 3D
- * model and lets the player pick the faces on that model (see
- * {@code io.github.xiao232ming.oritechaddonsone.client.page.TransferPreviewAddonPage}). Everything the page sends is
- * the same packet the transfer page sends and everything it draws comes from the same container data, so both
- * plugins really behave identically - only the way a face is chosen differs.
+ * Where it may be placed:
+ * <ul>
+ *     <li>hung on Oritech's <b>machine extender</b> it acts on the machine that extender was claimed by,</li>
+ *     <li>hung <b>directly on an Oritech machine</b> it acts on that machine.</li>
+ * </ul>
+ * The page of this plugin draws neither of those as a cube net: it renders the machine it serves as a rotatable
+ * 3D model and lets the player pick the faces on that model (see
+ * {@code io.github.xiao232ming.oritechaddonsone.client.page.TransferPreviewAddonPage}).
  * <p>
  * The plugin is therefore an {@link ExtensionAddonBlockEntity} with four differences:
  * <ul>
  *     <li>the machine it works on is {@link #servedMachinePos()}: the machine behind its host extender, or the
  *     machine it is attached to itself. Every inherited user of {@code connectedMachinePos()} - the machine name in
  *     the menu, the force load badge and the energy guard of the storage bonuses - therefore follows the host,</li>
- *     <li>its own faces answer with the machine inventory ({@link #getInventoryStorage(Direction)}), so the pipe and
- *     hopper side of the feature exists in both placements,</li>
- *     <li>the page it shows is its own ({@code ExtensionAddonMenu#previewOnly()}), and that page draws the machine
- *     it serves,</li>
- *     <li>an <b>occupied</b> face - the face of the machine this plugin hangs on, or a face another plugin of this
- *     mod already stands on - is refused and marked, so two plugins can never configure the same face and no mode
- *     can describe a connection that is physically blocked.</li>
+ *     <li>its own faces answer with an <b>empty</b> inventory ({@link #getInventoryStorage(Direction)}), so no pipe,
+ *     hopper or other mod can reach the machine through the plugin,</li>
+ *     <li>the page it shows is its own ({@code ExtensionAddonMenu#previewOnly()}), and that page draws the
+ *     machine it serves,</li>
+ *     <li>an <b>occupied</b> face - the face of the machine the plugin block stands in when the plugin hangs directly
+ *     on that machine - is refused and marked, so no mode can describe a connection that is physically blocked. Hung
+ *     on an extender the plugin occupies no face of the machine at all: the extender is not part of it, so all six
+ *     machine faces stay configurable.</li>
  * </ul>
  * Placed on a wall - i.e. on anything that is neither an Oritech machine nor an extender - it keeps Oritech's
  * ordinary addon behaviour: no GUI, no movement, an empty answer on every face.
@@ -59,8 +61,10 @@ import io.github.xiao232ming.oritechaddonsone.block.TransferPreviewAddonBlock;
 public class TransferPreviewAddonBlockEntity extends ExtensionAddonBlockEntity {
 
     /**
-     * Faces this plugin refuses to configure, as a bitmask over {@link Direction#values()}: the face of the machine
-     * it hangs on (the machine block is there) and every face another plugin of this mod stands on.
+     * Faces of the <b>machine</b> this plugin refuses to configure, as a bitmask over {@link Direction#values()}: the
+     * one face of the machine the plugin block stands in while the plugin hangs directly on that machine, and
+     * {@code 0} for the extender placement, whose plugin occupies a face of the extender rather than one of the
+     * machine.
      * <p>
      * The base class recomputes it from {@link #scanAttachedTransferFaces()} on the server and publishes it through
      * the menu's container data; on the client this field is the synced copy the menu writes, because the page has
@@ -69,38 +73,13 @@ public class TransferPreviewAddonBlockEntity extends ExtensionAddonBlockEntity {
     private int occupiedFaces;
 
     /**
-     * Faces this plugin last told NeoForge's capability caches about, as a bitmask over
-     * {@link Direction#values()}, or {@code -1} while that has not happened yet.
-     * <p>
-     * It exists so the invalidation can be moved out of the two lifecycle hooks that are not allowed to touch the
-     * level (see {@link #invalidateFaceCapabilities()}): the mask is compared on every server tick, and the plugin's
-     * position is invalidated exactly when it really changed. The bits stand for "this plugin answers with an
-     * inventory on this face": a face whose mode transfers something and which is not occupied.
-     */
-    private int publishedFaceMask = -1;
-
-    /**
-     * Number of times this plugin told NeoForge's capability caches that it may answer differently. Only a
-     * diagnostic counter, so that the log can say whether an invalidation happened at all without printing a line
-     * for every one of them.
-     */
-    private int faceInvalidations;
-
-    /**
-     * The empty inventory every face answers with while this plugin does not serve a machine. One instance for all
-     * six faces, because the capability wrapper Oritech builds for us
-     * ({@code NeoforgeItemApiImpl.ContainerStorageWrapper}) holds the storage a face answered with and the answer
-     * never changes: without a machine the plugin owns no items of its own (see
-     * {@link #getInventoryStorage(Direction)}).
+     * The empty inventory every face of this plugin answers with. One instance for all six faces, because
+     * {@code ItemApi.BlockProvider} is part of what an Extension Addon is and the answer never changes: this plugin
+     * never offers the machine's items through its own block (see {@link #getInventoryStorage(Direction)}), so a pipe
+     * that looks at it sees "nothing here" rather than an error.
      */
     private final ItemApi.InventoryStorage emptyStorage =
             new DelegatingInventoryStorage(() -> null, () -> false);
-
-    /**
-     * Storage of every face of this plugin, one object per face forever - the capability caches what a face answers
-     * with, so the instance must never be replaced (see {@link MachinePluginStorage}).
-     */
-    private final EnumMap<Direction, ItemApi.InventoryStorage> faceStorages = new EnumMap<>(Direction.class);
 
     public TransferPreviewAddonBlockEntity(BlockPos pos, BlockState state) {
         super(OritechAddonsOne.TRANSFER_PREVIEW_ADDON_ENTITY.get(), pos, state);
@@ -246,13 +225,27 @@ public class TransferPreviewAddonBlockEntity extends ExtensionAddonBlockEntity {
     // ------------------------------------------------------------------ the faces the plugin refuses
 
     /**
-     * The faces the page marks and refuses, as the bitmask the page draws its gold border from: the face of the
-     * machine this plugin hangs on - the machine block is there - and every face another plugin of this mod stands
-     * on.
+     * The faces of the <b>machine</b> this plugin refuses to configure, as the bitmask the page draws its gold border
+     * from: the one face of the machine the plugin itself stands on while it hangs directly on that machine.
      * <p>
-     * Both halves are a property of a <b>placement</b>, not of this plugin alone, so nothing is reported while the
-     * plugin serves no machine: a plugin standing on a wall keeps Oritech's ordinary addon behaviour, where every
-     * face is free and no face describes a connection to a machine.
+     * <b>The mask is about the machine's surface, not about the plugin's own faces.</b> What it has to answer is
+     * "which of the six doors of the machine is physically blocked by this plugin", because that is what the page
+     * shows and what a mode on such a face could not describe. The mask is therefore read on the machine's own
+     * directions:
+     * <ul>
+     *     <li>hung on an <b>extender</b> it is <b>empty</b>: the plugin occupies a face of the extender, and the
+     *     extender is not part of the machine - the machine's six faces are all free, so all six stay
+     *     configurable (the plugin's own faces only drive that automation, see {@link #serverTickTransfer()}),</li>
+     *     <li>hung <b>directly on the machine</b> it is the single face of the machine the plugin block stands in,
+     *     i.e. the machine's face the plugin was placed against. That face is the one the machine and the plugin share
+     *     and the one no pipe can ever be in, so it is the one face that has to be marked and refused.</li>
+     * </ul>
+     * Another plugin of this mod on a neighbouring face never marks a machine face: such a plugin stands on a face of
+     * the machine only when it hangs on the machine itself, and then it is the case above, from <em>its</em> point of
+     * view.
+     * <p>
+     * Nothing is reported while the plugin serves no machine: a plugin standing on a wall keeps Oritech's ordinary
+     * addon behaviour, where every face is free and no face describes a connection to a machine.
      * <p>
      * On the server the mask is recomputed from the world every tick; on the client it is the copy the base class's
      * container data wrote into {@link #occupiedFaces}, because the page has to draw the same borders there.
@@ -262,48 +255,43 @@ public class TransferPreviewAddonBlockEntity extends ExtensionAddonBlockEntity {
         if (level == null) return 0;
         if (level.isClientSide()) return occupiedFaces;
 
-        if (servedMachinePos() == null) return 0;
+        if (hangsOnExtender()) return 0;
+        if (!hangsOnMachine()) return 0;
 
-        var mask = 1 << TransferPreviewAddonBlock.attachedFace(getBlockState()).ordinal();
-        for (var face : Direction.values()) {
-            if (occupiedByPlugin(face)) mask |= 1 << face.ordinal();
-        }
-        return mask;
-    }
-
-    /**
-     * True while a transfer plugin of this mod stands on the given face of this plugin, i.e. while a pipe could not
-     * be there and a mode on that face could not describe a connection. Only the plugins of this mod count: an
-     * Oritech addon on a neighbouring face is not something this plugin can configure anyway, and treating it as
-     * occupied would only take a face away from the player.
-     */
-    private boolean occupiedByPlugin(Direction face) {
-        if (level == null) return false;
-
-        var neighbourPos = worldPosition.relative(face);
-        if (!level.isLoaded(neighbourPos)) return false;
-
-        return level.getBlockEntity(neighbourPos) instanceof TransferPreviewAddonBlockEntity other
-                && TransferPreviewAddonBlock.attachedFace(other.getBlockState()) == face.getOpposite();
+        return 1 << TransferPreviewAddonBlock.attachedFace(getBlockState()).ordinal();
     }
 
     // ------------------------------------------------------------------ moving the machine's items
 
     /**
-     * Moves items through this plugin for every face whose automation is switched on - the placed form of
-     * {@link ExtensionAddonBlockEntity#serverTickTransfer()}.
+     * Moves items through the <b>machine's own faces</b> for every face whose automation is switched on - the placed
+     * form of {@link ExtensionAddonBlockEntity#serverTickTransfer()}.
      * <p>
-     * The two sides are the machine this plugin serves and the container outside the plugin's face, so the trade
-     * happens exactly where the rendered model says it does. INPUT fills the machine, OUTPUT empties it and BOTH does
-     * both, with up to {@link MachineFaceStorage#ITEMS_PER_TICK} items per face and tick. The face the plugin hangs
-     * on is skipped (the machine is there, not a container), which is also the face no mode can be set on.
+     * <b>The face means the machine's face, in both placements.</b> The container a face trades with is the one
+     * <em>outside that face of the machine</em> ({@code machinePos.relative(face)}), which is the same partner the
+     * machine's own pipes would use and the same direction the page's model shows and configures: with a mode on the
+     * machine's face {@code d}, INPUT pulls from the container next to that face into the machine, OUTPUT pushes the
+     * machine's items into it, and BOTH does both. The plugin's own block is not part of it any more - hung on an
+     * extender it is somewhere else entirely, and the item it moves never passes through the plugin.
+     * <p>
+     * The trade happens between the machine's inventory and that container, with up to
+     * {@link MachineFaceStorage#ITEMS_PER_TICK} items per face and tick, in the order the two directions run in
+     * {@link MachineFaceStorage#move}: the machine is the owner on its own side of both, so its slot roles are
+     * respected ({@link MachineSlotRoles}) - an INPUT face fills the machine's input slots only and an OUTPUT face
+     * empties its output slots only. The container outside is passed without an owner, which is what a chest, a pipe
+     * or another mod's inventory is.
+     * <p>
+     * The one machine face that is skipped is the one the plugin's own host block stands in
+     * ({@link #hostFaceOfMachine()}): a plugin hung directly on the machine occupies exactly that face, so a
+     * container can never be there and trading would shuffle the machine's items through its own cell. The extender
+     * placement skips that face too - the extender is not a container, and the plugin is the block standing on the
+     * machine there.
      * <p>
      * Cheap while nothing is configured, and it does nothing at all while the plugin serves no machine, so a plugin
      * that stands on a wall keeps Oritech's plain addon behaviour.
      * <p>
-     * This deliberately does <b>not</b> call the base class's own movement: that one trades with the containers
-     * around the addon and with the machine that claimed the addon, which is the wrong pair for the extender
-     * placement.
+     * This deliberately does <b>not</b> call the base class's own movement: that one trades with the containers around
+     * the addon - around the plugin or around the extender - which is not what the page configures or shows.
      */
     @Override
     public void serverTickTransfer() {
@@ -313,11 +301,6 @@ public class TransferPreviewAddonBlockEntity extends ExtensionAddonBlockEntity {
 
         if (level == null || level.isClientSide()) return;
 
-        // The one moment this plugin may be told that it answers differently: a server tick of this very block
-        // entity, which runs after the world is ticking again and never inside the removal, unload or save path the
-        // block entity also goes through (see invalidateFaceCapabilities).
-        publishFaceCapabilityMask();
-
         var machinePos = servedMachinePos();
         var machine = MachineFaceStorage.machineStorageAt(level, machinePos);
         if (machine == null) return;
@@ -326,15 +309,15 @@ public class TransferPreviewAddonBlockEntity extends ExtensionAddonBlockEntity {
         // the input slots only and an OUTPUT face empties the output slots only, never the other way round (see
         // MachineSlotRoles). A storage alone does not carry that knowledge.
         var machineEntity = level.isLoaded(machinePos) ? level.getBlockEntity(machinePos) : null;
-        var skipped = TransferPreviewAddonBlock.attachedFace(getBlockState());
+        var hostFace = hostFaceOfMachine();
 
         for (var face : Direction.values()) {
-            if (face == skipped) continue;
+            if (face == hostFace) continue;
 
             var mode = transferModes().modeOf(face);
             if (mode == TransferMode.NONE || !transferModes().automationOf(face)) continue;
 
-            var neighbour = MachineFaceStorage.storageAt(level, worldPosition, face);
+            var neighbour = MachineFaceStorage.storageAt(level, machinePos, face);
             if (neighbour == null) continue;
 
             if (mode.allowsExtract()) MachineFaceStorage.move(machine, machineEntity, neighbour, null);
@@ -343,18 +326,46 @@ public class TransferPreviewAddonBlockEntity extends ExtensionAddonBlockEntity {
     }
 
     /**
-     * Sets what one face of this plugin does and tells the capability caches that the answer for that face may have
-     * changed: a face that was configured and now is not (or the other way round) turns this plugin from "no
-     * inventory here" into an item connection, or back.
+     * The face of the machine the block this plugin hangs on stands in, or {@code null} while that block is not next
+     * to the machine's core block at all.
      * <p>
-     * A face that is <b>occupied</b> is refused: the machine block is in the face this plugin hangs on and another
-     * transfer plugin is in a face one of them already stands on, so no pipe, hopper or other mod can ever be there
-     * and a mode on it could not describe a connection. The page marks those faces and does not offer them either;
-     * refusing them here as well is what keeps a mode written by an older version, by a modified client or by a
-     * half-rolled-back page from leaving a face configured that nothing can ever use.
+     * It is the one machine face that must not be traded with: hung directly on the machine it is the face the plugin
+     * itself occupies, and hung on an extender it is the face the extender sits in. In both cases the machine has no
+     * neighbour there to trade with - a block of this mod stands in it - and the automation is about the machine's own
+     * six faces.
+     * <p>
+     * The host is resolved on the server only, like every user of {@link #attachedHostPos()}: the client has neither
+     * the plugin's controller offset nor the extender's, and it runs no automation anyway.
+     */
+    @Nullable
+    private Direction hostFaceOfMachine() {
+        var machinePos = servedMachinePos();
+        if (machinePos == null || level == null) return null;
+
+        var hostPos = attachedHostPos();
+        for (var face : Direction.values()) {
+            if (machinePos.relative(face).equals(hostPos)) return face;
+        }
+        return null;
+    }
+
+    /**
+     * Sets what one face of the machine does, i.e. which container outside that face of the machine this plugin
+     * trades with on its own (see {@link #serverTickTransfer()}).
+     * <p>
+     * A face that is <b>occupied</b> is refused: while the plugin hangs directly on the machine, the machine block is
+     * in one of the machine's faces and the plugin itself stands in it, so no container can ever be there and a mode
+     * on it could not describe a connection. The page marks that face and does not offer it either; refusing it here
+     * as well is what keeps a mode written by an older version, by a modified client or by a half-rolled-back page
+     * from leaving a face configured that nothing can ever use.
+     * <p>
+     * Hung on an <b>extender</b> nothing is refused: the plugin occupies a face of the extender, which is not part of
+     * the machine, so all six of the machine's faces are configurable (see {@link #scanAttachedTransferFaces()}).
      * <p>
      * Called from the preview page's packet, on the server, on this very block entity - which is what makes the
-     * plugin the right place to do it: it knows the machine it serves and the faces that are physically blocked.
+     * plugin the right place to do it: it knows the machine it serves and the face that is physically blocked. No
+     * capability cache has to be told anything: this plugin answers no item capability at all (see
+     * {@link #getInventoryStorage(Direction)}).
      */
     @Override
     public boolean setTransferConfig(Direction face, TransferMode mode, boolean automation) {
@@ -363,15 +374,12 @@ public class TransferPreviewAddonBlockEntity extends ExtensionAddonBlockEntity {
         // face has to stay configurable.
         if (mode != TransferMode.NONE && servedMachinePos() != null && isOccupied(face)) {
             OritechAddonsOne.LOGGER.debug(
-                    "[transfer] refused {} on {} face {}: the face is occupied by a machine or another plugin",
+                    "[transfer] refused {} on {} face {}: the machine block stands in that face",
                     mode, worldPosition, face);
             return false;
         }
 
-        if (!super.setTransferConfig(face, mode, automation)) return false;
-
-        invalidateFaceCapabilities();
-        return true;
+        return super.setTransferConfig(face, mode, automation);
     }
 
     /** True while the given face is one of the faces {@link #scanAttachedTransferFaces()} refuses. */
@@ -383,108 +391,25 @@ public class TransferPreviewAddonBlockEntity extends ExtensionAddonBlockEntity {
 
     // ------------------------------------------------------------------ the plugin's own faces
 
+    // ------------------------------------------------------------------ the plugin's own faces
+
     /**
-     * The machine's inventory, offered on every face of this plugin whose mode transfers something - this is the pipe
-     * and hopper side of the feature in <b>both</b> placements (see {@link MachinePluginStorage}).
+     * <b>Nothing, on every face and in both placements.</b> This plugin never offers the machine's items through its
+     * own block: a machine that wants pipes, hoppers or another mod already offers its own faces to them, and those
+     * already reach the machine directly - a second connection through the plugin would only be a second meaning for
+     * the same six directions, because the page and the automation read a face as a face of the <em>machine</em>
+     * while an item capability on the plugin answers for the plugin's own block.
      * <p>
-     * Without a machine - a plugin on a wall, an extender no machine claimed, an unloaded chunk - the answer is an
-     * empty inventory instead of an error, so a pipe simply sees "nothing here". One storage object per face is
-     * created once and kept forever, and it reads the mode, the machine and the machine's slot roles on every single
-     * call, so the GUI, the automation and this storage can never disagree.
+     * The override exists because {@link ItemApi.BlockProvider} is part of what an Extension Addon is (see
+     * {@link ExtensionAddonBlockEntity#getInventoryStorage(Direction)}), and one storage object is kept for all six
+     * faces because the answer never changes and Oritech's own item bridge wraps whatever a face answered with and
+     * caches it (see {@link #emptyStorage}). The configured faces drive this plugin's own movement instead (see
+     * {@link #serverTickTransfer()}).
      */
     @Override
     public ItemApi.InventoryStorage getInventoryStorage(Direction direction) {
-        if (direction == null || servedMachinePos() == null) return emptyStorage;
-
-        return faceStorages.computeIfAbsent(direction, face -> MachinePluginStorage.handlerAt(this, face));
+        return emptyStorage;
     }
-
-    // ------------------------------------------------------------------ this plugin's capability cache
-
-    /**
-     * Tells NeoForge's capability caches that this plugin may answer differently from now on, and is public so that
-     * the block can call it on the way out (see {@link TransferPreviewAddonBlock#playerWillDestroy}).
-     * <p>
-     * The storage a configured face answers with stays the same object and reads the mode and the machine on every
-     * call, so it needs no invalidation of its own; what does need one is the jump between "this face offers nothing"
-     * and "this face offers the machine's inventory". That jump is the only thing a pipe cannot notice by itself -
-     * the {@code BlockLookupCache} of Oritech's own item pipes, for one, keeps a {@code null} answer until the level
-     * invalidates the position - so this plugin invalidates its own position whenever a face appears, disappears or
-     * is configured.
-     * <p>
-     * <b>It must never run while the block entity is being removed or unloaded.</b> NeoForge moves the invalidation
-     * of a position into {@code BlockEntity#setRemoved} / {@code clearRemoved}, which both run from
-     * {@code LevelChunk#removeBlockEntity} and {@code LevelChunk#setBlockEntity} - i.e. exactly while a chunk is
-     * unloaded or saved. Reading a neighbouring block there looks a second chunk up in the middle of that, and
-     * invalidating a capability re-enters the capability caches of every pipe and hopper that listens on the
-     * position. Both are hazard enough on their own; on a world save the chunk map keeps saving while the chunk is
-     * still marked unsaved, so anything that dirties it again from here turns "Saving world" into a loop. This plugin
-     * therefore never overrides those two hooks and reaches this method from {@link #publishFaceCapabilityMask()} (a
-     * server tick) or from {@link #setTransferConfig(Direction, TransferMode, boolean)} (the page's packet) only.
-     */
-    public void invalidateFaceCapabilities() {
-        if (!(level instanceof ServerLevel)) return;
-
-        faceInvalidations++;
-        level.invalidateCapabilities(worldPosition);
-    }
-
-    /**
-     * The faces of this plugin that currently answer with the machine's inventory, as a bitmask over
-     * {@link Direction#values()}: every face that is not occupied and whose mode transfers something. {@code 0}
-     * while the plugin serves no machine, which is also what every face answers with then.
-     */
-    private int capabilityMask() {
-        if (servedMachinePos() == null) return 0;
-
-        var mask = 0;
-        for (var face : Direction.values()) {
-            // the mode is the cheap test and the common answer is "not configured", so the world is only asked about
-            // a face that really carries a mode
-            if (transferModes().modeOf(face) == TransferMode.NONE) continue;
-            if (isOccupied(face)) continue;
-
-            mask |= 1 << face.ordinal();
-        }
-        return mask;
-    }
-
-    /**
-     * Compares the faces this plugin answers on with the ones its capability caches were last told about and
-     * invalidates its own position when they differ. Called once per server tick.
-     * <p>
-     * This is the safe replacement for the invalidation the removal hooks cannot do: a plugin that is placed, broken,
-     * unloaded or reconfigured changes the mask, and the difference is published on the next tick of the loaded
-     * plugin instead of inside the chunk bookkeeping. The first tick after the block entity is loaded publishes it as
-     * well, because the mask starts at {@code -1} - a world that was saved with a plugin already configured has to
-     * be able to answer from the very first tick.
-     * <p>
-     * Cheap in the normal case: no plugin state changes, no mask changes, no level call at all beyond the block state
-     * the mask is built from - and no log line.
-     */
-    private void publishFaceCapabilityMask() {
-        if (!(level instanceof ServerLevel)) return;
-
-        var mask = capabilityMask();
-        if (mask == publishedFaceMask) return;
-
-        publishedFaceMask = mask;
-        OritechAddonsOne.LOGGER.debug(
-                "[transfer] preview plugin capability mask of {} is now {} ({} invalidation(s), {})",
-                worldPosition, Integer.toBinaryString(mask), faceInvalidations + 1,
-                mask == 0 ? "no face offers an inventory" : "a pipe asking may now connect");
-
-        invalidateFaceCapabilities();
-    }
-
-    /*
-     * Nothing is overridden for setRemoved() / clearRemoved() on purpose: those two hooks run while the chunk is
-     * being unloaded or saved, and the invalidation that tells the pipes about this plugin is done from the server
-     * tick and from TransferPreviewAddonBlock#playerWillDestroy() instead (see invalidateFaceCapabilities()).
-     * BlockEntity#clearRemoved already invalidates this block entity's own position, which is all NeoForge asks a
-     * block entity to do there; a chunk that unloads invalidates its whole position range through NeoForge's own
-     * ChunkEvent.Unload hook.
-     */
 
     // ------------------------------------------------------------------ GUI and ticking
 

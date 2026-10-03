@@ -89,9 +89,10 @@ public final class TransferPreviewState {
      * to show as taken. Addons grow onto the machine over time, so leaving them out also keeps the faces in the same
      * place for as long as the panel is open.
      * <p>
-     * A multiblock machine is complete with this one entry: the machine's own renderer draws the whole model of the
-     * core's block state, which carries the machine's assembled structure, so the other parts of the structure are part
-     * of the machine's model rather than blocks of their own here.
+     * A multiblock machine is complete with this one entry: the widget works the machine's own part list out from its
+     * controller (see {@code FacePreviewWidget#partOffsets()}), so the parts of the structure are drawn and picked as
+     * cells of the machine - each with the block state standing at its own position - rather than as blocks of their
+     * own here.
      */
     @Nullable
     private static Preview build(Level level, BlockPos machinePos, int x, int y, int width, int height) {

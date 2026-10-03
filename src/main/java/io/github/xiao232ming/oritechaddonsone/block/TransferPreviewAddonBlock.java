@@ -95,25 +95,6 @@ public class TransferPreviewAddonBlock extends PluginAddonBlock {
     }
 
     /**
-     * The plugin is about to be broken, so it stops offering the machine's inventory on the faces it configured.
-     * Telling the capability caches here is the one moment that can be done for a broken plugin: this hook runs before
-     * the block is removed, i.e. while the chunk is still fully alive and before any chunk bookkeeping starts, unlike
-     * {@code BlockEntity#setRemoved()} - which the block entity deliberately does not use for it (see
-     * {@link TransferPreviewAddonBlockEntity#invalidateFaceCapabilities()}).
-     * <p>
-     * Without this a pipe that cached a storage would keep treating the plugin as a connection that answers nothing.
-     * The plugin's own tick cannot cover the case either, because a broken plugin has no block entity left to tick,
-     * and a plugin that unloads with its chunk is covered by NeoForge's chunk-wide invalidation.
-     */
-    @Override
-    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
-        if (!level.isClientSide() && level.getBlockEntity(pos) instanceof TransferPreviewAddonBlockEntity plugin) {
-            plugin.invalidateFaceCapabilities();
-        }
-        return super.playerWillDestroy(level, pos, state, player);
-    }
-
-    /**
      * The plugin with an item in the hand. 1.21.1 keeps the two hooks apart: this one answers with an
      * {@link ItemInteractionResult} and the empty hand hook ({@link #useWithoutItem}) with an
      * {@link InteractionResult}, and this one only lets that hook run when it gives the click back with
