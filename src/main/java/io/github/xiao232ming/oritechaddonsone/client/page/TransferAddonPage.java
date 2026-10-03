@@ -43,7 +43,10 @@ import io.github.xiao232ming.oritechaddonsone.network.TransferNetworking;
  *     inventory proxy addons and offers one configurable face each, while a single transfer addon is enough
  *     for all six faces, so the counter's maximum is always six,</li>
  *     <li>a face is not bound to a machine slot but set to a {@link TransferMode}: a click on a face opens a
- *     page with the three modes (input, output, both) and a right click clears the face again.</li>
+ *     page with the three modes (input, output, both) and a right click clears the face again,</li>
+ *     <li>the face a <b>placed</b> transfer addon hangs on - drawn with a gold border - is not configurable:
+ *     the plugin block itself stands in it, so no pipe or hopper can ever be there and a mode on it could
+ *     not describe a connection. It is marked and refused, both here and on the server.</li>
  * </ul>
  * The net shows which mode a face has: blue while it takes items <b>in</b>, orange while it gives them
  * <b>out</b>, and half blue half orange while it does both (see {@link #washOf}).
@@ -59,6 +62,8 @@ public final class TransferAddonPage implements AddonPage {
     private static final String LABEL_KEY = "gui.oritechaddonsone.page." + ID;
     private static final String PROMPT_KEY = "gui.oritechaddonsone.transfer.prompt";
     private static final String AUTOMATION_KEY = "gui.oritechaddonsone.transfer.automation";
+    /** Tooltip of the face the plugin block itself occupies, i.e. the face drawn with the gold border. */
+    private static final String OCCUPIED_KEY = "gui.oritechaddonsone.transfer.occupied";
     /** Colour of the green tick and of the "this face does something" state, as on the other pages. */
     private static final int GOOD = 0xFF2ECC71;
 
@@ -137,8 +142,9 @@ public final class TransferAddonPage implements AddonPage {
         for (var face : Direction.values()) {
             AddonFaceNet.drawFace(context, graphics, face, cells, textures, washOf(modeOf(menu, face)));
 
-            // The face a placed transfer addon hangs on gets a gold border, so it is clear which face of the
-            // dock this plugin stands on. It is a marker only: the face stays configurable like any other.
+            // The face a placed transfer addon hangs on gets a gold border: it is the face this plugin
+            // stands in, so a pipe or a hopper can never be there and the face is deliberately not
+            // configurable (see occupiedFace). The border is the marker of that, not a selection.
             if ((attached & 1 << face.ordinal()) != 0) {
                 drawGoldBorder(context, graphics, cells, face);
             }
@@ -188,8 +194,10 @@ public final class TransferAddonPage implements AddonPage {
     }
 
     /**
-     * Gold border around one face of the net, drawn over that face's own outline: the face of the dock a
-     * placed transfer addon hangs on. Nothing else about the face changes.
+     * Gold border around one face of the net, drawn over that face's own outline: the face of the extender a
+     * placed transfer addon hangs on. The plugin block stands in that face, so it is not configurable - a
+     * pipe or a hopper can never be there and a mode on it could not describe a connection (the server
+     * refuses it as well, see {@code TransferAddonBlockEntity#setTransferConfig}).
      */
     private static void drawGoldBorder(AddonPageContext context, GuiGraphicsExtractor graphics,
             Map<Direction, int[]> cells, Direction face) {
@@ -352,6 +360,10 @@ public final class TransferAddonPage implements AddonPage {
         var face = AddonFaceNet.faceAt(net(menu), mouseX, mouseY);
         if (face == null) return false;
 
+        // the face the plugin itself hangs on is not configurable: the plugin block is there, so no pipe or
+        // hopper can be, and a mode would describe a connection that cannot exist
+        if (face == occupiedFace(menu)) return true;
+
         // a right click on a configured face clears what that face does
         if (button == 1) {
             if (menu.transferMode(face) != TransferMode.NONE) {
@@ -421,11 +433,34 @@ public final class TransferAddonPage implements AddonPage {
         var face = AddonFaceNet.faceAt(net(menu), mouseX, mouseY);
         if (face == null) return List.of();
 
+        // the occupied face explains why it cannot be configured instead of naming a mode it can never have
+        if (face == occupiedFace(menu)) return List.of(Component.translatable(OCCUPIED_KEY));
+
         // only what that face does; which face it is, is the cell the mouse is on
         return List.of(Component.translatable(modeKey(modeOf(menu, face))));
     }
 
     // ------------------------------------------------------------------ helpers
+
+    /**
+     * The face of the extender the placed transfer addon itself hangs on, or {@code null} while this menu
+     * does not belong to a placed one.
+     * <p>
+     * A placed plugin is the only block that reports attached faces at all, and it reports exactly the one
+     * face it was placed against (see {@code TransferAddonBlockEntity#scanAttachedTransferFaces}), which is
+     * the face the net marks in gold. The wired addons and the wireless dock report none, so their pages
+     * keep all six faces configurable.
+     */
+    @Nullable
+    private static Direction occupiedFace(ExtensionAddonMenu menu) {
+        var attached = menu.attachedTransferFaces();
+        if (attached == 0) return null;
+
+        for (var face : Direction.values()) {
+            if ((attached & 1 << face.ordinal()) != 0) return face;
+        }
+        return null;
+    }
 
     /** The face whose mode picker is open for this menu, or {@code null}. */
     @Nullable

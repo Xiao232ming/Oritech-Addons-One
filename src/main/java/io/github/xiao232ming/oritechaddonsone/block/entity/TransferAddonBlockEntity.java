@@ -2,6 +2,8 @@ package io.github.xiao232ming.oritechaddonsone.block.entity;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -32,8 +34,10 @@ import io.github.xiao232ming.oritechaddonsone.block.TransferAddonBlock;
  *     <li>the net is drawn from the <b>host</b>, not from the plugin: {@link #transferPageBlock()} and
  *     {@link #transferPageBlockState()} report the extender's state, so the page shows the extender's faces
  *     (a plugin model unfolded into six faces would say nothing about where the items go),</li>
- *     <li>the gold border marks the face of the extender this plugin hangs on and the movement skips it, so
- *     the plugin never tries to trade with itself,</li>
+ *     <li>the gold border marks the face of the extender this plugin hangs on, that face is not
+ *     configurable and the movement skips it, so the plugin never tries to trade with itself: the plugin
+ *     block stands in that face, so no pipe or hopper can ever be there and a mode on it could not describe
+ *     a connection (see {@link #setTransferConfig(Direction, TransferMode, boolean)}),</li>
  *     <li>the machine is the one the <b>extender</b> is attached to (see {@link #attachedMachinePos()}), and
  *     the container of a face is the one next to the extender, not next to the plugin.</li>
  * </ul>
@@ -52,6 +56,25 @@ public class TransferAddonBlockEntity extends ExtensionAddonBlockEntity {
      * page has to draw the gold border there as well.
      */
     private int attachedHostFaces;
+
+    /**
+     * Faces of the extender this plugin last told NeoForge's capability caches about, as a bitmask over
+     * {@link Direction#values()}, or {@code -1} while that has not happened yet.
+     * <p>
+     * It exists so the invalidation can be moved out of the two lifecycle hooks that are not allowed to
+     * touch the level (see {@link #invalidateHostCapabilities()}): the mask is compared on every server
+     * tick, and the extender's position is invalidated exactly when it really changed. The bits stand for
+     * "the extender answers with an inventory on this face": the face the plugin itself occupies never
+     * counts, because the plugin block is there and no pipe can stand in it.
+     */
+    private int publishedHostMask = -1;
+
+    /**
+     * Number of times this plugin told NeoForge's capability caches that the extender may answer
+     * differently. Only a diagnostic counter, so that the log can say whether an invalidation happened at
+     * all without printing a line for every one of them.
+     */
+    private int hostInvalidations;
 
     /**
      * The empty inventory every face of a placed plugin answers with. One instance for all six faces,
@@ -213,6 +236,12 @@ public class TransferAddonBlockEntity extends ExtensionAddonBlockEntity {
         refreshAttachedTransferFaces();
 
         if (level == null || level.isClientSide()) return;
+
+        // The one moment the extender may be told that it answers differently: a server tick of this very
+        // block entity, which runs after the world is ticking again and never inside the removal, unload or
+        // save path the block entity also goes through (see invalidateHostCapabilities).
+        publishHostCapabilityMask();
+
         if (!hangsOnExtender()) return;
 
         var machine = MachineFaceStorage.machineStorageAt(level, attachedMachinePos());
@@ -244,11 +273,28 @@ public class TransferAddonBlockEntity extends ExtensionAddonBlockEntity {
      * may have changed: a face that was configured and now is not (or the other way round) turns the
      * extender from "no inventory here" into an item connection, or back.
      * <p>
+     * The face the plugin itself hangs on is refused: the plugin block occupies it, so no pipe, hopper or
+     * other mod can ever be there and a mode on it could not describe a connection. The transfer page marks
+     * that face in gold and does not offer it either (see {@code TransferAddonPage#occupiedFace}); refusing
+     * it here as well is what keeps a mode written by an older version, by a modified client or by a
+     * half-rolled-back page from leaving a face configured that nothing can ever use.
+     * <p>
      * Called from the transfer page's packet, on the server, on this very block entity - which is what makes
      * the plugin the right place to do it: it knows the extender it hangs on.
      */
     @Override
     public boolean setTransferConfig(Direction face, TransferMode mode, boolean automation) {
+        // The occupied face only exists while the plugin really hangs on an extender: placed on anything
+        // else the plugin keeps Oritech's own addon behaviour, where the face it is attached to says
+        // nothing about an extender and every face has to stay configurable.
+        if (mode != TransferMode.NONE && hangsOnExtender()
+                && face == TransferAddonBlock.attachedFace(getBlockState())) {
+            OritechAddonsOne.LOGGER.debug(
+                    "[transfer] refused {} on {} face {}: the plugin itself stands on that face of the extender",
+                    mode, worldPosition, face);
+            return false;
+        }
+
         if (!super.setTransferConfig(face, mode, automation)) return false;
 
         invalidateHostCapabilities();
@@ -273,7 +319,8 @@ public class TransferAddonBlockEntity extends ExtensionAddonBlockEntity {
 
     /**
      * Tells NeoForge's capability caches that the extender this plugin hangs on may answer differently from
-     * now on.
+     * now on, and is public so that the block can call it on the way out (see
+     * {@link TransferAddonBlock#playerWillDestroy}).
      * <p>
      * The handler a configured face answers with stays the same object and reads the plugin, the mode and
      * the machine on every call, so it needs no invalidation of its own; what does need one is the jump
@@ -287,38 +334,105 @@ public class TransferAddonBlockEntity extends ExtensionAddonBlockEntity {
      * mode per face of the extender, and whether any plugin hangs there at all is what can turn any of those
      * faces into a connection.
      * <p>
+     * <b>It must never run while the block entity is being removed or unloaded.</b> NeoForge moves the
+     * invalidation of a position into {@code BlockEntity#setRemoved} / {@code clearRemoved}, which both run
+     * from {@code LevelChunk#removeBlockEntity} and {@code LevelChunk#setBlockEntity} - i.e. exactly while a
+     * chunk is unloaded or saved. Reading a neighbouring block there ({@code level.getBlockState(hostPos)})
+     * looks a second chunk up in the middle of that, and invalidating a capability re-enters the capability
+     * caches of every pipe and hopper that listens on the position. Both are hazard enough on their own; on
+     * a world save the chunk map keeps saving while the chunk is still marked unsaved, so anything that
+     * dirties it again from here turns "Saving world" into a loop. This plugin therefore never overrides
+     * those two hooks and reaches this method from {@link #publishHostCapabilityMask()} (a server tick) or
+     * from {@link #setTransferConfig(Direction, TransferMode, boolean)} (the page's packet) only.
+     * <p>
      * Cheap and harmless while the plugin hangs on something else: the host is checked by block identity
-     * first, so no other block is ever invalidated, and the extender's own position is a position
-     * NeoForge's capability system knows.
+     * first - without reading a block state, so that no chunk is touched - and the extender's own position
+     * is a position NeoForge's capability system knows.
      */
-    protected void invalidateHostCapabilities() {
-        if (level == null || level.isClientSide()) return;
+    public void invalidateHostCapabilities() {
+        if (!(level instanceof ServerLevel serverLevel)) return;
+        if (!hangsOnExtender()) return;
 
-        var hostPos = hostPos();
-        if (!level.getBlockState(hostPos).is(BlockContent.MACHINE_EXTENDER.get())) return;
-
-        level.invalidateCapabilities(hostPos);
+        hostInvalidations++;
+        serverLevel.invalidateCapabilities(hostPos());
     }
 
     /**
-     * The plugin appeared in the world: the extender it hangs on may now answer on every one of its faces,
-     * so the cached answers it gave the pipes before - usually "no inventory" - have to be dropped.
+     * The faces of the extender that currently answer with an inventory, as a bitmask over
+     * {@link Direction#values()}: every face that no plugin hangs on and whose transfer page mode transfers
+     * something. {@code 0} while the plugin does not hang on an extender, which is also what the extender
+     * answers with then.
+     * <p>
+     * The plugin's own face is dropped even for a mode an older version stored on it, because that is what
+     * {@code ExtenderFaceStorage} answers: the plugin block stands in that face and the handler refuses it.
+     * Both sides read the same rule, so the mask can never announce a connection the handler would not give.
      */
-    @Override
-    public void clearRemoved() {
-        super.clearRemoved();
-        invalidateHostCapabilities();
+    private int hostAnswerMask() {
+        if (!hangsOnExtender()) return 0;
+
+        var mine = TransferAddonBlock.attachedFace(getBlockState());
+        var mask = 0;
+        for (var face : Direction.values()) {
+            if (face == mine) continue;
+            // the mode is the cheap test and the common answer is "not configured", so the world is only
+            // asked about a face that really carries a mode
+            if (transferModes().modeOf(face) == TransferMode.NONE) continue;
+            if (occupiedByPlugin(face)) continue;
+
+            mask |= 1 << face.ordinal();
+        }
+        return mask;
     }
 
     /**
-     * The plugin is gone: the extender's faces stop offering the machine. The handlers would already answer
-     * empty, but a pipe that cached "no capability" earlier would never ask again without this.
+     * True while a transfer plugin hangs on the given face of the extender, i.e. while some plugin block
+     * stands in the cell outside that face. Nothing but a plugin can be there any more, but a face that is
+     * still configured in the saved data must not be announced as a connection while it is occupied.
      */
-    @Override
-    public void setRemoved() {
-        invalidateHostCapabilities();
-        super.setRemoved();
+    private boolean occupiedByPlugin(Direction face) {
+        var pluginPos = hostPos().relative(face);
+        if (level == null || !level.isLoaded(pluginPos)) return false;
+
+        return level.getBlockEntity(pluginPos) instanceof TransferAddonBlockEntity other
+                && TransferAddonBlock.attachedFace(other.getBlockState()) == face;
     }
+
+    /**
+     * Compares the faces the extender answers on with the ones its capability caches were last told about
+     * and invalidates the extender's position when they differ. Called once per server tick.
+     * <p>
+     * This is the safe replacement for the invalidation the removal hooks used to do: a plugin that is
+     * placed, broken, unloaded or reconfigured changes the mask, and the difference is published on the next
+     * tick of the loaded plugin instead of inside the chunk bookkeeping. The first tick after the block
+     * entity is loaded publishes it as well, because the mask starts at {@code -1} - a world that was saved
+     * with a plugin already hanging on an extender has to be able to answer from the very first tick.
+     * <p>
+     * Cheap in the normal case: no plugin state changes, no mask changes, no level call at all beyond the
+     * block state the mask is built from - and no log line.
+     */
+    private void publishHostCapabilityMask() {
+        if (!(level instanceof ServerLevel)) return;
+
+        var mask = hostAnswerMask();
+        if (mask == publishedHostMask) return;
+
+        publishedHostMask = mask;
+        OritechAddonsOne.LOGGER.debug(
+                "[transfer] extender capability mask of {} is now {} ({} invalidation(s), {})",
+                worldPosition, Integer.toBinaryString(mask), hostInvalidations + 1,
+                mask == 0 ? "no face offers an inventory" : "a pipe asking may now connect");
+
+        invalidateHostCapabilities();
+    }
+
+    /*
+     * Nothing is overridden for setRemoved() / clearRemoved() on purpose: those two hooks run while the
+     * chunk is being unloaded or saved, and the invalidation that tells the pipes about this plugin is done
+     * from the server tick and from TransferAddonBlock#playerWillDestroy() instead (see
+     * invalidateHostCapabilities()). BlockEntity#clearRemoved already invalidates this block entity's own
+     * position, which is all NeoForge asks a block entity to do there; a chunk that unloads invalidates its
+     * whole position range through NeoForge's own ChunkEvent.Unload hook.
+     */
 
     // ------------------------------------------------------------------ GUI and ticking
 

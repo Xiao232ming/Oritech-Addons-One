@@ -85,6 +85,26 @@ public class TransferAddonBlock extends PluginAddonBlock {
     }
 
     /**
+     * The plugin is about to be broken, so the extender it hangs on stops offering the machine on the faces
+     * this plugin configured. Telling the capability caches here is the one moment that can be done for a
+     * broken plugin: this hook runs before the block is removed, i.e. while the chunk is still fully alive
+     * and before any chunk bookkeeping starts, unlike {@code BlockEntity#setRemoved()} - which the block
+     * entity deliberately does not use for it (see {@link TransferAddonBlockEntity#invalidateHostCapabilities()}).
+     * <p>
+     * Without this a pipe that cached a handler would keep treating the extender as a connection that answers
+     * nothing. The plugin's own tick cannot cover the case either, because a broken plugin has no block
+     * entity left to tick, and an extender that unloads with its chunk is covered by NeoForge's chunk-wide
+     * invalidation.
+     */
+    @Override
+    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+        if (!level.isClientSide() && level.getBlockEntity(pos) instanceof TransferAddonBlockEntity plugin) {
+            plugin.invalidateHostCapabilities();
+        }
+        return super.playerWillDestroy(level, pos, state, player);
+    }
+
+    /**
      * Right-clicking a placed transfer addon that hangs on a machine extender opens the plugin's own screen:
      * the net it shows is the extender's, its gold border is the face this plugin hangs on, and everything set
      * there is applied to the extender's faces. Anything else - no extender, or a plugin standing on a machine

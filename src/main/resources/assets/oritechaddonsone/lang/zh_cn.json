@@ -94,5 +94,6 @@
   "gui.oritechaddonsone.transfer.mode.output": "输出",
   "gui.oritechaddonsone.transfer.mode.both": "输入输出",
   "gui.oritechaddonsone.transfer.mode.none": "未设置",
-  "gui.oritechaddonsone.transfer.automation": "自动化"
+  "gui.oritechaddonsone.transfer.automation": "自动化",
+  "gui.oritechaddonsone.transfer.occupied": "该面被插件本体占据，管道或漏斗无法连接"
 }
