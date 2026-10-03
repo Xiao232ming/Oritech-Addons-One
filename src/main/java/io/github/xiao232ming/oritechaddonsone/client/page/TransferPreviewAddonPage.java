@@ -156,9 +156,12 @@ public final class TransferPreviewAddonPage implements AddonPage {
         }
 
         // the widget is drawn at the absolute pixel position it was built for, and it is asked with the same
-        // absolute mouse position for its own hover state
+        // absolute mouse position for its own hover state. The markings it draws are what the menu says, which is what
+        // the page itself reads for its counter and its modal - including the pending value of a click that has just
+        // been sent - so a mode the player sets shows on the model in the same frame
         var widget = preview.widget();
         widget.withRotation(preview.pitch(), preview.yaw());
+        widget.setFaceOverlays(faceModes(menu), menu.attachedTransferFaces());
         widget.tick();
         widget.render(graphics, screenX(context, mouseX), screenY(context, mouseY), partialTick);
 
@@ -350,6 +353,20 @@ public final class TransferPreviewAddonPage implements AddonPage {
             if (TransferPreviewPickerState.isOpen(menu.position(), face)) return face;
         }
         return null;
+    }
+
+    /**
+     * What every face of the machine is configured to do, indexed by {@link Direction#ordinal()}, as the model's
+     * markings are drawn from: exactly what a click on that face has chosen, i.e. the same
+     * {@link TransferFaceModal#modeOf(ExtensionAddonMenu, Direction)} the page's own plates and prompt read - the
+     * pending value of a click that has just been sent first, the menu's own container data after it.
+     */
+    private static List<TransferMode> faceModes(ExtensionAddonMenu menu) {
+        var modes = new TransferMode[Direction.values().length];
+        for (var face : Direction.values()) {
+            modes[face.ordinal()] = TransferFaceModal.modeOf(menu, face);
+        }
+        return List.of(modes);
     }
 
     /** X of a panel relative coordinate, converted to the absolute space the model lives in. */

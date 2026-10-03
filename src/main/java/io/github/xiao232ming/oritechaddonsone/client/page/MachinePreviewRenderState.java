@@ -12,6 +12,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix3x2f;
 
+import io.github.xiao232ming.oritechaddonsone.block.entity.TransferMode;
+
 /**
  * What the transfer preview page hands to the renderer: the machine's block states with their offsets, plus the face
  * the mouse is currently over and the part of the machine that face belongs to.
@@ -22,9 +24,11 @@ import org.joml.Matrix3x2f;
  * state one for one and are filled from the very numbers {@link FacePreviewWidget} submits its render with, so the
  * highlight is drawn in the model's own pose rather than in a pose of its own.
  *
- * @param entries    the blocks this state draws, one per part of the machine, in the same offset space the picking
- *                   uses (see {@link FacePreviewWidget#partOffsets()}) - the model has to be drawn at the offsets it
- *                   is picked at, or a click and the face under it would point at different cells
+ * @param entries    the blocks this state draws, one per drawn part of the machine, in the same offset space the
+ *                   picking uses (see {@link FacePreviewWidget#partOffsets()}) - the model has to be drawn at the
+ *                   offsets it is picked at, or a click and the face under it would point at different cells
+ * @param overlays   the markings of the machine's faces: for every face that is configured or occupied, the part that
+ *                   carries it and what it is (see {@link Overlay}), drawn in the model's own pose over the blocks
  * @param face       the face of the machine the mouse is over, i.e. the face to highlight, or {@code null} while the
  *                   mouse is not on the model
  * @param offset     the part of the machine that face belongs to, in model space, or {@code null} while no face is
@@ -48,6 +52,7 @@ import org.joml.Matrix3x2f;
  */
 public record MachinePreviewRenderState(
         List<Entry> entries,
+        List<Overlay> overlays,
         @Nullable Direction face,
         @Nullable Vec3i offset,
         float rotationX,
@@ -70,17 +75,30 @@ public record MachinePreviewRenderState(
      * Builds the state of one frame, working the bounds out the way Oritech's own preview state does, so the GUI
      * renderer culls the panel exactly as it culls Oritech's.
      */
-    public static MachinePreviewRenderState of(List<Entry> entries, @Nullable Direction face, @Nullable Vec3i offset,
-            float rotationX, float rotationY, float centerX, float centerY, float centerZ, float partialTick, int x0,
-            int y0, int x1, int y1, float scale, Matrix3x2f pose, @Nullable ScreenRectangle scissorArea) {
+    public static MachinePreviewRenderState of(List<Entry> entries, List<Overlay> overlays, @Nullable Direction face,
+            @Nullable Vec3i offset, float rotationX, float rotationY, float centerX, float centerY, float centerZ,
+            float partialTick, int x0, int y0, int x1, int y1, float scale, Matrix3x2f pose,
+            @Nullable ScreenRectangle scissorArea) {
         ScreenRectangle panel = new ScreenRectangle(x0, y0, x1 - x0, y1 - y0).transformMaxBounds(pose);
         ScreenRectangle bounds = scissorArea != null ? scissorArea.intersection(panel) : panel;
 
-        return new MachinePreviewRenderState(List.copyOf(entries), face, offset, rotationX, rotationY, centerX, centerY,
-                centerZ, partialTick, x0, y0, x1, y1, scale, new Matrix3x2f(pose), scissorArea, bounds);
+        return new MachinePreviewRenderState(List.copyOf(entries), List.copyOf(overlays), face, offset, rotationX,
+                rotationY, centerX, centerY, centerZ, partialTick, x0, y0, x1, y1, scale, new Matrix3x2f(pose),
+                scissorArea, bounds);
     }
 
     /** One block of the model: its state, its block entity and where it sits in model space. */
     public record Entry(BlockState state, @Nullable BlockEntity entity, Vec3i offset) {
+    }
+
+    /**
+     * One marking of one face of the machine: the part that carries it, which of its faces it is, the mode that face
+     * is configured with and whether a plugin of this mod occupies it.
+     * <p>
+     * The renderer turns this into geometry - a wash in the mode's colours ({@link TransferFaceStyle#wash}) and, for
+     * an occupied face, the gold outline of {@link TransferFaceStyle#GOLD}. A face that is both keeps both, so an
+     * outline can be read over a wash; a face with neither is not in this list at all.
+     */
+    public record Overlay(Vec3i offset, Direction face, TransferMode mode, boolean occupied) {
     }
 }
