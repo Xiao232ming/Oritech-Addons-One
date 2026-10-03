@@ -21,6 +21,10 @@ import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonMenu;
  * </ul>
  * A page therefore appears as another tab as soon as its addon is put in and is gone again when the last one
  * is taken out. Both variants - wired addon and wireless dock - get them.
+ * <p>
+ * The one exception is a transfer addon that is <b>placed</b> on an Oritech machine extender: that block is
+ * not a container at all, its only page is the transfer page of the extender's faces, so it gets exactly that
+ * one tab (see {@link #pages(ExtensionAddonMenu)}).
  */
 public final class AddonPageRegistry {
 
@@ -43,11 +47,15 @@ public final class AddonPageRegistry {
      * All pages of the given menu, in tab order.
      * <p>
      * The list is per menu and not a constant, because a page can depend on what the block holds - see
-     * {@link #pages(boolean, boolean)}. The screen compares this list with the pages it currently shows on
-     * every container tick, so taking the last inventory proxy or transfer addon out removes its tab right
-     * away and putting one in adds it right away, without reopening the GUI.
+     * {@link #pages(boolean, boolean)} - and because one block has exactly one page: a transfer addon that is
+     * <b>placed</b> on an Oritech machine extender is not a container of plugins, so its GUI shows the
+     * transfer page of the extender's faces and nothing else. The screen compares this list with the pages it
+     * currently shows on every container tick, so taking the last inventory proxy or transfer addon out
+     * removes its tab right away and putting one in adds it right away, without reopening the GUI.
      */
     public static List<AddonPage> pages(ExtensionAddonMenu menu) {
+        if (menu.transferOnly()) return List.of(TRANSFER);
+
         return pages(menu.hasInventoryProxy(), menu.hasTransferAddon());
     }
 

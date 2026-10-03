@@ -151,26 +151,22 @@ public class WirelessExtensionAddonBlock extends Block implements EntityBlock, A
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player,
             BlockHitResult hit) {
-        return openDockMenu(level, pos, player);
+        return openPluginMenu(level, pos, player);
     }
 
     @Override
     protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
             Player player, InteractionHand hand, BlockHitResult hit) {
-        return openDockMenu(level, pos, player) == InteractionResult.SUCCESS
+        return openPluginMenu(level, pos, player) == InteractionResult.SUCCESS
                 ? ItemInteractionResult.SUCCESS
                 : ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
     }
 
     /**
-     * Opens this dock's own screen, i.e. the plugin grid, the wireless page and - while a transfer addon is
-     * stored inside or a placed one hangs on this dock - the Extension Transfer page.
-     * <p>
-     * Public because a transfer addon placed <b>on</b> a dock opens exactly this screen when it is right
-     * clicked (see {@code TransferAddonBlock}): the page then shows the dock's faces and what it configures
-     * happens through the dock, so both ways of using the plugin end up in the same screen.
+     * Opens this dock's own screen: the plugin grid, the wireless page and - while a transfer addon is
+     * stored inside - the Extension Transfer page.
      */
-    public static InteractionResult openDockMenu(Level level, BlockPos pos, Player player) {
+    private static InteractionResult openPluginMenu(Level level, BlockPos pos, Player player) {
         if (!level.isClientSide() && player instanceof ServerPlayer serverPlayer
                 && level.getBlockEntity(pos) instanceof WirelessExtensionAddonBlockEntity dock) {
             var slots = dock.getContainerSize();

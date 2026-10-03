@@ -44,6 +44,7 @@ import io.github.xiao232ming.oritechaddonsone.block.TransferAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.block.WirelessExtensionAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ChunkAnchorAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEntity;
+import io.github.xiao232ming.oritechaddonsone.block.entity.TransferAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.WirelessExtensionAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonLayout;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonMenu;
@@ -169,6 +170,11 @@ public class OritechAddonsOne {
      * on can be filled from and emptied into through the addon's own six faces, one direction per face (see
      * the "Extension Transfer" page).
      * <p>
+     * Placed in the world on Oritech's machine extender, the same plugin does this for the extender instead:
+     * right clicking it opens the transfer page of the extender's own six faces, and the items are moved
+     * between the machine behind the extender and the containers around it. That placed form has behaviour
+     * of its own, so it uses its own block entity type ({@link #TRANSFER_ADDON_ENTITY}).
+     * <p>
      * Like the warehouse and tank addons it is a neutral {@link PluginAddonBlock}, and the Extension Addon
      * Type II accepts it because that type takes every Oritech addon that is not one of the stat plugins.
      * Its model and texture are Oritech's inventory proxy addon for now, see
@@ -293,6 +299,20 @@ public class OritechAddonsOne {
                             WAREHOUSE_ADDON.get(), TANK_ADDON.get(), CHUNK_ANCHOR_ADDON.get(),
                             TRANSFER_ADDON.get()).build(null));
 
+    /**
+     * Block entity type of the transfer addon. It is not part of {@link #PLUGIN_ADDON_ENTITY}: the placed
+     * plugin has behaviour of its own (see {@link TransferAddonBlockEntity}), so it uses the menu and the
+     * face settings of an Extension Addon - a subclass, which is what its registered block entity has to be.
+     * <p>
+     * It is registered with {@code ItemApi.BLOCK} in the constructor like the other two addon types, because
+     * that is what Oritech's bridge wraps into the NeoForge item capability (see there); the storage it
+     * answers with is empty on purpose.
+     */
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TransferAddonBlockEntity>> TRANSFER_ADDON_ENTITY =
+            BLOCK_ENTITIES.register("transfer_addon",
+                    () -> BlockEntityType.Builder.of(TransferAddonBlockEntity::new, TRANSFER_ADDON.get())
+                            .build(null));
+
     public static final DeferredHolder<MenuType<?>, MenuType<ExtensionAddonMenu>> EXTENSION_ADDON_MENU =
             MENUS.register("extension_addon", () -> IMenuTypeExtension.create(ExtensionAddonMenu::new));
 
@@ -401,8 +421,13 @@ public class OritechAddonsOne {
         // ExtensionAddonBlockEntity#getInventoryStorage) in a NeoForge IItemHandler, so Oritech's own item
         // pipes - which look the neighbouring inventory up through ItemApi - as well as hoppers and other
         // mods see the machine inventory slot a face was bound to.
+        //
+        // The placed transfer addon is registered for items as well, but its own storage answers with
+        // nothing: the machine it works on is reachable through the faces of the extender it hangs on, never
+        // through its own (see TransferAddonBlockEntity#getInventoryStorage).
         ItemApi.BLOCK.registerBlockEntity(() -> (BlockEntityType<?>) EXTENSION_ADDON_ENTITY.get());
         ItemApi.BLOCK.registerBlockEntity(() -> (BlockEntityType<?>) WIRELESS_EXTENSION_ADDON_ENTITY.get());
+        ItemApi.BLOCK.registerBlockEntity(() -> (BlockEntityType<?>) TRANSFER_ADDON_ENTITY.get());
 
         LOGGER.info("Oritech Addons One loaded: {}, {}, {} and the wireless variants {} registered",
                 EXTENSION_ADDON_1.getId(), EXTENSION_ADDON_2.getId(), EXTENSION_ADDON_3.getId(),

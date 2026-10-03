@@ -8,7 +8,6 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -213,37 +212,27 @@ public class ExtensionAddonBlock extends MachineAddonBlock implements AddonDetai
         }
     }
 
+    /**
+     * Right clicking the addon opens its screen. The menu itself belongs to the block entity and is shared
+     * with the wireless dock and with a placed transfer addon, so the opener lives in {@link PluginAddonMenus}.
+     */
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player,
             BlockHitResult hit) {
-        return openPluginMenu(level, pos, player);
+        var opened = PluginAddonMenus.openItemMenu(level, pos, player);
+        return opened == ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION
+                ? super.useWithoutItem(state, level, pos, player, hit)
+                : opened.result();
     }
 
+    /** The same as {@link #useWithoutItem}: an item in the hand must not swallow the click. */
     @Override
     protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
             Player player, InteractionHand hand, BlockHitResult hit) {
-        return openPluginMenu(level, pos, player) == InteractionResult.SUCCESS
-                ? ItemInteractionResult.SUCCESS
-                : ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
-    }
-
-    private static InteractionResult openPluginMenu(Level level, BlockPos pos, Player player) {
-        if (!level.isClientSide() && player instanceof ServerPlayer serverPlayer
-                && level.getBlockEntity(pos) instanceof ExtensionAddonBlockEntity blockEntity) {
-            // The slot count is configurable, so the client needs it to build the matching layout.
-            var slots = blockEntity.getContainerSize();
-            serverPlayer.openMenu(blockEntity, buffer -> {
-                buffer.writeBlockPos(pos);
-                buffer.writeVarInt(slots);
-                // wired addons are never linked, but the menu reads this field for both variants
-                buffer.writeBoolean(false);
-                // name of the machine this addon is attached to, resolved here on the server (see
-                // ExtensionAddonBlockEntity#connectedMachineNameKey)
-                var nameKey = blockEntity.connectedMachineNameKey();
-                buffer.writeUtf(nameKey == null ? "" : nameKey);
-            });
-        }
-        return InteractionResult.SUCCESS;
+        var opened = PluginAddonMenus.openItemMenu(level, pos, player);
+        return opened == ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION
+                ? super.useItemOn(stack, state, level, pos, player, hand, hit)
+                : opened;
     }
 
     @Override

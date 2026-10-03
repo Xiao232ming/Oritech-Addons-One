@@ -1,7 +1,9 @@
 package io.github.xiao232ming.oritechaddonsone.block.entity;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
 import org.jetbrains.annotations.Nullable;
@@ -32,8 +34,21 @@ import rearth.oritech.api.item.containers.DelegatingInventoryStorage;
  * unloaded, replaced or never present simply yields {@code null} - the
  * {@link DelegatingInventoryStorage} then reports zero slots and accepts/offers nothing instead of
  * crashing.
+ * <p>
+ * The class also carries the two helpers the <b>automation</b> of a face is built from - looking a
+ * neighbour's inventory up ({@link #storageAt}) and moving one stack between two storages ({@link #move}).
+ * They need no face of their own, which is what lets the placed transfer addon move items between a machine
+ * and the containers around the extender it hangs on (see
+ * {@code TransferAddonBlockEntity#serverTickTransfer}) with the very same logic a face of this block uses.
  */
 public final class MachineFaceStorage extends DelegatingInventoryStorage {
+
+    /**
+     * How many items automation moves per face and tick. Eight is a fast but unremarkable rate - a hopper
+     * moves one item, an Oritech item pipe up to a stack - and it keeps a face that is fed and emptied at the
+     * same time from starving its own other direction.
+     */
+    public static final int ITEMS_PER_TICK = 8;
 
     private final BlockEntity owner;
     /** Face this storage belongs to, resolved against the block entity on every call. */
@@ -56,13 +71,81 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
     @Nullable
     public static ItemApi.InventoryStorage machineStorage(BlockEntity owner) {
         if (!(owner instanceof ExtensionAddonBlockEntity addon)) return null;
+        return machineStorageAt(addon.getLevel(), addon.connectedMachinePos());
+    }
 
-        var target = addon.connectedMachinePos();
-        if (target == null || addon.getLevel() == null || !addon.getLevel().isLoaded(target)) return null;
+    /**
+     * The inventory storage of the block at {@code machinePos} - the machine an addon works on - or
+     * {@code null} while there is none (no position, unloaded chunk, block entity gone, a block without an
+     * inventory).
+     * <p>
+     * It exists next to {@link #machineStorage(BlockEntity)} because the machine of a placed transfer addon
+     * is not the machine of the block that holds the plugin: the plugin is asked for the extender's
+     * controller position instead of its own, and this is where that position is turned into a storage.
+     */
+    @Nullable
+    public static ItemApi.InventoryStorage machineStorageAt(@Nullable Level level, @Nullable BlockPos machinePos) {
+        if (level == null || machinePos == null || !level.isLoaded(machinePos)) return null;
 
-        return addon.getLevel().getBlockEntity(target) instanceof ItemApi.BlockProvider provider
+        return level.getBlockEntity(machinePos) instanceof ItemApi.BlockProvider provider
                 ? provider.getInventoryStorage(null)
                 : null;
+    }
+
+    /**
+     * The item storage of the block outside one face of the block at {@code pos} - the container automation
+     * moves items with - or {@code null} while there is none (air, a machine without an inventory, an
+     * unloaded chunk). The side is asked for as the neighbour's own face pointing back at that block, which
+     * is what Oritech's own item pipe asks with (see {@code ItemPipeInterfaceEntity}, which does
+     * {@code ItemApi.BLOCK.find(world, sourcePos, direction)} with the direction pointing from the neighbour
+     * back at the pipe).
+     */
+    @Nullable
+    public static ItemApi.InventoryStorage storageAt(@Nullable Level level, BlockPos pos, Direction face) {
+        if (level == null) return null;
+
+        var neighbourPos = pos.relative(face);
+        if (!level.isLoaded(neighbourPos)) return null;
+
+        return ItemApi.BLOCK.find(level, neighbourPos, face.getOpposite());
+    }
+
+    /**
+     * Moves up to {@link #ITEMS_PER_TICK} items of one stack from {@code from} to {@code to}, if the target
+     * takes any of it, and stops after that one stack.
+     * <p>
+     * Oritech's {@code ItemApi.InventoryStorage} has no transaction: both sides are therefore asked first and
+     * really moved afterwards. The target is asked how much it would take with a simulated insert, the source
+     * with a simulated extract, and only then is exactly that amount taken out and put in. Whatever the target
+     * ends up refusing (it can only refuse because something else filled it in between) is handed straight back
+     * to the source, so no item can be lost even then.
+     */
+    public static void move(ItemApi.InventoryStorage from, ItemApi.InventoryStorage to) {
+        if (!from.supportsExtraction() || !to.supportsInsertion()) return;
+
+        for (int slot = 0; slot < from.getSlotCount(); slot++) {
+            var stack = from.getStackInSlot(slot);
+            if (stack.isEmpty()) continue;
+
+            // dry run: how much would the target take of this stack, and how much can the source give?
+            var offered = stack.copyWithCount(Math.min(stack.getCount(), ITEMS_PER_TICK));
+            var wanted = to.insert(offered, true);
+            if (wanted <= 0) continue;
+
+            var takeable = from.extractFromSlot(offered.copyWithCount(wanted), slot, true);
+            if (takeable <= 0) continue;
+
+            var extracted = from.extractFromSlot(offered.copyWithCount(takeable), slot, false);
+            if (extracted <= 0) continue;
+
+            var inserted = to.insert(offered.copyWithCount(extracted), false);
+            if (inserted < extracted) {
+                // the target changed its mind in between: give the refused items back to where they came from
+                from.insert(offered.copyWithCount(extracted - inserted), false);
+            }
+
+            return;
+        }
     }
 
     /** The mode this face transfers with, or {@link TransferMode#NONE} while it transfers nothing. */
