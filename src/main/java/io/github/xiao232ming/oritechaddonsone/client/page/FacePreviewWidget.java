@@ -48,6 +48,12 @@ import io.github.xiao232ming.oritechaddonsone.block.entity.TransferMode;
  * {@code BlockPreviewWidget.java:145}). That recipe is what this class reproduces, on the same surface and with the
  * same light.
  * <p>
+ * <b>The user's zoom is folded into the measured scale</b> ({@link #setZoom}): it multiplies the fit-to-panel scale
+ * {@link #calculateSize()} works out, which is the one number the drawing, the picking, the hover outline and the
+ * markings all read. The model grows and shrinks about the centre of the structure it is measured at, so a zoomed
+ * model is still the same cells in the same places - just bigger - and a click keeps landing on the face the player
+ * sees.
+ * <p>
  * What Oritech's 1.21.1 widget cannot do is what the preview page is for: its {@code rotation} field is private with
  * no setter, its X rotation is a constant, it has no picking helper of any kind, and its centre and scale are private
  * as well. So this class keeps its own pitch and yaw (the defaults are Oritech's own 30 and 225 degrees), computes
@@ -166,6 +172,12 @@ public final class FacePreviewWidget extends UIComponent {
     private float pitch = DEFAULT_PITCH;
     private float yaw = DEFAULT_YAW;
 
+    /**
+     * The user's zoom, a factor on the fit-to-panel scale this widget measures the model with. 1 is the fitted model;
+     * the page sets it from the interaction state once per frame (see {@link #setZoom(float)}).
+     */
+    private float zoom = 1.0F;
+
     /** The machine this widget draws, or {@code null} while it has none to draw. */
     @Nullable
     private BlockState state;
@@ -264,6 +276,21 @@ public final class FacePreviewWidget extends UIComponent {
     /** Yaw of this model, as the page last set it. */
     public float yaw() {
         return yaw;
+    }
+
+    /**
+     * Sets the user's zoom: a factor on the fit-to-panel scale the model is measured with, so 1 is "the whole machine,
+     * exactly as this panel sized it". The page hands it over once per frame from the interaction state it keeps
+     * (see {@link TransferPreviewState.Preview#zoom()}), the way it hands over the rotation.
+     * <p>
+     * It is applied <b>inside</b> {@link #scale(float, float)}, i.e. in the one number every user of this frame's
+     * geometry reads: {@link #transform()} builds the shared {@link PreviewTransform} from the scale it answers for
+     * the picking, and {@link #renderContent} applies that same value to the pose for the drawing, the hover outline
+     * and the markings. A zoomed model is therefore drawn and picked with one and the same scaled transform, and what
+     * the player sees is exactly what a click hits.
+     */
+    public void setZoom(float zoom) {
+        this.zoom = zoom;
     }
 
     /**
@@ -568,21 +595,6 @@ public final class FacePreviewWidget extends UIComponent {
     }
 
     /**
-     * The scale the model is drawn with, from Oritech's own calculation: the smaller of the two ratios between the
-     * panel's half size and the model's radii, with Oritech's own 0.98 margin. {@link #calculateSize()} is what
-     * refreshes the radii and the centre it reads, and it only runs while the model changed.
-     */
-    private float scale(float availableWidth, float availableHeight) {
-        if (scaleDirty) calculateSize();
-
-        if (maxHorizontalRadius <= 0.0F || maxVerticalRadius <= 0.0F) return 0.0F;
-
-        float widthScale = availableWidth * 0.5F / maxHorizontalRadius;
-        float heightScale = availableHeight * 0.5F / maxVerticalRadius;
-        return Math.min(widthScale, heightScale) * 0.98F;
-    }
-
-    /**
      * Recomputes the centre and the two radii of the model - Oritech's own calculation, repeated here because its
      * fields are private: the centre is the middle of the model's bounding box, and the radii are the largest
      * horizontal and the largest pitch-projected vertical distance of any point of that box from the centre.
@@ -853,6 +865,29 @@ public final class FacePreviewWidget extends UIComponent {
             if (hit != null && (closest == null || hit.distance() < closest.distance())) closest = hit;
         }
         return closest;
+    }
+
+    /**
+     * The scale the model is drawn with, from Oritech's own calculation: the smaller of the two ratios between the
+     * panel's half size and the model's radii, with Oritech's own 0.98 margin - and then the user's zoom on top of it.
+     * {@link #calculateSize()} is what refreshes the radii and the centre it reads, and it only runs while the model
+     * changed.
+     * <p>
+     * The result is the one number every user of this frame's geometry reads (see {@link #setZoom}): the drawing
+     * applies it to the pose, {@link #transform()} builds the shared {@link PreviewTransform} from it for the picking,
+     * and the hover outline and the markings are drawn in the same pose - so a zoomed model is drawn and picked with
+     * one and the same scaled transform.
+     */
+    private float scale(float availableWidth, float availableHeight) {
+        if (scaleDirty) calculateSize();
+
+        if (maxHorizontalRadius <= 0.0F || maxVerticalRadius <= 0.0F) return 0.0F;
+
+        float widthScale = availableWidth * 0.5F / maxHorizontalRadius;
+        float heightScale = availableHeight * 0.5F / maxVerticalRadius;
+        // the fit-to-panel scale, then the user's own zoom on top of it - the one number the drawing, the picking and
+        // the markings all read (see #setZoom)
+        return Math.min(widthScale, heightScale) * 0.98F * zoom;
     }
 
     /**

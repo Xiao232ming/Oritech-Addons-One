@@ -300,8 +300,10 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
     }
 
     /**
-     * Whether the player's own inventory slots are usable. Only ever set on the client, and only off while
-     * the Item Proxy page's configuration panel is open over the whole panel; see {@link #playerSlotsActive}.
+     * Whether the player's own inventory slots are usable. Only ever set on the client, and only off while the
+     * player's inventory is not part of the screen: a page's configuration panel is open over the whole panel
+     * (see {@link #setPlayerSlotsActive}), or the visible page is the whole page - the 传输插件 preview, or the
+     * placed plugin's own screen.
      */
     public boolean playerSlotsActive() {
         return playerSlotsActive;
@@ -318,9 +320,9 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
     }
 
     /**
-     * Called by the screen whenever the Item Proxy page's configuration panel opens or closes: the panel is
-     * an opaque modal step over the whole panel, so the player's inventory is drawn - and clickable - only
-     * while it is closed.
+     * Called by the screen whenever the player's inventory stops or starts being part of the screen: a page's
+     * configuration panel is an opaque modal step over the whole panel, and the 传输插件 preview page is a whole page
+     * of its own, so the player's inventory is drawn - and clickable - only while neither is the case.
      */
     public void setPlayerSlotsActive(boolean active) {
         this.playerSlotsActive = active;
