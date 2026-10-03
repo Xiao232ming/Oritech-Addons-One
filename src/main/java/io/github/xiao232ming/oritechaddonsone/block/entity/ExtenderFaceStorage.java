@@ -167,7 +167,12 @@ public final class ExtenderFaceStorage extends DelegatingInventoryStorage {
 
         // The plugin has to hang on this very extender: a plugin that stands on a machine or a wall
         // somewhere else must not turn this extender's faces into a way into a machine.
-        return TransferAddonBlock.attachedFace(plugin.getBlockState()) == side.getOpposite() ? plugin : null;
+        // The plugin has to hang on this very extender: a plugin standing on a machine or a wall somewhere
+        // else must not turn this extender's faces into a way into a machine. {@code side} runs from the
+        // extender to the neighbour and {@code attachedFace} is the extender's own face the plugin hangs on,
+        // so the two are the same direction - taking its opposite here asked for the far face and never
+        // matched, which left every face of every extender answering "no inventory".
+        return TransferAddonBlock.attachedFace(plugin.getBlockState()) == side ? plugin : null;
     }
 
     /**
