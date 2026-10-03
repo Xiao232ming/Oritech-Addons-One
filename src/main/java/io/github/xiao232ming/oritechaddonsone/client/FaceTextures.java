@@ -80,11 +80,16 @@ public record FaceTextures(Map<Direction, Face> faces) {
         }
 
         // the wired addon: a slab, either standing against the horizontal facing or lying flat
-        var rot = resolved.getValue(ExtensionAddonBlock.HORIZONTAL_FACING).get2DDataValue() * 90;
-
         var placement = resolved.getValue(ExtensionAddonBlock.PLACEMENT);
         if (placement == ExtensionAddonBlock.Placement.VERTICAL) {
-            return new FaceTextures(cubeFaces(port, side, rotateY(Direction.NORTH, rot), false));
+            // The blockstate rotates the model by its facing (north: none, east: 90, south: 180, west: 270),
+            // so the model's port face is the block's own HORIZONTAL_FACING - which is also the face the
+            // Item Proxy page's net turns to the middle of the cross. Deriving it from get2DDataValue()
+            // instead named the face opposite the facing (that 2D value plus two is the opposite
+            // direction), so the net drew the interface texture on its back cell and the side texture on
+            // its front one, i.e. exactly swapped.
+            return new FaceTextures(cubeFaces(port, side,
+                    resolved.getValue(ExtensionAddonBlock.HORIZONTAL_FACING), false));
         }
 
         // flat: the port is on the up face, the sides are sampled from the lower half of their texture
@@ -132,21 +137,5 @@ public record FaceTextures(Map<Direction, Face> faces) {
     private static <T extends Comparable<T>> T stateValue(BlockState state,
             net.minecraft.world.level.block.state.properties.Property<T> property) {
         return state.hasProperty(property) ? state.getValue(property) : null;
-    }
-
-    /** Rotates a horizontal direction clockwise by the given amount of degrees. */
-    private static Direction rotateY(Direction direction, int degrees) {
-        var steps = Math.floorMod(degrees / 90, 4);
-        var result = direction;
-        for (int i = 0; i < steps; i++) {
-            result = switch (result) {
-                case NORTH -> Direction.EAST;
-                case EAST -> Direction.SOUTH;
-                case SOUTH -> Direction.WEST;
-                case WEST -> Direction.NORTH;
-                default -> result;
-            };
-        }
-        return result;
     }
 }
