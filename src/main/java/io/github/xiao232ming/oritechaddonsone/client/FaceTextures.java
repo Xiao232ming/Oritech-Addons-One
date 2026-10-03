@@ -24,12 +24,11 @@ import io.github.xiao232ming.oritechaddonsone.block.WirelessExtensionAddonBlock;
  * textures, so this is the one place that knows the face to texture mapping. It is derived from the block
  * models and blockstates of this mod:
  * <ul>
- *     <li>the standing (vertical) addon of types I and II is Oritech's machine extender slab: the interface
- *     texture covers both of its big faces - Oritech's own machine extender block is a {@code cube_all}
- *     model and this slab is a slice of it - and the side texture its four cut edges. The slab occupies the
- *     half of the block it was placed against ({@link ExtensionAddonBlock#HORIZONTAL_FACING} points at the
- *     machine in front of the player), so the big face the player looks at is the opposite one, and that is
- *     the front,</li>
+ *     <li>the standing (vertical) addon of every type is the same machine extender slab: the interface
+ *     texture is on the big face the player looks at, and the side texture on the other big face - the half
+ *     the slab occupies, standing against the machine - and on the four cut edges. The slab occupies the half
+ *     of the block it was placed against ({@link ExtensionAddonBlock#HORIZONTAL_FACING} points at the machine
+ *     in front of the player), so the face carrying the interface is the opposite of that facing,</li>
  *     <li>the flat (bottom/top) addon is the same slab laid down: only the big face the player sees carries
  *     the interface - up for a bottom placement, down for a top one, whose blockstate flips the model
  *     ({@code "x": 180}) - and the other five the side texture; the model samples the side textures from the
@@ -94,14 +93,12 @@ public record FaceTextures(Map<Direction, Face> faces, Direction front) {
 
         var placement = value(resolved, ExtensionAddonBlock.PLACEMENT);
         if (placement == ExtensionAddonBlock.Placement.VERTICAL) {
-            // The slab stands in the half it was placed against and keeps Oritech's machine extender look on
-            // both of its big faces: that texture is on every face of Oritech's own machine extender block
-            // (a cube_all model), which this slab is a slice of. The side texture therefore only covers the
-            // four cut edges. The face the player looks at - not the one standing against the machine - is
-            // the front: the mouth of the net.
+            // The model puts the interface on its outward half and the side texture on the half that stands
+            // against the machine, so the face the player looks at is the one that carries the interface -
+            // and that is the front of the net.
             var facing = value(resolved, ExtensionAddonBlock.HORIZONTAL_FACING);
             var front = (facing == null ? Direction.NORTH : facing).getOpposite();
-            return new FaceTextures(slabFaces(port, side, front), front);
+            return new FaceTextures(cubeFaces(port, side, front), front);
         }
 
         // flat: the interface is on the big face the player sees - up, or down when the blockstate flipped
@@ -112,20 +109,6 @@ public record FaceTextures(Map<Direction, Face> faces, Direction front) {
             faces.put(face, new Face(face == front ? port : side, face.getAxis().isHorizontal()));
         }
         return new FaceTextures(faces, front);
-    }
-
-    /**
-     * Six faces of the standing slab: the interface texture on its two big faces ({@code front}, the one the
-     * player looks at, and the one opposite it, which the slab stands against) and the side texture on the
-     * four cut edges.
-     */
-    private static Map<Direction, Face> slabFaces(ResourceLocation port, ResourceLocation side, Direction front) {
-        var faces = new EnumMap<Direction, Face>(Direction.class);
-        for (var face : Direction.values()) {
-            var big = face == front || face == front.getOpposite();
-            faces.put(face, new Face(big ? port : side, false));
-        }
-        return faces;
     }
 
     /** Six faces of a cube whose model points its interface texture at {@code front}. */
