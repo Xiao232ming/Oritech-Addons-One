@@ -2,6 +2,7 @@ package io.github.xiao232ming.oritechaddonsone.block.entity;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -15,8 +16,8 @@ import org.jetbrains.annotations.Nullable;
 import rearth.oritech.api.item.ItemApi;
 import rearth.oritech.api.item.containers.DelegatingInventoryStorage;
 import rearth.oritech.block.entity.addons.AddonBlockEntity;
-import rearth.oritech.init.BlockContent;
 
+import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 import io.github.xiao232ming.oritechaddonsone.block.TransferAddonBlock;
 
 /**
@@ -35,8 +36,16 @@ import io.github.xiao232ming.oritechaddonsone.block.TransferAddonBlock;
  * <b>The plugin configures the whole extender, not one face.</b> The transfer page is opened on the plugin,
  * but what it sets is a mode per face of the extender ({@link TransferFaceModes}), so a face is a connection
  * when <em>that</em> face has a mode - never because the plugin happens to hang on it. The face the plugin
- * occupies is therefore never a connection: a pipe cannot stand there, and the plugin's own faces answer
- * empty (see {@link TransferAddonBlockEntity#getInventoryStorage(Direction)}).
+ * occupies is therefore never a connection: a pipe cannot stand there, the mode is refused for it
+ * (see {@link TransferAddonBlockEntity#setTransferConfig}) and the plugin's own faces answer empty
+ * (see {@link TransferAddonBlockEntity#getInventoryStorage(Direction)}).
+ * <p>
+ * <b>The side is read the way Oritech's pipes ask it.</b> Oritech checks a neighbour with
+ * {@code level.getCapability(Capabilities.ItemHandler.BLOCK, neighbourPos, direction.getOpposite())}, i.e.
+ * the context is the direction <em>from the block that answers towards the block that asked</em> - so a pipe
+ * east of the extender asks with {@link Direction#EAST} and stands on the face this storage must answer for.
+ * A hopper does the same with its own facing. There is no translation to do here; the side is already the
+ * extender's face.
  * <p>
  * <b>The two views share one configuration.</b> The mode of a face is read on every single call, so the GUI,
  * the automation and this storage can never disagree; nothing is cached here but the identity of the storage
@@ -59,8 +68,29 @@ public final class ExtenderFaceStorage extends DelegatingInventoryStorage {
     /**
      * Storage of every extender position and face that was ever asked, indexed by
      * {@link Direction#ordinal()} - see the class comment for why the objects are kept.
+     * <p>
+     * Bounded in practice by "one entry per extender position a pipe ever asked about", and the entry is a
+     * fixed six element array, so a server that has seen <i>n</i> extenders asked about holds six references
+     * of <i>n</i>. It is deliberately not a cache of answers - the answers are re-resolved on every call, so
+     * a stale entry can never be seen; the map only preserves the identity of the handler objects.
      */
     private static final Map<BlockPos, ExtenderFaceStorage[]> HANDLERS = new ConcurrentHashMap<>();
+
+    /**
+     * How many nanoseconds have to pass between two "this face answered nothing" diagnostic lines. A pipe
+     * asks its neighbours again every tick, so without a limit a face that is deliberately not configured
+     * would write twenty lines a second and drown everything else in the log. One line per second and
+     * position is enough to show the mode lookup is really being asked and what it sees.
+     */
+    private static final long DIAGNOSTIC_INTERVAL_NANOS = 1_000_000_000L;
+
+    /**
+     * Last time the diagnostic line of a position was written, per position. Keyed by position only - and
+     * not by position and face - so an extender cannot flood the log even while a pipe walks all six faces.
+     * Entries are never removed, which is bounded by the number of extenders ever asked about, exactly like
+     * {@link #HANDLERS}.
+     */
+    private static final Map<BlockPos, AtomicLong> LAST_DIAGNOSTIC = new ConcurrentHashMap<>();
 
     private final AddonBlockEntity extender;
     /** Face of the extender this storage belongs to, resolved against the block entity on every call. */
@@ -82,6 +112,12 @@ public final class ExtenderFaceStorage extends DelegatingInventoryStorage {
      * <p>
      * Only extender faces can answer this way: the plugin itself offers an empty inventory, so the machine is
      * reachable at exactly one place, and the same items cannot be found at two.
+     * <p>
+     * The diagnostic line is the only way to see this provider from outside the game: the provider itself
+     * logs that it was called, and this one says what the mode lookup answered and which plugin it saw on
+     * the extender. It is written at most once a second per extender position (see
+     * {@link #DIAGNOSTIC_INTERVAL_NANOS}) and only while debug logging is on, so a pipe that asks every tick
+     * cannot drown the log.
      */
     @Nullable
     public static ExtenderFaceStorage handlerAt(AddonBlockEntity extender, @Nullable Direction face) {
@@ -95,6 +131,9 @@ public final class ExtenderFaceStorage extends DelegatingInventoryStorage {
 
         var created = new ExtenderFaceStorage(extender, face);
         handlers[face.ordinal()] = created;
+
+        OritechAddonsOne.LOGGER.debug("[transfer] capability: extender {} face {} now answers its handler",
+                extender.getBlockPos(), face);
         return created;
     }
 
@@ -145,20 +184,59 @@ public final class ExtenderFaceStorage extends DelegatingInventoryStorage {
      * More than one plugin may hang on the same extender. Each of them carries its own modes, and only the
      * plugin a mode was set on knows it, so a face counts as configured when <em>any</em> of them configures
      * it - scanning every plugin and not only the first one is what keeps such an extender working.
+     * <p>
+     * The face a plugin hangs on is skipped for <em>that</em> plugin: the plugin block occupies it, so no
+     * pipe or hopper can ever be there and a mode an older version stored on it must not turn the extender
+     * into a connection that leads into the plugin block itself. With several plugins on one extender every
+     * plugin therefore still answers for all faces but its own.
+     * <p>
+     * A face the mode lookup answers {@code NONE} for gets one diagnostic line, which is what tells a
+     * "configured face does not connect" report apart from "the provider was never asked": the line names
+     * every plugin that was found on the extender, so it also shows whether the plugin the page wrote to is
+     * the plugin this lookup really sees.
      */
     private static TransferMode transferMode(AddonBlockEntity extender, Direction face) {
         var level = extender.getLevel();
         if (level == null || level.isClientSide()) return TransferMode.NONE;
 
+        var diagnostic = OritechAddonsOne.LOGGER.isDebugEnabled();
+        var found = diagnostic ? new StringBuilder() : null;
+
         for (var side : Direction.values()) {
             var plugin = pluginAt(extender, level, side);
-            if (plugin == null || !plugin.canTransferItems()) continue;
+            if (plugin == null) continue;
+
+            var pluginFace = TransferAddonBlock.attachedFace(plugin.getBlockState());
+            if (diagnostic) {
+                found.append(' ').append(side).append('=')
+                        .append(plugin.canTransferItems() ? "configured" : "not-ready")
+                        .append("/hangs-on-").append(pluginFace);
+            }
+            if (face == pluginFace) continue;
+            if (!plugin.canTransferItems()) continue;
 
             var mode = plugin.transferModes().modeOf(face);
             if (mode != TransferMode.NONE) return mode;
         }
 
+        if (diagnostic) {
+            logNothingAnswered(extender.getBlockPos(), face, found.isEmpty() ? " none" : found.toString());
+        }
         return TransferMode.NONE;
+    }
+
+    /** Writes the "answered nothing" diagnostic line, but at most once a second per extender position. */
+    private static void logNothingAnswered(BlockPos pos, Direction face, String plugins) {
+        var last = LAST_DIAGNOSTIC.computeIfAbsent(pos.immutable(), ignored -> new AtomicLong(Long.MIN_VALUE));
+        var now = System.nanoTime();
+        var previous = last.get();
+
+        if (previous != Long.MIN_VALUE && now - previous < DIAGNOSTIC_INTERVAL_NANOS) return;
+        if (!last.compareAndSet(previous, now)) return;
+
+        OritechAddonsOne.LOGGER.debug(
+                "[transfer] capability: {} face {} answered nothing; plugins on the extender:{}",
+                pos, face, plugins);
     }
 
     /**

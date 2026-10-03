@@ -49,6 +49,21 @@ public class WirelessExtensionAddonBlockEntity extends ExtensionAddonBlockEntity
     /** Guards {@link #applyAllDocks} against re-entering itself through the block updates it causes. */
     private static boolean applying;
 
+    /**
+     * How many times {@link #applyAllDocks} may run in one server tick before the next call also logs who
+     * called it. A machine recomputes its addons a handful of times per tick at most - an addon was placed,
+     * a GUI was opened, a dock re-applied itself - so passing this mark means something is driving the
+     * addon scan repeatedly, which is the state that turns "Saving world" into a hang.
+     */
+    private static final int CALLS_PER_TICK_BEFORE_TRACE = 8;
+
+    /** Server tick the call counter below belongs to. */
+    private static long lastCallTick = Long.MIN_VALUE;
+    /** Calls of {@link #applyAllDocks} in {@link #lastCallTick}. */
+    private static int callsThisTick;
+    /** Tick whose call stack was already logged, so a runaway scan fills the log once and not once per call. */
+    private static long lastTracedTick = Long.MIN_VALUE;
+
     /** Machine this dock is linked to, or {@code null} while it is not linked. */
     private BlockPos linkedMachine;
 
@@ -218,6 +233,7 @@ public class WirelessExtensionAddonBlockEntity extends ExtensionAddonBlockEntity
             }
 
             OritechAddonsOne.LOGGER.debug("[diag] applyAllDocks: {} -> {} dock(s)", machinePos, docks.size());
+            traceRunawayAddonScan(level, machinePos);
             // Everything inside this window runs with an addon data set that does not contain these docks
             // yet, and merging one writes block states and replays plugin behaviours - either can make the
             // machine recompute its addons and clamp its stored energy in the middle of the merge. The
@@ -239,6 +255,39 @@ public class WirelessExtensionAddonBlockEntity extends ExtensionAddonBlockEntity
         } finally {
             applying = false;
         }
+    }
+
+    /**
+     * Counts the addon scans of one server tick and, once they pass
+     * {@link #CALLS_PER_TICK_BEFORE_TRACE}, logs the call stack of the first such call.
+     * <p>
+     * This exists because a runaway scan is invisible from the outside: the machine keeps recomputing its
+     * addons, nothing throws, and the only symptom is that the server thread never returns to the tick loop -
+     * a world save that never reaches "All chunks are saved", a shutdown that never finishes. The stack says
+     * which of the many callers is driving it (a world-save or chunk-unload path, a scheduled
+     * {@code initAddons}, an addon block update, a GUI packet), which no amount of reading the addon code can
+     * decide from the log alone.
+     * <p>
+     * Logged once per offending tick, so a server in that state produces one stack per tick instead of one
+     * per scan.
+     */
+    private static void traceRunawayAddonScan(Level level, BlockPos machinePos) {
+        if (!(level instanceof ServerLevel serverLevel)) return;
+        if (!OritechAddonsOne.LOGGER.isDebugEnabled()) return;
+
+        var gameTime = serverLevel.getGameTime();
+        if (gameTime == lastCallTick) {
+            callsThisTick++;
+        } else {
+            lastCallTick = gameTime;
+            callsThisTick = 1;
+        }
+        if (callsThisTick != CALLS_PER_TICK_BEFORE_TRACE) return;
+        if (lastTracedTick == gameTime) return;
+
+        lastTracedTick = gameTime;
+        OritechAddonsOne.LOGGER.debug("[diag] machine {} was rescanned {} times in tick {}; caller stack:",
+                machinePos, callsThisTick, gameTime, new Exception("addon scan caller"));
     }
 
     /**

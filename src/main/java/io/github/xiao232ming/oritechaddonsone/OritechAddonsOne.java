@@ -510,9 +510,24 @@ public class OritechAddonsOne {
      * {@code ADDON_ENTITY} field carries no {@code @AssignSidedInventory}), so there is nothing to fight
      * over. The provider still answers only for a machine extender with a placed transfer plugin on the
      * asked face; every other addon of the shared type answers {@code null}, exactly as it did before.
+     * <p>
+     * <b>Diagnostics.</b> Every extender lookup that reaches the provider is logged, and so is what the mode
+     * lookup behind it answered, so one log tells apart the three possibilities a "the pipe does not
+     * connect" report can have: the provider was never called (the registration or the block entity type is
+     * the problem), it was called but answered {@code null} (the face has no mode, the plugin is not ready,
+     * or the machine behind the extender cannot be resolved), or it answered a handler and the pipe still
+     * does not connect (the pipe's own caching or connection state). All of it uses the mod's own
+     * {@code [transfer] ...} debug lines. The provider is logged per call (not per registration) on purpose:
+     * it is the only place that proves NeoForge really fired our provider for an extender at all, which is
+     * what tells "the registration is ignored" apart from "the handler answered nothing".
      */
     private void registerExtenderItemCapabilities(RegisterCapabilitiesEvent event) {
         event.registerBlockEntity(Capabilities.ItemHandler.BLOCK, BlockEntitiesContent.ADDON_ENTITY,
-                ExtenderFaceStorage::handlerFor);
+                (blockEntity, side) -> {
+                    LOGGER.debug("[transfer] capability: provider called for {} ({}), side {}",
+                            BlockEntitiesContent.ADDON_ENTITY.builtInRegistryHolder().getRegisteredName(),
+                            blockEntity.getBlockPos(), side);
+                    return ExtenderFaceStorage.handlerFor(blockEntity, side);
+                });
     }
 }
