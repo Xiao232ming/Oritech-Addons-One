@@ -4,8 +4,8 @@ import org.joml.Matrix4f;
 import org.joml.Vector3f;
 
 /**
- * The one transform the transfer preview page's model is drawn with on this branch, and the inverse its picking
- * ray is built from.
+ * The one transform the page model of 传输插件 is drawn with, and the inverse its picking ray is built
+ * from.
  * <p>
  * <b>Why this exists.</b> The model is drawn by {@link FacePreviewWidget#renderContent}, which applies a concrete
  * chain to the GUI's own pose: translate to the panel's centre at z 400, scale by

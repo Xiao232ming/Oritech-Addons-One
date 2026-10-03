@@ -20,7 +20,7 @@ import io.github.xiao232ming.oritechaddonsone.block.entity.TransferMode;
  * a hundred and sixty-two cell-faces, and Oritech's part lists are not bounded by six, so the fixed container data
  * slots that carry a setting per direction cannot carry this. The server sends the whole map instead
  * ({@code TransferNetworking.FaceModes}) and this class holds it, keyed by the plugin it belongs to - the same shape
- * as {@link TransferPreviewState}, and the same reason: the packet handler is not the screen, and the screen is not
+ * as {@link TransferAddonState}, and the same reason: the packet handler is not the screen, and the screen is not
  * the only thing that can ask.
  * <p>
  * The client is a <b>mirror</b> here, never the authority: every entry in it came from the server, so what the page
@@ -28,7 +28,7 @@ import io.github.xiao232ming.oritechaddonsone.block.entity.TransferMode;
  * answer, which is what makes a refused configuration (an occupied face, a cell that is not part of the structure)
  * visible on the page as "nothing happened".
  * <p>
- * It is dropped with the preview when the GUI closes, so a page that is opened again starts from whatever the server
+ * It is dropped with the model when the GUI closes, so a page that is opened again starts from whatever the server
  * sends with the menu.
  */
 public final class TransferFaceState {

@@ -11,7 +11,7 @@ import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEntity;
-import io.github.xiao232ming.oritechaddonsone.block.entity.TransferPreviewAddonBlockEntity;
+import io.github.xiao232ming.oritechaddonsone.block.entity.TransferAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.WirelessExtensionAddonBlockEntity;
 
 /**
@@ -21,7 +21,7 @@ import io.github.xiao232ming.oritechaddonsone.block.entity.WirelessExtensionAddo
  * It exists as one shared place because more than one block renders that menu: the wired
  * {@link ExtensionAddonBlock} and the wireless dock open it for themselves, and a transfer addon placed on
  * an Oritech machine extender opens its own block entity with the very same menu (see
- * {@link TransferAddonBlock}). Copying the buffer layout into every opener would mean three places that have
+ * {@link ExtensionTransferAddonBlock}). Copying the buffer layout into every opener would mean three places that have
  * to agree on what the client constructor reads, so the layout lives here once.
  */
 public final class PluginAddonMenus {
@@ -60,7 +60,7 @@ public final class PluginAddonMenus {
      * consumes the click here, exactly like the wired addon's own hook does
      * ({@link ExtensionAddonBlock#useWithoutItem} answers with {@link InteractionResult#SUCCESS} on both sides). The
      * question it cannot answer - whether the plugin really serves a machine - is not asked here: the block's hooks
-     * gate on the synced placement (see {@link TransferPreviewAddonBlock#canOpenScreen}), and the
+     * gate on the synced placement (see {@link TransferAddonBlock#canOpenScreen}), and the
      * server stays the side that opens the menu and that refuses everything for a plugin which serves nothing.
      * <p>
      * No machine is passed explicitly; this overload resolves it from the block entity itself, so a caller cannot
@@ -91,7 +91,7 @@ public final class PluginAddonMenus {
             @Nullable BlockPos servedMachine) {
         if (level.isClientSide()) {
             var blockEntity = level.getBlockEntity(pos);
-            if (blockEntity instanceof TransferPreviewAddonBlockEntity) return ItemInteractionResult.SUCCESS;
+            if (blockEntity instanceof TransferAddonBlockEntity) return ItemInteractionResult.SUCCESS;
 
             return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         }
@@ -113,7 +113,7 @@ public final class PluginAddonMenus {
      * <p>
      * Only 传输插件 can answer this and only on the server: it is built from the controller offset Oritech writes
      * into the block it claimed, which is plain save data that never leaves the server (see
-     * {@code TransferPreviewAddonBlockEntity#servedMachinePos()}). Every other addon and the dock serve no machine of
+     * {@code TransferAddonBlockEntity#servedMachinePos()}). Every other addon and the dock serve no machine of
      * their own through this menu, so for them the answer is {@code null} - which the page reads as its "no machine"
      * state, exactly as it should.
      * <p>
@@ -122,7 +122,7 @@ public final class PluginAddonMenus {
      */
     @Nullable
     private static BlockPos resolveServedMachine(ExtensionAddonBlockEntity blockEntity, BlockPos pos) {
-        return blockEntity instanceof TransferPreviewAddonBlockEntity plugin ? plugin.servedMachinePos() : null;
+        return blockEntity instanceof TransferAddonBlockEntity plugin ? plugin.servedMachinePos() : null;
     }
 
     /**

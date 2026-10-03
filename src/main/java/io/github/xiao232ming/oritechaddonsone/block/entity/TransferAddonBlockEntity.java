@@ -1,10 +1,13 @@
 package io.github.xiao232ming.oritechaddonsone.block.entity;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.Level;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.Vec3i;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -15,70 +18,85 @@ import rearth.oritech.api.item.ItemApi;
 import rearth.oritech.api.item.containers.DelegatingInventoryStorage;
 import rearth.oritech.block.entity.addons.AddonBlockEntity;
 import rearth.oritech.init.BlockContent;
+import rearth.oritech.util.Geometry;
+import rearth.oritech.util.MachineAddonController;
+import rearth.oritech.util.MultiblockMachineController;
 
 import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 import io.github.xiao232ming.oritechaddonsone.block.TransferAddonBlock;
 
 /**
- * Block entity of the transfer addon that is <b>placed as a block</b> on an Oritech machine extender
- * ({@code oritech:machine_extender}).
+ * Block entity of 传输插件 (the transfer preview plugin), the second transfer plugin of this mod.
  * <p>
- * The plugin is the same item as the one that is put <i>into</i> an Extension Addon, and once it stands on
- * an extender it does for that extender what the stored plugin does for its addon: it makes the six faces of
- * the host configurable on the "Extension Transfer" page and moves the items of the machine behind it. It is
- * therefore an {@link ExtensionAddonBlockEntity} - the GUI, the menu, the per-face settings, the save format
- * and the page's container data are all reused as they are - with three differences:
+ * Its <b>function</b> is the transfer side of {@link ExtensionTransferAddonBlockEntity}: one {@link TransferMode} plus the
+ * automation flag per face (see {@link TransferFaceModes}), applied on the server. What differs is what a face
+ * means and what its page shows:
  * <ul>
- *     <li>the net is drawn from the <b>host</b>, not from the plugin: {@link #transferPageBlock()} and
- *     {@link #transferPageBlockState()} report the extender's state, so the page shows the extender's faces
- *     (a plugin model unfolded into six faces would say nothing about where the items go),</li>
- *     <li>the gold border marks the face of the extender this plugin hangs on, that face is not
- *     configurable and the movement skips it, so the plugin never tries to trade with itself: the plugin
- *     block stands in that face, so no pipe or hopper can ever be there and a mode on it could not describe
- *     a connection (see {@link #setTransferConfig(Direction, TransferMode, boolean)}),</li>
- *     <li>the machine is the one the <b>extender</b> is attached to (see {@link #attachedMachinePos()}), and
- *     the container of a face is the one next to the extender, not next to the plugin.</li>
+ *     <li>a configured face means a face of the <b>machine</b> the plugin serves in both placements, and it drives
+ *     this plugin's own <b>automation</b> only - with the container outside that face of the machine (see
+ *     {@link #serverTickTransfer()}),</li>
+ *     <li><b>pipes, hoppers and other mods never connect here.</b> A machine that wants them already offers its own
+ *     faces to them, directly from Oritech, so this plugin deliberately registers no item capability at all (see
+ *     {@code OritechAddonsOne#registerCapabilities}): a capability on the plugin would answer for the
+ *     <em>plugin's</em> own block, i.e. a second meaning for the same six directions, and none is needed.</li>
  * </ul>
- * The plugin's own faces offer nothing: they are not a way into the machine, the extender's faces are (see
- * {@link #getInventoryStorage(Direction)}).
+ * Where it may be placed:
+ * <ul>
+ *     <li>hung on Oritech's <b>machine extender</b> it acts on the machine that extender was claimed by,</li>
+ *     <li>hung <b>directly on an Oritech machine</b> it acts on that machine.</li>
+ * </ul>
+ * The page of this plugin draws neither of those as a cube net: it renders the machine it serves as a rotatable
+ * 3D model and lets the player pick the faces on that model (see
+ * {@code io.github.xiao232ming.oritechaddonsone.client.page.TransferAddonPage}).
  * <p>
- * Placed on anything else - a machine, a wall, another block - none of this applies: the plugin keeps
- * Oritech's ordinary addon behaviour, has no GUI and moves nothing.
+ * The plugin is therefore an {@link ExtensionAddonBlockEntity} with four differences:
+ * <ul>
+ *     <li>the machine it works on is {@link #servedMachinePos()}: the machine behind its host extender, or the
+ *     machine it is attached to itself. Every inherited user of {@code connectedMachinePos()} - the machine name in
+ *     the menu, the force load badge and the energy guard of the storage bonuses - therefore follows the host,</li>
+ *     <li>its own faces answer with an <b>empty</b> inventory ({@link #getInventoryStorage(Direction)}), so no pipe,
+ *     hopper or other mod can reach the machine through the plugin,</li>
+ *     <li>the page it shows is its own ({@code ExtensionAddonMenu#previewOnly()}), and that page draws the
+ *     machine it serves,</li>
+ *     <li>an <b>occupied</b> face - the face of the machine the plugin block stands in when the plugin hangs directly
+ *     on that machine - is refused and marked, so no mode can describe a connection that is physically blocked. Hung
+ *     on an extender the plugin occupies no face of the machine at all: the extender is not part of it, so all six
+ *     machine faces stay configurable.</li>
+ * </ul>
+ * Placed on a wall - i.e. on anything that is neither an Oritech machine nor an extender - it keeps Oritech's
+ * ordinary addon behaviour: no GUI, no movement, an empty answer on every face.
  */
 public class TransferAddonBlockEntity extends ExtensionAddonBlockEntity {
 
     /**
-     * Faces of the extender this plugin hangs on, as a bitmask over {@link Direction#values()}. The base
-     * class recomputes it from {@link #scanAttachedTransferFaces()} on the server and publishes it through
-     * the menu's container data; on the client this field is the synced copy the menu writes, because the
-     * page has to draw the gold border there as well.
-     */
-    private int attachedHostFaces;
-
-    /**
-     * Faces of the extender this plugin last told NeoForge's capability caches about, as a bitmask over
-     * {@link Direction#values()}, or {@code -1} while that has not happened yet.
+     * Faces of the <b>machine</b> this plugin refuses to configure, as a bitmask over {@link Direction#values()}: the
+     * one face of the machine the plugin block stands in while the plugin hangs directly on that machine, and
+     * {@code 0} for the extender placement, whose plugin occupies a face of the extender rather than one of the
+     * machine.
      * <p>
-     * It exists so the invalidation can be moved out of the two lifecycle hooks that are not allowed to
-     * touch the level (see {@link #invalidateHostCapabilities()}): the mask is compared on every server
-     * tick, and the extender's position is invalidated exactly when it really changed. The bits stand for
-     * "the extender answers with an inventory on this face": the face the plugin itself occupies never
-     * counts, because the plugin block is there and no pipe can stand in it.
+     * The base class recomputes it from {@link #scanAttachedTransferFaces()} on the server and publishes it through
+     * the menu's container data; on the client this field is the synced copy the menu writes, because the page has
+     * to mark those faces there as well.
      */
-    private int publishedHostMask = -1;
+    private int occupiedFaces;
 
     /**
-     * Number of times this plugin told NeoForge's capability caches that the extender may answer
-     * differently. Only a diagnostic counter, so that the log can say whether an invalidation happened at
-     * all without printing a line for every one of them.
+     * What each <b>cell-face</b> of the served machine's structure does - the setting this page configures, one entry
+     * per individual face of one individual cell (see {@link CellFaceModes}).
+     * <p>
+     * It is a map of its own and not the inherited {@link TransferFaceModes}, which stays what it is for the cube net
+     * page and the Extension Addons: that one keys a setting by {@link Direction} alone and so describes the six faces
+     * of <b>one block</b>, while this one names a face of a cell of a structure and has no maximum at all. The two
+     * live side by side on this block entity because it inherits the whole addon - the plugin slots, the energy lookup
+     * and the cube net page's own model - and only the parts this page owns are moved onto the cell-face model.
      */
-    private int hostInvalidations;
+    private final CellFaceModes cellFaces = new CellFaceModes();
 
     /**
-     * The empty inventory every face of a placed plugin answers with. One instance for all six faces,
-     * because Oritech's bridge caches the storage a face answers with
-     * ({@code NeoforgeItemApiImpl.ContainerStorageWrapper}) and the answer never changes: the plugin owns no
-     * items of its own (see {@link #getInventoryStorage(Direction)}).
+     * The empty inventory every face of this plugin answers with. One instance for all six faces, because
+     * {@code ItemApi.BlockProvider} is part of what an Extension Addon is and the answer never changes: this plugin
+     * never offers the machine's items through its own block (see {@link #getInventoryStorage(Direction)}), so a pipe
+     * that looks at it sees "nothing here" rather than an error.
      */
     private final ItemApi.InventoryStorage emptyStorage =
             new DelegatingInventoryStorage(() -> null, () -> false);
@@ -87,186 +105,251 @@ public class TransferAddonBlockEntity extends ExtensionAddonBlockEntity {
         super(OritechAddonsOne.TRANSFER_ADDON_ENTITY.get(), pos, state);
     }
 
-    // ------------------------------------------------------------------ the host extender
+    // ------------------------------------------------------------------ which machine this plugin serves
 
-    /**
-     * The Oritech machine extender this plugin hangs on, or {@code null} while it hangs on something else (a
-     * machine, a wall, ...) or that block's chunk is not loaded.
-     * <p>
-     * Only the server decides this: the host is found by looking at the neighbour the plugin was placed
-     * against, and the client learns everything it needs about it through the menu (see
-     * {@link #attachedTransferFaces()} and {@link #transferPageBlockState()}).
-     */
-    @Nullable
-    public BlockEntity attachedExtender() {
-        if (level == null || level.isClientSide()) return null;
-
-        var hostPos = hostPos();
-        if (!level.isLoaded(hostPos)) return null;
-
-        return level.getBlockEntity(hostPos);
+    /** Position of the block this plugin hangs on, i.e. of the machine or of the extender. */
+    private BlockPos attachedHostPos() {
+        return worldPosition.relative(TransferAddonBlock.attachedTowards(getBlockState()));
     }
 
     /**
-     * True while this plugin hangs on an Oritech machine extender, i.e. while the whole placed behaviour -
-     * the GUI, the page, the movement - applies. The host is checked by block identity, so an addon or a
-     * machine that merely happens to be an Oritech addon block does not count.
+     * The machine the <b>host</b> this plugin hangs on reports, or {@code null} while that host is not an addon of
+     * a machine at all: the machine behind the extender, or the machine the plugin itself was claimed by.
+     * <p>
+     * This is the one place the two placements are told apart, and it deliberately asks the <em>host</em> instead
+     * of the plugin: Oritech's addon scan walks through an extender and claims the plugin standing on it like any
+     * other addon, so it writes the position of the <b>machine behind the extender</b> into the plugin's own
+     * controller position - never the extender's. A plugin that compared its own controller position with the
+     * block it hangs on therefore answers "no" for the extender placement, which is what used to make right
+     * clicking such a plugin do nothing at all (see {@link #hangsOnExtender()}).
+     * <p>
+     * Server only, like every user of it: a controller offset is plain block entity save data that never reaches
+     * a client - the client's copy stays zero, so {@code getControllerPos()} answers the block's own position
+     * there - and the extender's controller position is not synced either. The client learns the machine the page
+     * draws through the menu instead (see {@code ExtensionAddonMenu#transferMachinePos()}).
+     */
+    @Nullable
+    private BlockPos hostMachinePos() {
+        if (level == null || level.isClientSide()) return null;
+
+        var hostPos = attachedHostPos();
+        if (!level.isLoaded(hostPos)) return null;
+
+        if (level.getBlockState(hostPos).is(BlockContent.MACHINE_EXTENDER)) {
+            if (!(level.getBlockEntity(hostPos) instanceof AddonBlockEntity extender)) return null;
+
+            var machinePos = extender.getControllerPos();
+            return machinePos == null || machinePos.equals(extender.getBlockPos()) ? null : machinePos;
+        }
+
+        var controller = getControllerPos();
+        if (controller == null || !controller.equals(hostPos)) return null;
+
+        return level.getBlockEntity(hostPos) instanceof MachineAddonController ? hostPos : null;
+    }
+
+    /**
+     * True while this plugin hangs on an Oritech machine extender that a machine claimed, i.e. while the extender
+     * placement really applies.
+     * <p>
+     * The host is checked by block identity, so an addon or a machine that merely happens to be an Oritech addon
+     * block does not count, and the extender's own controller position has to point at a machine as well: an
+     * extender no machine ever claimed has no machine behind it, so a plugin hanging on it serves nothing.
      */
     public boolean hangsOnExtender() {
         if (level == null || level.isClientSide()) return false;
 
-        var hostPos = hostPos();
-        return level.isLoaded(hostPos) && level.getBlockState(hostPos).is(BlockContent.MACHINE_EXTENDER);
-    }
+        var hostPos = attachedHostPos();
+        if (!level.isLoaded(hostPos)) return false;
+        if (!level.getBlockState(hostPos).is(BlockContent.MACHINE_EXTENDER)) return false;
 
-    /** Position of the block this plugin hangs on, i.e. of the extender while there is one. */
-    private BlockPos hostPos() {
-        return worldPosition.relative(attachedTowards());
-    }
-
-    /** Direction from this plugin towards the block it hangs on, i.e. the extender when there is one. */
-    private Direction attachedTowards() {
-        return TransferAddonBlock.attachedTowards(getBlockState());
+        return hostMachinePos() != null;
     }
 
     /**
-     * Position of the machine the <b>extender</b> is attached to, or {@code null} while the plugin does not
-     * hang on an extender, that extender was not claimed by a machine, or the machine's chunk is not loaded.
+     * True while this plugin hangs directly on an Oritech machine, i.e. on a block that claimed it as one of its
+     * addons - the second placement this plugin supports.
      * <p>
-     * The machine is resolved exactly like the machine of an addon: Oritech's addon scan writes the position
-     * of the machine that claimed the extender into the extender's own block entity, and its controller
-     * position is that machine - as long as it is not its own position, which is the "claimed by nobody"
-     * value.
+     * The machine is the neighbour the plugin was placed against <b>and</b> the block Oritech wrote into the
+     * plugin's controller position: a plugin standing on a wall next to something it was never claimed by serves
+     * nothing, and a plugin whose extender was broken does not silently start serving whatever block is behind it
+     * either. An extender never counts here even when it was claimed by a machine - that placement is
+     * {@link #hangsOnExtender()}.
      */
-    @Nullable
-    public BlockPos attachedMachinePos() {
-        if (!(attachedExtender() instanceof AddonBlockEntity extender)) return null;
+    public boolean hangsOnMachine() {
+        if (level == null || level.isClientSide()) return false;
 
-        var machinePos = extender.getControllerPos();
-        return machinePos == null || machinePos.equals(extender.getBlockPos()) ? null : machinePos;
+        var hostPos = attachedHostPos();
+        if (level.getBlockState(hostPos).is(BlockContent.MACHINE_EXTENDER)) return false;
+
+        var controller = getControllerPos();
+        if (controller == null || !controller.equals(hostPos)) return false;
+
+        return hostMachinePos() != null;
     }
 
     /**
-     * The machine this plugin works on. The base class answers "the machine that claimed me", which is
-     * Oritech's answer for the plugin's <b>own</b> addon slot (and nothing while it stands on an extender is
-     * scanned); what the plugin really works on is the machine behind its host extender. Every inherited user
-     * of this position - the machine name in the menu and the energy guard of the storage bonuses - therefore
-     * follows the extender, which is what makes them show and protect the right machine.
+     * The machine this plugin works on, or {@code null} while it serves none: the machine the host extender was
+     * claimed by, or the machine the plugin itself is attached to.
+     * <p>
+     * Extends the base class's answer - that one is the plugin's own controller position - by the extender case: while
+     * the plugin hangs on an extender, Oritech's addon scan writes the position of the machine <b>behind</b> that
+     * extender into the plugin, so the base class's answer is the machine that really claimed the plugin; the
+     * extender is only asked because it is the block whose faces the plugin works through (see
+     * {@link #hostMachinePos()}).
+     * <p>
+     * <b>This is the server's answer.</b> It is built from controller offsets, which are plain block entity save data
+     * and never reach a client, so a client gets {@code null} here for a plugin that really serves a machine. The
+     * capability provider and the automation read it on the server, where it is authoritative, and the machine the
+     * page draws is sent to the client with the menu instead
+     * ({@code ExtensionAddonMenu#transferMachinePos()}).
+     */
+    @Override
+    @Nullable
+    public BlockPos servedMachinePos() {
+        return hostMachinePos();
+    }
+
+    /**
+     * The machine this plugin works on. The base class answers "the machine that claimed me", which is right for a
+     * plugin in an addon slot and right for this plugin as long as it hangs on a machine directly; while it hangs on
+     * an <b>extender</b> it is the machine behind that extender, because that is the machine whose items the
+     * extender's faces move.
      */
     @Override
     @Nullable
     public BlockPos connectedMachinePos() {
-        return attachedMachinePos();
+        return servedMachinePos();
     }
 
-    // ------------------------------------------------------------------ the page of the host
+    // ------------------------------------------------------------------ the page of the plugin
 
     /**
-     * The block whose faces the transfer page shows: the extender this plugin hangs on, or the plugin itself
-     * while it does not hang on one (the page then never appears, see {@link #canTransferItems()}).
+     * The block whose faces the page configures: the plugin itself. Both placements configure the plugin's own faces
+     * - the extender placement deliberately keeps {@link ExtenderFaceStorage}'s answer separate from the preview
+     * plugin, so an extender's faces stay {@link ExtensionTransferAddonBlockEntity}'s - and the plugin is also the block whose
+     * block state decides whether it is really connected to a machine (the {@code addon_used} flag, which the
+     * blockstate swaps the model on).
      */
     @Override
     public Block transferPageBlock() {
-        if (level == null) return super.transferPageBlock();
-
-        var hostPos = hostPos();
-        if (!level.isLoaded(hostPos)) return super.transferPageBlock();
-
-        return level.getBlockState(hostPos).getBlock();
+        return getBlockState().getBlock();
     }
 
-    /**
-     * State of that block, or {@code null} while the plugin does not hang on an extender. The state is read
-     * from the client's own level, where block states are synced, so the net is drawn from the very
-     * orientation the extender has in the world.
-     */
+    /** State of {@link #transferPageBlock()}, which is always this plugin's own state. */
     @Override
-    @Nullable
     public BlockState transferPageBlockState() {
-        if (level == null) return super.transferPageBlockState();
-
-        var hostPos = hostPos();
-        if (!level.isLoaded(hostPos)) return super.transferPageBlockState();
-
-        return level.getBlockState(hostPos);
+        return getBlockState();
     }
 
-    // ------------------------------------------------------------------ the face the plugin hangs on
+    // ------------------------------------------------------------------ the faces the plugin refuses
 
     /**
-     * The face of the extender this plugin hangs on, as the bitmask the page draws its gold border from.
+     * The faces of the <b>machine</b> this plugin refuses to configure, as the bitmask the page draws its gold border
+     * from: the one face of the machine the plugin itself stands on while it hangs directly on that machine.
      * <p>
-     * The extender is not scanned by this plugin, so there is nothing to look up here: the face follows from
-     * the plugin's own placement - it is the face of the extender the plugin was placed against - and is
-     * therefore only reported while the plugin really hangs on an extender. On the client the base class's
-     * container data already wrote the value into {@link #attachedHostFaces}.
+     * <b>The mask is about the machine's surface, not about the plugin's own faces.</b> What it has to answer is
+     * "which of the six doors of the machine is physically blocked by this plugin", because that is what the page
+     * shows and what a mode on such a face could not describe. The mask is therefore read on the machine's own
+     * directions:
+     * <ul>
+     *     <li>hung on an <b>extender</b> it is <b>empty</b>: the plugin occupies a face of the extender, and the
+     *     extender is not part of the machine - the machine's six faces are all free, so all six stay
+     *     configurable (the plugin's own faces only drive that automation, see {@link #serverTickTransfer()}),</li>
+     *     <li>hung <b>directly on the machine</b> it is the single face of the machine the plugin block stands in,
+     *     i.e. the machine's face the plugin was placed against. That face is the one the machine and the plugin share
+     *     and the one no pipe can ever be in, so it is the one face that has to be marked and refused.</li>
+     * </ul>
+     * Another plugin of this mod on a neighbouring face never marks a machine face: such a plugin stands on a face of
+     * the machine only when it hangs on the machine itself, and then it is the case above, from <em>its</em> point of
+     * view.
+     * <p>
+     * Nothing is reported while the plugin serves no machine: a plugin standing on a wall keeps Oritech's ordinary
+     * addon behaviour, where every face is free and no face describes a connection to a machine.
+     * <p>
+     * On the server the mask is recomputed from the world every tick; on the client it is the copy the base class's
+     * container data wrote into {@link #occupiedFaces}, because the page has to draw the same borders there.
      */
     @Override
     protected int scanAttachedTransferFaces() {
         if (level == null) return 0;
-        if (level.isClientSide()) return attachedHostFaces;
+        if (level.isClientSide()) return occupiedFaces;
 
-        return hangsOnExtender() ? 1 << TransferAddonBlock.attachedFace(getBlockState()).ordinal() : 0;
+        if (hangsOnExtender()) return 0;
+        if (!hangsOnMachine()) return 0;
+
+        return 1 << TransferAddonBlock.attachedFace(getBlockState()).ordinal();
     }
 
-    // ------------------------------------------------------------------ moving the extender's items
+    // ------------------------------------------------------------------ moving the machine's items
 
     /**
-     * Moves items through the extender for every face whose automation is switched on - the placed form of
-     * {@link ExtensionAddonBlockEntity#serverTickTransfer()}.
+     * Moves items through the <b>individual faces of the machine's cells</b> for every cell-face whose automation is
+     * switched on - the placed form of {@link ExtensionAddonBlockEntity#serverTickTransfer()}.
      * <p>
-     * The two sides are the machine the <b>extender</b> is attached to and the container on the extender's
-     * face, so the trade happens exactly where the page's net says it does. INPUT fills the machine,
-     * OUTPUT empties it and BOTH does both, with up to {@link MachineFaceStorage#ITEMS_PER_TICK} items per
-     * face and tick. The face the plugin itself hangs on is skipped (there is no container there, only the
-     * plugin), as is the face the machine itself sits on - trading "machine to machine" there would only
-     * shuffle the machine's own items through its own inventory.
+     * <b>A configured entry names a face of one cell of the structure</b> ({@link CellFaceModes}), and the container it
+     * trades with is the one outside <em>that</em> face of <em>that</em> cell: with a mode on the north face of the
+     * cell at offset {@code o}, INPUT pulls from the container north of {@code machinePos.offset(o)} into the machine,
+     * OUTPUT pushes the machine's items into it, and BOTH does both. A face of a cell that no other cell of the
+     * structure covers is a face of the machine's outer surface, which is the only kind the page can configure (the
+     * server re-checks that too, see {@link #setTransferConfig}), so an entry always names a real outside face.
      * <p>
-     * Cheap while nothing is configured, and does nothing at all while the plugin does not hang on an
-     * extender, so a plugin that stands on a machine keeps Oritech's plain addon behaviour.
+     * The trade happens between the machine's inventory and that container, with up to
+     * {@link MachineFaceStorage#ITEMS_PER_TICK} items per <b>entry</b> and tick, in the order the two directions run in
+     * {@link MachineFaceStorage#move}: the machine is the owner on its own side of both, so its slot roles are
+     * respected ({@link MachineSlotRoles}) - an INPUT face fills the machine's input slots only and an OUTPUT face
+     * empties its output slots only. The container outside is passed without an owner, which is what a chest, a pipe
+     * or another mod's inventory is.
      * <p>
-     * This deliberately does <b>not</b> call the base class's own movement: that one trades with the
-     * containers around the <em>plugin</em>, while the faces this plugin configures are the extender's (see
-     * {@link #invalidateHostCapabilities()} for the one thing the extender needs to be told on top).
+     * <b>The budget is per configured cell-face and not shared.</b> The model has no maximum, so a machine whose
+     * surface is configured all over would move {@code ITEMS_PER_TICK} per entry - which is exactly what the page's
+     * counter reports and what a player who configured that many faces asked for. What keeps it bounded is the
+     * machine's own inventory: every entry moves items into or out of the same inventory, so an empty or full machine
+     * starves the rest of the entries instead of the loop doing more work than the items allow. The loop itself is one
+     * pass over the configured entries, and the common case is none.
+     * <p>
+     * The one machine face that is skipped is the one the plugin's own host block stands in
+     * ({@link #hostFaceOfMachine()}): a plugin hung directly on the machine occupies exactly that face of the
+     * controller's cell, so a container can never be there and trading would shuffle the machine's items through its
+     * own cell. The extender placement skips that cell-face too - the extender is not a container, and the plugin is
+     * the block standing on the machine there.
+     * <p>
+     * Cheap while nothing is configured, and it does nothing at all while the plugin serves no machine, so a plugin
+     * that stands on a wall keeps Oritech's plain addon behaviour.
+     * <p>
+     * This deliberately does <b>not</b> call the base class's own movement: that one trades with the containers around
+     * the addon - around the plugin or around the extender - which is not what the page configures or shows.
      */
     @Override
     public void serverTickTransfer() {
-        // keeps the gold-border face and the very existence of the page in step with the world; the base
-        // class's own movement must not run here - the faces and the machine are the extender's
+        // keeps the refused faces and the very existence of the page in step with the world; the base class's own
+        // movement must not run here - the faces and the machine are resolved by this plugin
         refreshAttachedTransferFaces();
 
         if (level == null || level.isClientSide()) return;
 
-        // The one moment the extender may be told that it answers differently: a server tick of this very
-        // block entity, which runs after the world is ticking again and never inside the removal, unload or
-        // save path the block entity also goes through (see invalidateHostCapabilities).
-        publishHostCapabilityMask();
-
-        if (!hangsOnExtender()) return;
-
-        var machine = MachineFaceStorage.machineStorageAt(level, attachedMachinePos());
+        var machinePos = servedMachinePos();
+        var machine = MachineFaceStorage.machineStorageAt(level, machinePos);
         if (machine == null) return;
 
-        var hostPos = hostPos();
-        var skipped = TransferAddonBlock.attachedFace(getBlockState());
-        var machinePos = attachedMachinePos();
+        if (cellFaces.isEmpty()) return;
 
-        // The machine's own block entity, known here because the machine sits behind the extender and not
-        // behind the plugin: the movement is told about it so that the machine's slot roles can be respected
-        // - an INPUT face fills the input slots only and an OUTPUT face empties the output slots only, never
-        // the other way round (see MachineSlotRoles). A handler alone does not carry that knowledge.
+        // The machine's own block entity, so that the machine's slot roles can be respected - an INPUT face fills
+        // the input slots only and an OUTPUT face empties the output slots only, never the other way round (see
+        // MachineSlotRoles). A storage alone does not carry that knowledge.
         var machineEntity = level.isLoaded(machinePos) ? level.getBlockEntity(machinePos) : null;
+        // the face of the controller's own cell the plugin's host block stands in, or null while it stands somewhere
+        // else entirely (the extender placement): only that one cell-face can ever be blocked
+        var hostFace = hostFaceOfMachine();
 
-        for (var face : Direction.values()) {
-            if (face == skipped) continue;
+        for (var entry : cellFaces.packedEntries()) {
+            var mode = entry.mode();
+            if (mode == TransferMode.NONE || !entry.automation()) continue;
 
-            var mode = transferModes().modeOf(face);
-            if (mode == TransferMode.NONE || !transferModes().automationOf(face)) continue;
+            // the plugin's own block is no container: no container can be outside that face of that cell
+            if (entry.cell().equals(Vec3i.ZERO) && entry.face() == hostFace) continue;
 
-            // the face the machine sits on has no container of its own to trade with
-            if (hostPos.relative(face).equals(machinePos)) continue;
-
-            var neighbour = MachineFaceStorage.storageAt(level, hostPos, face);
+            var neighbour = MachineFaceStorage.storageAt(level, machinePos.offset(entry.cell()), entry.face());
             if (neighbour == null) continue;
 
             if (mode.allowsExtract()) MachineFaceStorage.move(machine, machineEntity, neighbour, null);
@@ -275,174 +358,196 @@ public class TransferAddonBlockEntity extends ExtensionAddonBlockEntity {
     }
 
     /**
-     * Sets what one face of the extender does and tells the capability caches that the answer for that face
-     * may have changed: a face that was configured and now is not (or the other way round) turns the
-     * extender from "no inventory here" into an item connection, or back.
+     * Sets what one <b>face of one cell</b> of the machine does, i.e. which container outside that face of that cell
+     * this plugin trades with on its own (see {@link #serverTickTransfer()}).
      * <p>
-     * The face the plugin itself hangs on is refused: the plugin block occupies it, so no pipe, hopper or
-     * other mod can ever be there and a mode on it could not describe a connection. The transfer page marks
-     * that face in gold and does not offer it either (see {@code TransferAddonPage#occupiedFace}); refusing
-     * it here as well is what keeps a mode written by an older version, by a modified client or by a
-     * half-rolled-back page from leaving a face configured that nothing can ever use.
+     * <b>The server validates the offset, not the client.</b> The cell has to name a cell of the machine the plugin
+     * really serves ({@link #machineCellOffsets()}: the controller's own cell plus the multiblock's core positions,
+     * rotated by the machine's facing) and it has to be inside the range one entry can express
+     * ({@link CellFaceModes#isCellOffsetInRange}), so a modified client can neither configure a cell that is not part
+     * of the structure nor make the plugin trade with something arbitrarily far away. The offset arrives exactly as
+     * the client measured it, i.e. relative to the machine the page draws.
      * <p>
-     * Called from the transfer page's packet, on the server, on this very block entity - which is what makes
-     * the plugin the right place to do it: it knows the extender it hangs on.
+     * A cell-face the plugin's own host block stands in is <b>occupied</b> and refused: while the plugin hangs
+     * directly on the machine, the machine block is in one of the controller cell's faces and the plugin itself stands
+     * in it, so no container can ever be there and a mode on it could not describe a connection. The page marks that
+     * face and does not offer it either; refusing it here as well is what keeps a mode written by an older version, by
+     * a modified client or by a half-rolled-back page from leaving a face configured that nothing can ever use.
+     * <p>
+     * Hung on an <b>extender</b> nothing is refused: the plugin occupies a face of the extender, which is not part of
+     * the machine, so every face of every cell of the structure is configurable (see
+     * {@link #scanAttachedTransferFaces()}).
+     * <p>
+     * Called from the preview page's packet, on the server, on this very block entity - which is what makes the plugin
+     * the right place to do it: it knows the machine it serves and the face that is physically blocked. No capability
+     * cache has to be told anything: this plugin answers no item capability at all (see
+     * {@link #getItemLookup(Direction)}).
+     *
+     * @param cell the offset of the cell from the served machine's controller block, as the page measured it
+     * @return true while the setting was accepted and written
      */
-    @Override
-    public boolean setTransferConfig(Direction face, TransferMode mode, boolean automation) {
-        // The occupied face only exists while the plugin really hangs on an extender: placed on anything
-        // else the plugin keeps Oritech's own addon behaviour, where the face it is attached to says
-        // nothing about an extender and every face has to stay configurable.
-        if (mode != TransferMode.NONE && hangsOnExtender()
-                && face == TransferAddonBlock.attachedFace(getBlockState())) {
-            OritechAddonsOne.LOGGER.debug(
-                    "[transfer] refused {} on {} face {}: the plugin itself stands on that face of the extender",
-                    mode, worldPosition, face);
-            return false;
-        }
+    public boolean setCellFaceConfig(Vec3i cell, Direction face, TransferMode mode, boolean automation) {
+        if (level == null || level.isClientSide() || cell == null || face == null || mode == null) return false;
+        if (mode != TransferMode.NONE && !canTransferItems()) return false;
+        if (mode != TransferMode.NONE && servedMachinePos() == null) return false;
+        if (!CellFaceModes.isCellOffsetInRange(cell)) return false;
+        if (mode != TransferMode.NONE && !machineCellOffsets().contains(cell)) return false;
+        if (mode != TransferMode.NONE && isOccupied(cell, face)) return false;
 
-        if (!super.setTransferConfig(face, mode, automation)) return false;
+        if (!cellFaces.set(cell, face, mode, automation)) return true;
 
-        invalidateHostCapabilities();
+        setChanged();
         return true;
+    }
+
+    /** The cell-face settings of this plugin; never {@code null}, empty while nothing is configured. */
+    public CellFaceModes cellFaceModes() {
+        return cellFaces;
+    }
+
+    /**
+     * True while the given face of the given cell is one the plugin refuses: the machine face its own host block
+     * stands in.
+     * <p>
+     * Only the controller's own cell can be occupied - the host block stands in exactly one face of exactly one cell -
+     * so the mask {@link #scanAttachedTransferFaces()} publishes (which is about the machine's own six directions) is
+     * consulted for that cell, and every other cell of the structure is free.
+     */
+    public boolean isOccupied(Vec3i cell, @Nullable Direction face) {
+        if (face == null) return false;
+        if (!cell.equals(Vec3i.ZERO)) return false;
+
+        return isOccupied(face);
+    }
+
+    /**
+     * The cells of the served machine's structure, as offsets from its controller block: the controller's own cell
+     * plus every cell Oritech's part list names ({@code MultiblockMachineController#getCorePositions()}), each rotated
+     * by the machine's facing the way the assembled machine itself rotates them.
+     * <p>
+     * It is the list the server validates a client's offset against, and it is deliberately the same list the page
+     * builds its model from: a one-block machine - or a machine whose block entity is not a multiblock controller at
+     * all - is the one cell at the origin.
+     * <p>
+     * Empty while the plugin serves no machine or the machine's chunk is not loaded, which is what makes every
+     * configuration request fail then.
+     */
+    public List<Vec3i> machineCellOffsets() {
+        var machinePos = servedMachinePos();
+        if (machinePos == null || level == null || !level.isLoaded(machinePos)) return List.of();
+
+        var cells = new ArrayList<Vec3i>();
+        cells.add(Vec3i.ZERO);
+
+        var machineEntity = level.getBlockEntity(machinePos);
+        if (machineEntity instanceof MultiblockMachineController multiblock) {
+            var facing = multiblock.getFacingForMultiblock();
+            for (var relative : multiblock.getCorePositions()) {
+                var cell = Geometry.rotatePosition(relative, facing);
+                if (!cells.contains(cell)) cells.add(cell);
+            }
+        }
+        return List.copyOf(cells);
+    }
+
+    /**
+     * The face of the machine the block this plugin hangs on stands in, or {@code null} while that block is not next
+     * to the machine's core block at all.
+     * <p>
+     * It is the one machine face that must not be traded with: hung directly on the machine it is the face the plugin
+     * itself occupies, and hung on an extender it is the face the extender sits in. In both cases the machine has no
+     * neighbour there to trade with - a block of this mod stands in it - and the automation is about the machine's own
+     * six faces.
+     * <p>
+     * The host is resolved on the server only, like every user of {@link #attachedHostPos()}: the client has neither
+     * the plugin's controller offset nor the extender's, and it runs no automation anyway.
+     */
+    @Nullable
+    private Direction hostFaceOfMachine() {
+        var machinePos = servedMachinePos();
+        if (machinePos == null || level == null) return null;
+
+        var hostPos = attachedHostPos();
+        for (var face : Direction.values()) {
+            if (machinePos.relative(face).equals(hostPos)) return face;
+        }
+        return null;
+    }
+
+    /**
+     * Sets what one face of the machine does, i.e. which container outside that face of the machine this plugin
+     * trades with on its own (see {@link #serverTickTransfer()}).
+     * <p>
+     * A face that is <b>occupied</b> is refused: while the plugin hangs directly on the machine, the machine block is
+     * in one of the machine's faces and the plugin itself stands in it, so no container can ever be there and a mode
+     * on it could not describe a connection. The page marks that face and does not offer it either; refusing it here
+     * as well is what keeps a mode written by an older version, by a modified client or by a half-rolled-back page
+     * from leaving a face configured that nothing can ever use.
+     * <p>
+     * Hung on an <b>extender</b> nothing is refused: the plugin occupies a face of the extender, which is not part of
+     * the machine, so all six of the machine's faces are configurable (see {@link #scanAttachedTransferFaces()}).
+     * <p>
+     * Called from the preview page's packet, on the server, on this very block entity - which is what makes the
+     * plugin the right place to do it: it knows the machine it serves and the face that is physically blocked. No
+     * capability cache has to be told anything: this plugin answers no item capability at all (see
+     * {@link #getInventoryStorage(Direction)}).
+     */
+    /** True while the given face of the controller's cell is one {@link #scanAttachedTransferFaces()} refuses. */
+    private boolean isOccupied(@Nullable Direction face) {
+        if (face == null) return false;
+
+        return (scanAttachedTransferFaces() & 1 << face.ordinal()) != 0;
     }
 
     // ------------------------------------------------------------------ the plugin's own faces
 
+    // ------------------------------------------------------------------ the plugin's own faces
+
     /**
-     * Nothing. The net, the modes and the movement of a placed plugin are about the faces of the extender it
-     * hangs on, so a pipe, a hopper or another mod that looks at the plugin's own faces must see an empty
-     * inventory instead of the machine's items - otherwise the same items would be reachable at two
-     * different places, with the machine's inventory appearing to sit inside a plugin that only passes them
-     * through.
+     * <b>Nothing, on every face and in both placements.</b> This plugin never offers the machine's items through its
+     * own block: a machine that wants pipes, hoppers or another mod already offers its own faces to them, and those
+     * already reach the machine directly - a second connection through the plugin would only be a second meaning for
+     * the same six directions, because the page and the automation read a face as a face of the <em>machine</em>
+     * while an item capability on the plugin answers for the plugin's own block.
+     * <p>
+     * The override exists because {@link ItemApi.BlockProvider} is part of what an Extension Addon is (see
+     * {@link ExtensionAddonBlockEntity#getInventoryStorage(Direction)}), and one storage object is kept for all six
+     * faces because the answer never changes and Oritech's own item bridge wraps whatever a face answered with and
+     * caches it (see {@link #emptyStorage}). The configured faces drive this plugin's own movement instead (see
+     * {@link #serverTickTransfer()}).
      */
     @Override
     public ItemApi.InventoryStorage getInventoryStorage(Direction direction) {
         return emptyStorage;
     }
 
-    // ------------------------------------------------------------------ the extender's capability cache
+    // ------------------------------------------------------------------ save data
 
     /**
-     * Tells NeoForge's capability caches that the extender this plugin hangs on may answer differently from
-     * now on, and is public so that the block can call it on the way out (see
-     * {@link TransferAddonBlock#playerWillDestroy}).
+     * Saves this plugin's own cell-face settings next to everything the inherited addon saves.
      * <p>
-     * The handler a configured face answers with stays the same object and reads the plugin, the mode and
-     * the machine on every call, so it needs no invalidation of its own; what does need one is the jump
-     * between "this face offers nothing" and "this face offers the machine's inventory". That jump is the
-     * only thing a pipe cannot notice by itself - the {@code BlockCapabilityCache} of Oritech's own item
-     * pipes, for one, keeps a {@code null} answer until the level invalidates the position - so the plugin
-     * invalidates the extender's position whenever it appears, disappears or is configured.
-     * <p>
-     * The invalidation is per <b>position</b>, and deliberately so: {@code Level#invalidateCapabilities} has
-     * no notion of a face, and the extender's answer changes for all of them at once - the plugin holds one
-     * mode per face of the extender, and whether any plugin hangs there at all is what can turn any of those
-     * faces into a connection.
-     * <p>
-     * <b>It must never run while the block entity is being removed or unloaded.</b> NeoForge moves the
-     * invalidation of a position into {@code BlockEntity#setRemoved} / {@code clearRemoved}, which both run
-     * from {@code LevelChunk#removeBlockEntity} and {@code LevelChunk#setBlockEntity} - i.e. exactly while a
-     * chunk is unloaded or saved. Reading a neighbouring block there ({@code level.getBlockState(hostPos)})
-     * looks a second chunk up in the middle of that, and invalidating a capability re-enters the capability
-     * caches of every pipe and hopper that listens on the position. Both are hazard enough on their own; on
-     * a world save the chunk map keeps saving while the chunk is still marked unsaved, so anything that
-     * dirties it again from here turns "Saving world" into a loop. This plugin therefore never overrides
-     * those two hooks and reaches this method from {@link #publishHostCapabilityMask()} (a server tick) or
-     * from {@link #setTransferConfig(Direction, TransferMode, boolean)} (the page's packet) only.
-     * <p>
-     * Cheap and harmless while the plugin hangs on something else: the host is checked by block identity
-     * first - without reading a block state, so that no chunk is touched - and the extender's own position
-     * is a position NeoForge's capability system knows.
+     * The inherited {@link TransferFaceModes} is written as well - it is the base class's own field and the cube net
+     * page's model - but this plugin never sets an entry in it (see {@link #setCellFaceConfig}), so what it holds is
+     * only ever what a world written by an older version had. That is exactly what the migration in
+     * {@link CellFaceModes#load(net.minecraft.nbt.CompoundTag)} reads, and it is why the old array is left untouched
+     * rather than cleared: a world that is opened by the older version again keeps the six settings it can show.
      */
-    public void invalidateHostCapabilities() {
-        if (!(level instanceof ServerLevel)) return;
-        if (!hangsOnExtender()) return;
-
-        hostInvalidations++;
-        level.invalidateCapabilities(hostPos());
+    @Override
+    protected void saveAdditional(CompoundTag nbt, HolderLookup.Provider registries) {
+        super.saveAdditional(nbt, registries);
+        cellFaces.save(nbt);
     }
 
-    /**
-     * The faces of the extender that currently answer with an inventory, as a bitmask over
-     * {@link Direction#values()}: every face that no plugin hangs on and whose transfer page mode transfers
-     * something. {@code 0} while the plugin does not hang on an extender, which is also what the extender
-     * answers with then.
-     * <p>
-     * The plugin's own face is dropped even for a mode an older version stored on it, because that is what
-     * {@code ExtenderFaceStorage} answers: the plugin block stands in that face and the handler refuses it.
-     * Both sides read the same rule, so the mask can never announce a connection the handler would not give.
-     */
-    private int hostAnswerMask() {
-        if (!hangsOnExtender()) return 0;
-
-        var mine = TransferAddonBlock.attachedFace(getBlockState());
-        var mask = 0;
-        for (var face : Direction.values()) {
-            if (face == mine) continue;
-            // the mode is the cheap test and the common answer is "not configured", so the world is only
-            // asked about a face that really carries a mode
-            if (transferModes().modeOf(face) == TransferMode.NONE) continue;
-            if (occupiedByPlugin(face)) continue;
-
-            mask |= 1 << face.ordinal();
-        }
-        return mask;
+    /** Reads the cell-face settings, migrating the old direction-keyed array (see {@link CellFaceModes#load}). */
+    @Override
+    protected void loadAdditional(CompoundTag nbt, HolderLookup.Provider registries) {
+        super.loadAdditional(nbt, registries);
+        cellFaces.load(nbt);
     }
-
-    /**
-     * True while a transfer plugin hangs on the given face of the extender, i.e. while some plugin block
-     * stands in the cell outside that face. Nothing but a plugin can be there any more, but a face that is
-     * still configured in the saved data must not be announced as a connection while it is occupied.
-     */
-    private boolean occupiedByPlugin(Direction face) {
-        var pluginPos = hostPos().relative(face);
-        if (level == null || !level.isLoaded(pluginPos)) return false;
-
-        return level.getBlockEntity(pluginPos) instanceof TransferAddonBlockEntity other
-                && TransferAddonBlock.attachedFace(other.getBlockState()) == face;
-    }
-
-    /**
-     * Compares the faces the extender answers on with the ones its capability caches were last told about
-     * and invalidates the extender's position when they differ. Called once per server tick.
-     * <p>
-     * This is the safe replacement for the invalidation the removal hooks used to do: a plugin that is
-     * placed, broken, unloaded or reconfigured changes the mask, and the difference is published on the next
-     * tick of the loaded plugin instead of inside the chunk bookkeeping. The first tick after the block
-     * entity is loaded publishes it as well, because the mask starts at {@code -1} - a world that was saved
-     * with a plugin already hanging on an extender has to be able to answer from the very first tick.
-     * <p>
-     * Cheap in the normal case: no plugin state changes, no mask changes, no level call at all beyond the
-     * block state the mask is built from - and no log line.
-     */
-    private void publishHostCapabilityMask() {
-        if (!(level instanceof ServerLevel)) return;
-
-        var mask = hostAnswerMask();
-        if (mask == publishedHostMask) return;
-
-        publishedHostMask = mask;
-        OritechAddonsOne.LOGGER.debug(
-                "[transfer] extender capability mask of {} is now {} ({} invalidation(s), {})",
-                worldPosition, Integer.toBinaryString(mask), hostInvalidations + 1,
-                mask == 0 ? "no face offers an inventory" : "a pipe asking may now connect");
-
-        invalidateHostCapabilities();
-    }
-
-    /*
-     * Nothing is overridden for setRemoved() / clearRemoved() on purpose: those two hooks run while the
-     * chunk is being unloaded or saved, and the invalidation that tells the pipes about this plugin is done
-     * from the server tick and from TransferAddonBlock#playerWillDestroy() instead (see
-     * invalidateHostCapabilities()). BlockEntity#clearRemoved already invalidates this block entity's own
-     * position, which is all NeoForge asks a block entity to do there; a chunk that unloads invalidates its
-     * whole position range through NeoForge's own ChunkEvent.Unload hook.
-     */
 
     // ------------------------------------------------------------------ GUI and ticking
 
-    /** Name of the placed plugin's screen; the plugin has no addon type of its own to name it. */
+    /** Name of the plugin's screen; the plugin has no addon type of its own to name it. */
     @Override
     protected String displayNameKey() {
         return "container.oritechaddonsone." + OritechAddonsOne.TRANSFER_ADDON.getId().getPath();

@@ -33,12 +33,12 @@ import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
  * (see {@link MachineSlotRoles}).
  * <p>
  * <b>One placement, one subclass.</b> A placed 扩展传输插件 on Oritech's machine extender configures the
- * extender's faces ({@link ExtenderFaceStorage}), so that is the placement this class serves today: it is told which
- * plugin configures a face and which machine that plugin works on, while the machine inventory, the slot roles, the
- * mode gating and the storage identity live here once. 传输插件, the preview plugin, deliberately answers no item
- * capability at all ({@code TransferPreviewAddonBlockEntity#getInventoryStorage}) - its configured faces drive only
- * its own automation, and a machine that wants pipes offers them its own faces - so there is no second subclass any
- * more.
+ * extender's faces ({@link ExtenderFaceStorage}), so that is the placement this class serves today: it is told
+ * which plugin configures a face and which machine that plugin works on, while the machine inventory, the slot
+ * roles, the mode gating and the handler identity live here once. 传输插件 deliberately
+ * answers no item capability at all ({@code TransferAddonBlockEntity#getItemLookup}) - its configured faces
+ * drive only its own automation, and a machine that wants pipes offers them its own faces - so there is no second
+ * subclass any more.
  * <p>
  * <b>The side is read the way Oritech's pipes ask it.</b> Oritech checks a neighbour with
  * {@code ItemApi.BLOCK.find(level, neighbourPos, direction.getOpposite())}, i.e. the context is the direction
@@ -89,9 +89,9 @@ public class FacePluginStorage extends DelegatingInventoryStorage {
 
     /**
      * Which plugin configures one face of the host, i.e. the one question a placement has to answer.
-     * Implementations read the world on every call - a plugin can be broken or placed at any time, and Oritech's own
-     * invalidation (see {@code TransferAddonBlockEntity}) is what makes a pipe ask again - so a stale answer can
-     * never be served from here.
+     * Implementations read the world on every call - a plugin can be broken or placed at any time, and
+     * NeoForge's own invalidation (see {@code ExtensionTransferAddonBlockEntity}) is what makes a pipe ask again - so a
+     * stale answer can never be served from here.
      */
     @FunctionalInterface
     public interface FaceLookup {

@@ -20,10 +20,10 @@ import io.github.xiao232ming.oritechaddonsone.Config;
 import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonType;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEntity;
-import io.github.xiao232ming.oritechaddonsone.block.entity.TransferAddonBlockEntity;
+import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionTransferAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferFaceModes;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferMode;
-import io.github.xiao232ming.oritechaddonsone.block.entity.TransferPreviewAddonBlockEntity;
+import io.github.xiao232ming.oritechaddonsone.block.entity.TransferAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.WirelessExtensionAddonBlockEntity;
 
 /**
@@ -74,7 +74,7 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
      * loaded all along.
      * <p>
      * Unlike the wireless link it is set on the server side too, so both sides read the same field and
-     * {@link #transferPreviewMachinePos()} needs no side check.
+     * {@link #transferMachinePos()} needs no side check.
      */
     @Nullable
     private BlockPos servedMachine;
@@ -302,7 +302,7 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
     /**
      * Whether the player's own inventory slots are usable. Only ever set on the client, and only off while the
      * player's inventory is not part of the screen: a page's configuration panel is open over the whole panel
-     * (see {@link #setPlayerSlotsActive}), or the visible page is the whole page - the 传输插件 preview, or the
+     * (see {@link #setPlayerSlotsActive}), or the visible page is the whole page - the 传输插件 page, or the
      * placed plugin's own screen.
      */
     public boolean playerSlotsActive() {
@@ -321,7 +321,7 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
 
     /**
      * Called by the screen whenever the player's inventory stops or starts being part of the screen: a page's
-     * configuration panel is an opaque modal step over the whole panel, and the 传输插件 preview page is a whole page
+     * configuration panel is an opaque modal step over the whole panel, and the 传输插件 page is a whole page
      * of its own, so the player's inventory is drawn - and clickable - only while neither is the case.
      */
     public void setPlayerSlotsActive(boolean active) {
@@ -538,26 +538,26 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
      * slots, or one placed on a block that hosts placed plugins, which reaches that block's faces just the
      * same.
      */
-    public boolean hasTransferAddon() {
+    public boolean hasExtensionTransferAddon() {
         return transferAddonCount() > 0 || attachedTransferFaces() != 0;
     }
 
     /**
-     * True while the 传输插件 page has anything to show, i.e. while a transfer preview plugin is stored in this
+     * True while the 传输插件 page has anything to show, i.e. while 传输插件 is stored in this
      * block's plugin slots.
      * <p>
-     * Read from the container exactly like {@link #transferAddonCount()}, so both screens get their page list from
-     * the same contents: the addon's own screen offers the preview tab as soon as one is put in, and the preview
+     * Read from the container exactly like {@link #transferPluginCount()}, so both screens get their page list
+     * from the same contents: the addon's own screen offers the 传输插件 tab as soon as one is put in, and that
      * plugin's <b>placed</b> screen never takes this path at all (it is narrowed to that one page, see
-     * {@link #previewOnly()}).
+     * {@link #transferOnly()}).
      */
-    public boolean hasTransferPreviewAddon() {
+    public boolean hasTransferAddon() {
         var blockEntity = blockEntity();
-        return blockEntity != null && blockEntity.hasTransferPreviewAddon();
+        return blockEntity != null && blockEntity.hasTransferAddon();
     }
 
     /**
-     * True while this menu belongs to a transfer addon that is <b>placed</b> on an Oritech machine extender.
+     * True while this menu belongs to 扩展传输插件 that is <b>placed</b> on an Oritech machine extender.
      * <p>
      * Such a plugin is not a container of plugins and has no machine of its own: the only thing it has to
      * offer is the transfer page of the extender's faces. The page list is therefore narrowed to that one
@@ -567,22 +567,22 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
      * The question is answered from the block entity, which exists on both sides: the server has it while
      * the GUI is open, and the client has it because the plugin is a block in its own level.
      */
-    public boolean transferOnly() {
-        return blockEntity() instanceof TransferAddonBlockEntity;
+    public boolean extensionTransferOnly() {
+        return blockEntity() instanceof ExtensionTransferAddonBlockEntity;
     }
 
     /**
-     * True while this menu belongs to 传输插件, the transfer preview plugin. Such a plugin is not a container of
-     * plugins either and has exactly one page: the rotatable 3D preview of the machine it serves. The page list is
-     * therefore narrowed to that one page (see {@code AddonPageRegistry#pages}), so the plugin grid, the wireless
-     * page and the Item Proxy page stay out of the GUI.
+     * True while this menu belongs to 传输插件. Such a plugin is not a container of plugins either and has
+     * exactly one page: the rotatable 3D model of the machine it serves. The page list is therefore narrowed to
+     * that one page (see {@code AddonPageRegistry#pages}), so the plugin grid, the wireless page and the Item
+     * Proxy page stay out of the GUI.
      * <p>
-     * Like {@link #transferOnly()} the question is answered from the block entity, which exists on both sides - the
-     * server has it while the GUI is open, the client has it because the plugin is a block in its own level - so
-     * the screen and the page registry need no separate flag and no second menu class.
+     * Like {@link #extensionTransferOnly()} the question is answered from the block entity, which exists on both
+     * sides - the server has it while the GUI is open, the client has it because the plugin is a block in its own
+     * level - so the screen and the page registry need no separate flag and no second menu class.
      */
-    public boolean previewOnly() {
-        return blockEntity() instanceof TransferPreviewAddonBlockEntity;
+    public boolean transferOnly() {
+        return blockEntity() instanceof TransferAddonBlockEntity;
     }
 
     /**
@@ -648,10 +648,10 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
         return null;
     }
 
-    // ------------------------------------------------------------------ the machine of the preview page
+    // ------------------------------------------------------------------ the machine of the transfer page
 
     /**
-     * The machine the transfer preview page renders, or {@code null} while this menu's block serves none.
+     * The machine the transfer page renders, or {@code null} while this menu's block serves none.
      * <p>
      * Which block the answer belongs to depends on which screen shows the page, and that is exactly what the menu
      * addresses:
@@ -673,7 +673,7 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
      * always was - the server's, authoritative for the capability and automation paths.
      */
     @Nullable
-    public BlockPos transferPreviewMachinePos() {
+    public BlockPos transferMachinePos() {
         return servedMachine;
     }
 

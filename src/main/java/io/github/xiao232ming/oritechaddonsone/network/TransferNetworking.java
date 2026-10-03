@@ -21,7 +21,7 @@ import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 import io.github.xiao232ming.oritechaddonsone.block.entity.CellFaceModes;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferFaceModes;
-import io.github.xiao232ming.oritechaddonsone.block.entity.TransferPreviewAddonBlockEntity;
+import io.github.xiao232ming.oritechaddonsone.block.entity.TransferAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferMode;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonMenu;
 
@@ -113,7 +113,7 @@ public final class TransferNetworking {
      */
     public record SetCellFaceMode(BlockPos pos, int entry) implements CustomPacketPayload {
 
-        public static final Type<SetCellFaceMode> TYPE = new Type<>(id("transfer_preview_set_mode"));
+        public static final Type<SetCellFaceMode> TYPE = new Type<>(id("transfer_cell_face_mode"));
         public static final StreamCodec<RegistryFriendlyByteBuf, SetCellFaceMode> CODEC = StreamCodec.composite(
                 BlockPos.STREAM_CODEC, SetCellFaceMode::pos,
                 ByteBufCodecs.VAR_INT, SetCellFaceMode::entry,
@@ -128,7 +128,7 @@ public final class TransferNetworking {
             if (!(context.player() instanceof ServerPlayer player)) return;
 
             if (!(player.level().getBlockEntity(packet.pos())
-                    instanceof TransferPreviewAddonBlockEntity plugin)) {
+                    instanceof TransferAddonBlockEntity plugin)) {
                 return;
             }
 
@@ -138,7 +138,7 @@ public final class TransferNetworking {
             if (entry == null) return;
 
             if (!plugin.setCellFaceConfig(entry.cell(), entry.face(), entry.mode(), entry.automation())) {
-                OritechAddonsOne.LOGGER.debug("[transfer preview] refused {} for {} cell {} face {}",
+                OritechAddonsOne.LOGGER.debug("[transfer] refused {} for {} cell {} face {}",
                         packet.entry(), packet.pos(), entry.cell(), entry.face());
                 return;
             }
@@ -147,7 +147,7 @@ public final class TransferNetworking {
             // copy back - including the entry a clear just removed
             sendFaceModes(player.level(), packet.pos());
 
-            OritechAddonsOne.LOGGER.debug("[transfer preview] {} cell {} face {} -> {} (automation {}, {} face(s))",
+            OritechAddonsOne.LOGGER.debug("[transfer] {} cell {} face {} -> {} (automation {}, {} face(s))",
                     packet.pos(), entry.cell(), entry.face(), entry.mode(), entry.automation(),
                     plugin.cellFaceModes().configuredFaces());
         }
@@ -171,7 +171,7 @@ public final class TransferNetworking {
      */
     public record FaceModes(BlockPos pos, List<Integer> entries) implements CustomPacketPayload {
 
-        public static final Type<FaceModes> TYPE = new Type<>(id("transfer_preview_face_modes"));
+        public static final Type<FaceModes> TYPE = new Type<>(id("transfer_cell_face_modes"));
         public static final StreamCodec<RegistryFriendlyByteBuf, FaceModes> CODEC = StreamCodec.composite(
                 BlockPos.STREAM_CODEC, FaceModes::pos,
                 ByteBufCodecs.VAR_INT.apply(ByteBufCodecs.list()), FaceModes::entries,
@@ -195,7 +195,7 @@ public final class TransferNetworking {
     }
 
     /** Sends the whole cell-face map of {@code plugin} to one player. */
-    public static void sendFaceModes(ServerPlayer player, BlockPos pos, TransferPreviewAddonBlockEntity plugin) {
+    public static void sendFaceModes(ServerPlayer player, BlockPos pos, TransferAddonBlockEntity plugin) {
         var packed = new ArrayList<Integer>();
         for (var entry : plugin.cellFaceModes().packedEntries()) {
             packed.add(CellFaceModes.pack(entry));
@@ -214,11 +214,11 @@ public final class TransferNetworking {
      * open: only this mod's own addon menu ({@code ExtensionAddonMenu}) can be showing this page, and that menu knows
      * the block it belongs to, so a player who is merely standing nearby is not sent anything.
      * <p>
-     * Does nothing on the client and nothing while the block entity is not a preview plugin.
+     * Does nothing on the client and nothing while the block entity is not a transfer plugin.
      */
     public static void sendFaceModes(Level level, BlockPos pos) {
         if (level == null || level.isClientSide()) return;
-        if (!(level.getBlockEntity(pos) instanceof TransferPreviewAddonBlockEntity plugin)) return;
+        if (!(level.getBlockEntity(pos) instanceof TransferAddonBlockEntity plugin)) return;
         if (!(level instanceof ServerLevel serverLevel)) return;
 
         for (var player : serverLevel.getServer().getPlayerList().getPlayers()) {
@@ -231,7 +231,7 @@ public final class TransferNetworking {
 
     /** Sends the whole cell-face map of the block entity at {@code pos} to one player. */
     public static void sendFaceModes(ServerPlayer player, BlockPos pos) {
-        if (!(player.level().getBlockEntity(pos) instanceof TransferPreviewAddonBlockEntity plugin)) return;
+        if (!(player.level().getBlockEntity(pos) instanceof TransferAddonBlockEntity plugin)) return;
         sendFaceModes(player, pos, plugin);
     }
 

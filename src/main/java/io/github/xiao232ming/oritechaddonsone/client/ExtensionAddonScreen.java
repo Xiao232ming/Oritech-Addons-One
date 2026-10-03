@@ -11,9 +11,9 @@ import io.github.xiao232ming.oritechaddonsone.client.page.AddonPageRegistry;
 import io.github.xiao232ming.oritechaddonsone.client.page.AddonTabStrip;
 import io.github.xiao232ming.oritechaddonsone.client.page.ProxyPickerState;
 import io.github.xiao232ming.oritechaddonsone.client.page.TransferFaceState;
+import io.github.xiao232ming.oritechaddonsone.client.page.ExtensionTransferPickerState;
 import io.github.xiao232ming.oritechaddonsone.client.page.TransferPickerState;
-import io.github.xiao232ming.oritechaddonsone.client.page.TransferPreviewPickerState;
-import io.github.xiao232ming.oritechaddonsone.client.page.TransferPreviewState;
+import io.github.xiao232ming.oritechaddonsone.client.page.TransferAddonState;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonLayout;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonMenu;
 
@@ -44,7 +44,7 @@ public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddon
     private AddonPageContext context;
 
     /**
-     * True while the visible page is the one that drags something of its own - the 3D preview of 传输插件, whose
+     * True while the visible page is the one that drags something of its own - the 3D page of 传输插件, whose
      * model is rotated by dragging over it. Only then are {@link #mouseDragged} / {@link #mouseReleased} forwarded
      * to the page: every other page keeps vanilla's drag handling untouched, so a page can never accidentally eat
      * the drag of an item the player is moving across a slot.
@@ -52,7 +52,7 @@ public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddon
     private boolean pageDrags;
 
     /**
-     * True while the visible page is the one that uses the mouse wheel - the 3D preview of 传输插件, whose model is
+     * True while the visible page is the one that uses the mouse wheel - the 3D page of 传输插件, whose model is
      * zoomed by scrolling over it. It is the wheel's counterpart of {@link #pageDrags} and is set the same way
      * ({@link #syncVisiblePage}), so no other page can receive a scroll it does not expect.
      */
@@ -96,38 +96,39 @@ public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddon
         var page = this.tabs.selectedPage();
         this.menu.setPluginPageActive(page == AddonPageRegistry.pluginPage());
         this.menu.setWirelessPageActive(page == AddonPageRegistry.wirelessPage());
-        // the preview plugin's whole GUI is its 3D page: the player inventory stays out of it the way it stays out
-        // of the modal step below, so nothing is drawn over the panel and no click can reach a slot behind it
-        this.pageDrags = page == AddonPageRegistry.transferPreviewPage();
+        // the 3D page of 传输插件 is that plugin's whole GUI: the player inventory stays out of it the way it
+        // stays out of the modal step below, so nothing is drawn over the panel and no click can reach a slot
+        // behind it
+        this.pageDrags = page == AddonPageRegistry.transferPage();
         // and the same page is the one that zooms on the wheel, so the scroll is only forwarded to it
-        this.pageScrolls = page == AddonPageRegistry.transferPreviewPage();
+        this.pageScrolls = page == AddonPageRegistry.transferPage();
         // leaving one of the picking pages closes whatever picker was open on it, so coming back starts
         // fresh
         if (page != AddonPageRegistry.proxyPage()) {
             ProxyPickerState.close();
         }
+        if (page != AddonPageRegistry.extensionTransferPage()) {
+            ExtensionTransferPickerState.close();
+        }
+        // The 传输插件 page has its own modal state, because it can be shown next to the cube net page of the
+        // same block: the guard above must not close the transfer page's modal the frame it opens
         if (page != AddonPageRegistry.transferPage()) {
             TransferPickerState.close();
-        }
-        // the 3D preview page has its own modal state, because it can be shown next to the cube net page of the
-        // same block: the guard above must not close the preview's modal the frame it opens
-        if (page != AddonPageRegistry.transferPreviewPage()) {
-            TransferPreviewPickerState.close();
         }
         // The Item Proxy, Extension Transfer and 传输插件 pages' configuration panels are opaque modal steps over
         // the whole panel, and the player inventory is drawn after the page - so the inventory is hidden while
         // one of those panels is open, which is what makes the panel read as a full page like Oritech's own
         // inventory proxy screen. The slot positions, their ids and everything the server sees are untouched.
         var modalOpen = ProxyPickerState.isOpen(this.menu.position())
-                || TransferPickerState.isOpen(this.menu.position())
-                || TransferPreviewPickerState.isOpen(this.menu.position());
+                || ExtensionTransferPickerState.isOpen(this.menu.position())
+                || TransferPickerState.isOpen(this.menu.position());
         // The 传输插件 page is a whole page of its own besides that: it is the only page of the placed plugin and one
         // tab of an Extension Addon that stores one, and while it is visible the panel is the transfer configuration -
         // the model, the counter and the hint - with no inventory under it, exactly like the placed plugin's screen.
         // This runs on every frame of the open GUI (see extractBackground) as well as on init and on every tab change,
         // so leaving the page or closing the GUI puts the slots back without anything else having to remember it.
-        var previewPage = page == AddonPageRegistry.transferPreviewPage();
-        this.menu.setPlayerSlotsActive(!modalOpen && !this.menu.previewOnly() && !previewPage);
+        var transferOnly = page == AddonPageRegistry.transferPage();
+        this.menu.setPlayerSlotsActive(!modalOpen && !this.menu.transferOnly() && !transferOnly);
     }
 
     /**
@@ -155,18 +156,18 @@ public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddon
 
     /**
      * Forgets the slot layouts the Item Proxy page asked the server for and the pickers both item pages had
-     * open, and the rendered preview state of the 3D preview page. The layouts describe one machine, so keeping
-     * them past the GUI would only leak memory (and show a stale machine after a relink); the preview state holds a
+     * open, and the rendered model state of the 传输插件 page. The layouts describe one machine, so keeping
+     * them past the GUI would only leak memory (and show a stale machine after a relink); the model state holds a
      * built 3D model of one machine, which is rebuilt when its GUI is opened again.
      */
     @Override
     public void removed() {
         super.removed();
         ProxyPickerState.clear();
+        ExtensionTransferPickerState.clear();
         TransferPickerState.clear();
-        TransferPreviewPickerState.clear();
         // only this GUI's own model: another addon screen can be open at the same time
-        TransferPreviewState.clear(this.menu.position());
+        TransferAddonState.clear(this.menu.position());
         // and the cell-face map the server sent for this block, for the same reason - the next time this GUI is
         // opened the server sends it again with the menu
         TransferFaceState.clear(this.menu.position());

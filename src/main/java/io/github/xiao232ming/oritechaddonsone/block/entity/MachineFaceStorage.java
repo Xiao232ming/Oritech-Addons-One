@@ -39,10 +39,10 @@ import rearth.oritech.api.item.containers.DelegatingInventoryStorage;
  * crashing.
  * <p>
  * The class also carries the two helpers the <b>automation</b> of a face is built from - looking a
- * neighbour's inventory up ({@link #storageAt}) and moving one stack between two storages ({@link #move}).
- * They need no face of their own, which is what lets the placed transfer addon move items between a machine
- * and the containers around the extender it hangs on (see
- * {@code TransferAddonBlockEntity#serverTickTransfer}) with the very same logic a face of this block uses.
+ * neighbour's inventory up ({@link #storageAt}) and moving one stack between two handlers ({@link #move}).
+ * They are static and need no face of their own, which is what lets the placed transfer addon move items
+ * between a machine and the containers around the extender it hangs on (see
+ * {@code ExtensionTransferAddonBlockEntity#serverTickTransfer}) with the very same logic a face of this block uses.
  */
 public final class MachineFaceStorage extends DelegatingInventoryStorage {
 

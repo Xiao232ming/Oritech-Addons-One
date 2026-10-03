@@ -33,7 +33,7 @@ import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferMode;
 
 /**
- * The 3D model of the transfer preview page: <b>one</b> machine, drawn inside the page's panel with the same recipe
+ * The 3D model of the page of 传输插件: <b>one</b> machine, drawn inside the page's panel with the same recipe
  * Oritech's own {@code BlockPreviewWidget} uses on this branch, plus the things that page needs and Oritech's widget
  * does not offer - the markings of its faces (their mode, and the face a plugin occupies) and face picking with a
  * highlight on the face under the mouse.
@@ -69,7 +69,7 @@ import io.github.xiao232ming.oritechaddonsone.block.entity.TransferMode;
  * point against the box edges would be a tie between all three axes.
  * <p>
  * <b>The model is only the machine, and it is all of the machine.</b> The page's model never contains the machine's
- * addons, the indicators of its open addon slots or the plugin block itself (see {@code TransferPreviewState#build}
+ * addons, the indicators of its open addon slots or the plugin block itself (see {@code TransferAddonState#build}
  * for why). It does contain <b>every drawn part</b> of the machine: a multiblock machine is several blocks of world,
  * so one entry would make one cell of it clickable and draw one cell of it while the player looks at a whole
  * structure, and the surface the page asks for a face of would be unreachable. Oritech enumerates those parts as
@@ -360,7 +360,7 @@ public final class FacePreviewWidget extends UIComponent {
     /**
      * Sets the user's zoom: a factor on the fit-to-panel scale the model is measured with, so 1 is "the whole machine,
      * exactly as this panel sized it". The page hands it over once per frame from the interaction state it keeps
-     * (see {@link TransferPreviewState.Preview#zoom()}), the way it hands over the rotation.
+     * (see {@link TransferAddonState.Preview#zoom()}), the way it hands over the rotation.
      * <p>
      * It is applied <b>inside</b> {@link #scale(float, float)}, i.e. in the one number every user of this frame's
      * geometry reads: {@link #transform()} builds the shared {@link PreviewTransform} from the scale it answers for

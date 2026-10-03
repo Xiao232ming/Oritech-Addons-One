@@ -35,7 +35,7 @@ import io.github.xiao232ming.oritechaddonsone.network.TransferNetworking;
  * colours on the model. The geometry, the surfaces and the mode names are shared already
  * ({@link AddonPickerPanel}, {@link TransferFaceStyle}); this class is the drawing, the hit tests and the send
  * path between them, and the page that opens it supplies what the face does and where a change goes
- * ({@link Current}, {@link Sink}) - the cube net page reads its settings from the menu, the preview page from the
+ * ({@link Current}, {@link Sink}) - the cube net page reads its settings from the menu, the 传输插件 page from the
  * map the server sent, so this class can serve both without knowing either model.
  * <p>
  * What a click does is the cube net page's behaviour: a click on a plate sets that mode and leaves the page open,
@@ -77,7 +77,7 @@ public final class TransferFaceModal {
      * the coordinate system {@link SurfaceWidget} expects.
      * <p>
      * <b>The caller owns the data.</b> This modal is shared by the two transfer pages, whose models are different -
-     * the cube net page keys a setting by {@link Direction} on one block, the preview page by cell and direction on a
+     * the cube net page keys a setting by {@link Direction} on one block, the 传输插件 page by cell and direction on a
      * structure (see {@code CellFaceModes}) - so it neither reads nor writes a model itself. It is told which face it
      * shows, what that face currently does ({@link Current}) and what a change should be sent to ({@link Sink}).
      *
@@ -115,7 +115,7 @@ public final class TransferFaceModal {
     public static boolean mouseClicked(AddonPageContext context, Direction face, Current current, Sink sink,
             boolean occupied, double mouseX, double mouseY, int button) {
         if (button == 1) {
-            TransferPreviewPickerState.close();
+            TransferPickerState.close();
             return true;
         }
 
@@ -145,7 +145,7 @@ public final class TransferFaceModal {
 
         // anything else - the panel's own background, the prompt, the icon, or the page outside the modal -
         // closes it, like a click outside a modal
-        TransferPreviewPickerState.close();
+        TransferPickerState.close();
         return true;
     }
 
@@ -222,7 +222,7 @@ public final class TransferFaceModal {
     /**
      * The automation row: Oritech's dark checkbox and its label, centred under the plates. With automation on the
      * face moves items by itself - towards the container on that side for "output", from it for "input", both for
-     * "input + output" (see {@code TransferPreviewAddonBlockEntity#serverTickTransfer()}).
+     * "input + output" (see {@code TransferAddonBlockEntity#serverTickTransfer()}).
      * <p>
      * The row is dimmed and refuses clicks while the face has no direction yet: a face that transfers nothing has
      * nothing to move on its own, so the switch only becomes meaningful together with a mode.
@@ -343,12 +343,12 @@ public final class TransferFaceModal {
 
     /** What the open configuration page of this face set a moment ago, or {@code null} while it is closed. */
     @Nullable
-    private static TransferPreviewPickerState.Pending pending(ExtensionAddonMenu menu, Direction face) {
-        var cell = TransferPreviewPickerState.openCell();
+    private static TransferPickerState.Pending pending(ExtensionAddonMenu menu, Direction face) {
+        var cell = TransferPickerState.openCell();
         if (cell == null) return null;
 
-        return TransferPreviewPickerState.isOpen(menu.position(), cell, face)
-                ? TransferPreviewPickerState.pending()
+        return TransferPickerState.isOpen(menu.position(), cell, face)
+                ? TransferPickerState.pending()
                 : null;
     }
 

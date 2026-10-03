@@ -26,7 +26,7 @@ import io.github.xiao232ming.oritechaddonsone.block.WirelessExtensionAddonBlock;
  * The Item Proxy page draws the block as an unfolded cube net from the block's <b>own</b> per-face
  * textures, so this is the one place that knows the face to texture mapping. It is derived from the block
  * models and blockstates of this mod - and of Oritech's machine extender, the one foreign block a page of
- * this mod draws (a placed transfer plugin, see {@code TransferAddonBlockEntity}):
+ * this mod draws (a placed transfer plugin, see {@code ExtensionTransferAddonBlockEntity}):
  * <ul>
  *     <li>the standing (vertical) addon of every type is the same machine extender slab: the interface
  *     texture is on the big face the player looks at, and the side texture on the other big face - the half
@@ -105,7 +105,7 @@ public record FaceTextures(Map<Direction, Face> faces, Direction front) {
         var resolved = state == null || state.getBlock() != block ? block.defaultBlockState() : state;
 
         // A placed transfer plugin reports the extender it hangs on as the block of its page, not itself (see
-        // TransferAddonBlockEntity#transferPageBlockState), so Oritech's machine extender ends up here even
+        // ExtensionTransferAddonBlockEntity#transferPageBlockState), so Oritech's machine extender ends up here even
         // though it is no addon of this mod: its model is a minecraft:block/cube_all over EXTENDER_PORT, one
         // texture on all six faces and no port or side face to distinguish. Which face is the "interface" one
         // is therefore arbitrary; NORTH only keeps the frame the net is built around deterministic.

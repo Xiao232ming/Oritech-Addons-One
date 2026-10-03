@@ -1,5 +1,5 @@
 {
-  "parent": "oritechaddonsone:block/transfer_preview_addon_on",
+  "parent": "oritechaddonsone:block/extension_transfer_addon_on",
   "display": {
     "thirdperson_righthand": {"translation": [-2, 0, 0], "scale": [0.4, 0.4, 0.4]},
     "thirdperson_lefthand": {"translation": [2, 0, 0], "scale": [0.4, 0.4, 0.4]},

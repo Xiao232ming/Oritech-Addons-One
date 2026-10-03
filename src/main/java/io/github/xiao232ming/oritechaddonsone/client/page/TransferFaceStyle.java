@@ -12,7 +12,7 @@ import io.github.xiao232ming.oritechaddonsone.block.entity.TransferMode;
 /**
  * How a transfer mode is drawn and named, in the one place both transfer pages read it.
  * <p>
- * The cube net page ({@link TransferAddonPage}) and the 3D preview page ({@link TransferPreviewAddonPage}) show
+ * The cube net page ({@link ExtensionTransferAddonPage}) and the 3D page of 传输插件 ({@link TransferAddonPage}) show
  * the same thing - what one face of the machine does with its items - and the colours and words for it are part
  * of the feature, not of a page: a player who learned on the net that blue means "input" has to see blue on the
  * model as well. The mode colours, the plate list, the mode names and the "occupied face" treatment therefore
@@ -87,7 +87,7 @@ public final class TransferFaceStyle {
     /**
      * Gold border around one face: the face of the machine a plugin of this mod occupies, so no pipe or hopper can
      * be there and no mode on it could describe a connection. The server refuses such a face as well (see
-     * {@code TransferPreviewAddonBlockEntity#setTransferConfig}).
+     * {@code TransferAddonBlockEntity#setTransferConfig}).
      */
     public static void drawGoldBorder(GuiGraphics graphics, int x, int y, int size) {
         graphics.fill(x, y, x + size, y + 1, GOLD);

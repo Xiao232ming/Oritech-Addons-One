@@ -14,14 +14,14 @@ import rearth.oritech.api.screen.Insets;
 import rearth.oritech.api.screen.OritechSurface;
 
 /**
- * Client side state of the transfer preview page (传输插件): the 3D model of the machine this plugin serves, the
+ * Client side state of the 传输插件 page: the 3D model of the machine this plugin serves, the
  * rotation the player dragged it into, and the face the player selected.
  * <p>
- * Everything here is presentation, exactly like {@link TransferPickerState}: what a face really does is stored on
+ * Everything here is presentation, exactly like {@link ExtensionTransferPickerState}: what a face really does is stored on
  * the block entity, and every value the page shows comes from the menu's container data. Two things cannot come from
  * there, and both are read on this side: the model - a block state and a block entity for the renderer, taken from
  * the client's own level, which has the machine as soon as its chunk is loaded - and <b>which</b> machine that is,
- * which the server resolved and sent with the menu ({@code ExtensionAddonMenu#transferPreviewMachinePos()}), because
+ * which the server resolved and sent with the menu ({@code ExtensionAddonMenu#transferMachinePos()}), because
  * the offsets it is resolved from never reach a client.
  * <p>
  * The state is kept per menu position - i.e. per panel that was opened, whether that panel belongs to a placed plugin
@@ -29,12 +29,12 @@ import rearth.oritech.api.screen.OritechSurface;
  * while the machine behind the plugin is replaced. It is dropped when the screen closes ({@link #clear(BlockPos)},
  * called by {@code ExtensionAddonScreen#removed()}), so a built model never outlives the GUI it was built for.
  */
-public final class TransferPreviewState {
+public final class TransferAddonState {
 
     /** The built preview and its interaction state, one per plugin position that had a GUI open. */
     private static final Map<BlockPos, Preview> PREVIEWS = new ConcurrentHashMap<>();
 
-    private TransferPreviewState() {
+    private TransferAddonState() {
     }
 
     /**
