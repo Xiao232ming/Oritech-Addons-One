@@ -1,10 +1,14 @@
 package io.github.xiao232ming.oritechaddonsone.block.entity;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
+import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.item.ItemResource;
+import net.neoforged.neoforge.transfer.transaction.Transaction;
 import net.neoforged.neoforge.transfer.transaction.TransactionContext;
 
 import org.jetbrains.annotations.Nullable;
@@ -34,8 +38,21 @@ import rearth.oritech.util.MachineAddonController;
  * <b>Fail safe:</b> the machine inventory is resolved on every call too, so a machine that was broken,
  * unloaded, replaced or never present simply yields {@code null} - this handler then reports zero slots and
  * accepts/offers nothing instead of crashing.
+ * <p>
+ * The class also carries the two helpers the <b>automation</b> of a face is built from - looking a
+ * neighbour's inventory up ({@link #storageAt}) and moving one stack between two handlers ({@link #move}).
+ * They are static and need no face of their own, which is what lets the placed transfer addon move items
+ * between a machine and the containers around the extender it hangs on (see
+ * {@code TransferAddonBlockEntity#serverTickTransfer}) with the very same logic a face of this block uses.
  */
 public final class MachineFaceStorage extends DelegatingInventoryStorage {
+
+    /**
+     * How many items automation moves per face and tick. Eight is a fast but unremarkable rate - a hopper
+     * moves one item, an Oritech item pipe up to a stack - and it keeps a face that is fed and emptied at the
+     * same time from starving its own other direction.
+     */
+    public static final int ITEMS_PER_TICK = 8;
 
     private final BlockEntity owner;
     /** Face this storage belongs to, resolved against the block entity on every call. */
@@ -58,17 +75,82 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
     @Nullable
     public static ResourceHandler<ItemResource> machineStorage(BlockEntity owner) {
         if (!(owner instanceof ExtensionAddonBlockEntity addon)) return null;
+        return machineStorageAt(addon.getLevel(), addon.connectedMachinePos());
+    }
 
-        var target = addon.connectedMachinePos();
-        if (target == null || addon.getLevel() == null || !addon.getLevel().isLoaded(target)) return null;
+    /**
+     * The inventory handler of the block at {@code machinePos} - the machine an addon works on - or
+     * {@code null} while there is none (no position, unloaded chunk, block entity gone, a block without an
+     * inventory).
+     * <p>
+     * It exists next to {@link #machineStorage(BlockEntity)} because the machine of a placed transfer addon
+     * is not the machine of the block that holds the plugin: the plugin is asked for the extender's
+     * controller position instead of its own, and this is where that position is turned into a handler.
+     */
+    @Nullable
+    public static ResourceHandler<ItemResource> machineStorageAt(@Nullable Level level, @Nullable BlockPos machinePos) {
+        if (level == null || machinePos == null || !level.isLoaded(machinePos)) return null;
 
-        var machine = addon.getLevel().getBlockEntity(target);
+        var machine = level.getBlockEntity(machinePos);
         if (machine == null) return null;
 
         // the machine's own addon inventory is what Oritech's proxy uses first; the machine's item lookup is
         // the fallback for the few machines that do not offer one
         if (machine instanceof MachineAddonController controller) return controller.getInventoryForAddon();
         return machine instanceof ItemProvider provider ? provider.getItemLookup(null) : null;
+    }
+
+    /**
+     * The item storage of the block outside one face of the block at {@code pos} - the container automation
+     * moves items with - or {@code null} while there is none (air, a machine without an inventory, an
+     * unloaded chunk). The side is asked for as the neighbour's own face pointing back at that block, which
+     * is what a pipe would ask with.
+     */
+    @Nullable
+    public static ResourceHandler<ItemResource> storageAt(@Nullable Level level, BlockPos pos, Direction face) {
+        if (level == null) return null;
+
+        var neighbourPos = pos.relative(face);
+        if (!level.isLoaded(neighbourPos)) return null;
+
+        var state = level.getBlockState(neighbourPos);
+        var blockEntity = level.getBlockEntity(neighbourPos);
+        return level.getCapability(Capabilities.Item.BLOCK, neighbourPos, state, blockEntity, face.getOpposite());
+    }
+
+    /**
+     * Moves up to {@link #ITEMS_PER_TICK} items of one stack from {@code from} to {@code to}, if the target
+     * takes any of it, and stops after that one stack.
+     * <p>
+     * Both halves run in a transaction, so nothing can be lost: the target is first asked how much it would
+     * take (that transaction is closed without committing, i.e. rolled back), and only then is exactly that
+     * amount extracted and re-inserted. The step is committed only while the two amounts match; if the
+     * inventory changed in between (another pipe, a target that filled up) the whole step rolls back instead
+     * of dropping items on the floor.
+     */
+    public static void move(ResourceHandler<ItemResource> from, ResourceHandler<ItemResource> to) {
+        for (int slot = 0; slot < from.size(); slot++) {
+            var resource = from.getResource(slot);
+            if (resource.isEmpty()) continue;
+
+            int wanted;
+            try (var probe = Transaction.openRoot()) {
+                wanted = to.insert(resource, ITEMS_PER_TICK, probe);
+            }
+            if (wanted <= 0) continue;
+
+            try (var transaction = Transaction.openRoot()) {
+                int extracted = from.extract(slot, resource, wanted, transaction);
+                if (extracted <= 0) continue;
+
+                int inserted = to.insert(resource, extracted, transaction);
+                if (inserted != extracted) continue;
+
+                transaction.commit();
+            }
+
+            return;
+        }
     }
 
     /** The mode this face transfers with, or {@link TransferMode#NONE} while it transfers nothing. */

@@ -20,6 +20,7 @@ import io.github.xiao232ming.oritechaddonsone.Config;
 import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonType;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEntity;
+import io.github.xiao232ming.oritechaddonsone.block.entity.TransferAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferFaceModes;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferMode;
 import io.github.xiao232ming.oritechaddonsone.block.entity.WirelessExtensionAddonBlockEntity;
@@ -505,10 +506,26 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
 
     /**
      * True while the Extension Transfer page has anything to show: a transfer addon stored in the plugin
-     * slots, or - on a dock - one placed on the block, which reaches this dock's faces just the same.
+     * slots, or one placed on a block that hosts placed plugins, which reaches that block's faces just the
+     * same.
      */
     public boolean hasTransferAddon() {
         return transferAddonCount() > 0 || attachedTransferFaces() != 0;
+    }
+
+    /**
+     * True while this menu belongs to a transfer addon that is <b>placed</b> on an Oritech machine extender.
+     * <p>
+     * Such a plugin is not a container of plugins and has no machine of its own: the only thing it has to
+     * offer is the transfer page of the extender's faces. The page list is therefore narrowed to that one
+     * page (see {@code AddonPageRegistry#pages}), so the plugin grid, the wireless page and the Item Proxy
+     * page stay out of the GUI.
+     * <p>
+     * The question is answered from the block entity, which exists on both sides: the server has it while
+     * the GUI is open, and the client has it because the plugin is a block in its own level.
+     */
+    public boolean transferOnly() {
+        return blockEntity() instanceof TransferAddonBlockEntity;
     }
 
     /**
@@ -548,15 +565,23 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
     /** The block this addon is, used by the Item Proxy page to draw its six faces. */
     public Block addonBlock() {
         var blockEntity = blockEntity();
-        if (blockEntity != null) return blockEntity.getBlockState().getBlock();
+        if (blockEntity != null) return blockEntity.transferPageBlockState().getBlock();
         return wireless ? type.wirelessBlock() : type.wiredBlock();
     }
 
-    /** The block state of the addon, or {@code null} while it cannot be resolved. */
+    /**
+     * The block state the pages draw their net from, or {@code null} while it cannot be resolved.
+     * <p>
+     * It is not necessarily the addon's own state: a transfer addon placed on an Oritech machine extender
+     * shows the extender's faces, so the net says where the items go rather than what the plugin looks like
+     * (see {@link ExtensionAddonBlockEntity#transferPageBlockState()}). For every other block - and on the
+     * Item Proxy page, which only exists while a proxy addon is stored, i.e. never for a placed plugin -
+     * this is the addon's own state and therefore what it always was.
+     */
     @Nullable
     public BlockState addonBlockState() {
         var blockEntity = blockEntity();
-        return blockEntity == null ? null : blockEntity.getBlockState();
+        return blockEntity == null ? null : blockEntity.transferPageBlockState();
     }
 
     /** Level this menu's block entity lives in, or {@code null} while it is not placed. */

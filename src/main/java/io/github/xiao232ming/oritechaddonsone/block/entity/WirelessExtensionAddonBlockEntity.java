@@ -3,7 +3,6 @@ package io.github.xiao232ming.oritechaddonsone.block.entity;
 import java.util.HashSet;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import org.jetbrains.annotations.Nullable;
@@ -18,7 +17,6 @@ import rearth.oritech.api.networking.SyncType;
 import rearth.oritech.util.MachineAddonController;
 
 import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
-import io.github.xiao232ming.oritechaddonsone.block.TransferAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.block.WirelessExtensionAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.wireless.AddonEnergyGuard;
 import io.github.xiao232ming.oritechaddonsone.wireless.WirelessLinks;
@@ -298,27 +296,6 @@ public class WirelessExtensionAddonBlockEntity extends ExtensionAddonBlockEntity
     @Override
     public void setControllerPos(BlockPos pos) {
         // no-op
-    }
-
-    /**
-     * The dock is the only block of this mod a transfer addon can be <b>placed</b> on to reach its faces: the
-     * six neighbours are asked whether a transfer addon hangs on this dock (see
-     * {@link TransferAddonBlock#isAttachedTo}). That is what the transfer page shows as a gold border, and
-     * what makes such a plugin work without being put into one of the plugin slots.
-     */
-    @Override
-    protected int scanAttachedTransferFaces() {
-        if (level == null) return 0;
-
-        var mask = 0;
-        for (var face : Direction.values()) {
-            var pluginPos = worldPosition.relative(face);
-            if (!level.isLoaded(pluginPos)) continue;
-            if (!TransferAddonBlock.isAttachedTo(level.getBlockState(pluginPos), face)) continue;
-
-            mask |= 1 << face.ordinal();
-        }
-        return mask;
     }
 
     @Override

@@ -46,6 +46,7 @@ import io.github.xiao232ming.oritechaddonsone.block.TransferAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.block.WirelessExtensionAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ChunkAnchorAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEntity;
+import io.github.xiao232ming.oritechaddonsone.block.entity.TransferAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.WirelessExtensionAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonLayout;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonMenu;
@@ -171,6 +172,11 @@ public class OritechAddonsOne {
      * on can be filled from and emptied into through the addon's own six faces, one direction per face (see
      * the "Extension Transfer" page).
      * <p>
+     * Placed in the world on Oritech's machine extender, the same plugin does this for the extender instead:
+     * right clicking it opens the transfer page of the extender's own six faces, and the items are moved
+     * between the machine behind the extender and the containers around it. That placed form has behaviour
+     * of its own, so it uses its own block entity type ({@link #TRANSFER_ADDON_ENTITY}).
+     * <p>
      * Like the warehouse and tank addons it is a neutral {@link PluginAddonBlock}, and the Extension Addon
      * Type II accepts it because that type takes every Oritech addon that is not one of the stat plugins.
      * Its model and texture are Oritech's inventory proxy addon for now, see
@@ -290,6 +296,15 @@ public class OritechAddonsOne {
                     () -> new BlockEntityType<AddonBlockEntity>(OritechAddonsOne::pluginAddonEntity,
                             WAREHOUSE_ADDON.get(), TANK_ADDON.get(), CHUNK_ANCHOR_ADDON.get(),
                             TRANSFER_ADDON.get()));
+
+    /**
+     * Block entity type of the transfer addon. It is not part of {@link #PLUGIN_ADDON_ENTITY}: the placed
+     * plugin has behaviour of its own (see {@link TransferAddonBlockEntity}), so it uses the menu and the
+     * face settings of an Extension Addon - a subclass, which is what its registered block entity has to be.
+     */
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TransferAddonBlockEntity>> TRANSFER_ADDON_ENTITY =
+            BLOCK_ENTITIES.register("transfer_addon",
+                    () -> new BlockEntityType<>(TransferAddonBlockEntity::new, TRANSFER_ADDON.get()));
 
     public static final DeferredHolder<MenuType<?>, MenuType<ExtensionAddonMenu>> EXTENSION_ADDON_MENU =
             MENUS.register("extension_addon", () -> IMenuTypeExtension.create(ExtensionAddonMenu::new));
@@ -433,6 +448,10 @@ public class OritechAddonsOne {
      * {@link ExtensionAddonBlockEntity#getItemLookup} - the machine slot a face was bound to - so Oritech's
      * own item pipes (which look a neighbouring inventory up through {@code Capabilities.Item.BLOCK}), as
      * well as hoppers and other mods, really see and use that machine inventory through this block.
+     * <p>
+     * A placed transfer addon is registered for the item capability as well, but with an empty answer: the
+     * machine it works on is reachable through the faces of the extender it hangs on, never through its own
+     * (see {@link TransferAddonBlockEntity#getItemLookup}).
      */
     private void registerCapabilities(RegisterCapabilitiesEvent event) {
         event.registerBlockEntity(Capabilities.Energy.BLOCK, EXTENSION_ADDON_ENTITY.get(),
@@ -443,6 +462,8 @@ public class OritechAddonsOne {
         event.registerBlockEntity(Capabilities.Item.BLOCK, EXTENSION_ADDON_ENTITY.get(),
                 (blockEntity, side) -> blockEntity.getItemLookup(side));
         event.registerBlockEntity(Capabilities.Item.BLOCK, WIRELESS_EXTENSION_ADDON_ENTITY.get(),
+                (blockEntity, side) -> blockEntity.getItemLookup(side));
+        event.registerBlockEntity(Capabilities.Item.BLOCK, TRANSFER_ADDON_ENTITY.get(),
                 (blockEntity, side) -> blockEntity.getItemLookup(side));
     }
 }

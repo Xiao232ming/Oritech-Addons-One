@@ -10,7 +10,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.component.DataComponentGetter;
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -214,32 +213,15 @@ public class ExtensionAddonBlock extends MachineAddonBlock {
 
     @Override
     public InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
-        return openPluginMenu(level, pos, player);
+        var opened = PluginAddonMenus.openPluginMenu(level, pos, player);
+        return opened == InteractionResult.PASS ? super.useWithoutItem(state, level, pos, player, hit) : opened;
     }
 
     @Override
     public InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player,
             InteractionHand hand, BlockHitResult hit) {
-        return openPluginMenu(level, pos, player);
-    }
-
-    private static InteractionResult openPluginMenu(Level level, BlockPos pos, Player player) {
-        if (!level.isClientSide() && player instanceof ServerPlayer serverPlayer
-                && level.getBlockEntity(pos) instanceof ExtensionAddonBlockEntity blockEntity) {
-            // The slot count is configurable, so the client needs it to build the matching layout.
-            var slots = blockEntity.getContainerSize();
-            serverPlayer.openMenu(blockEntity, buffer -> {
-                buffer.writeBlockPos(pos);
-                buffer.writeVarInt(slots);
-                // wired addons are never linked, but the menu reads this field for both variants
-                buffer.writeBoolean(false);
-                // name of the machine this addon is attached to, resolved here on the server (see
-                // ExtensionAddonBlockEntity#connectedMachineNameKey)
-                var nameKey = blockEntity.connectedMachineNameKey();
-                buffer.writeUtf(nameKey == null ? "" : nameKey);
-            });
-        }
-        return InteractionResult.SUCCESS;
+        var opened = PluginAddonMenus.openPluginMenu(level, pos, player);
+        return opened == InteractionResult.PASS ? super.useItemOn(stack, state, level, pos, player, hand, hit) : opened;
     }
 
     @Override

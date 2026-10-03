@@ -23,11 +23,9 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
-import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.transfer.energy.EnergyHandler;
 import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.item.ItemResource;
-import net.neoforged.neoforge.transfer.transaction.Transaction;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -451,9 +449,10 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
 
     /**
      * Faces of this block a placed transfer addon hangs on, as a bitmask over {@link Direction#values()}.
-     * Only a dock can host one (see {@link #scanAttachedTransferFaces()}), so this stays {@code 0} on the
-     * wired addons. The page draws a gold border around these faces and {@link #hasTransferAddon()} counts
-     * them, which is what lets a plugin that is merely placed on a dock work without being put inside.
+     * A block that can host one reports it through {@link #scanAttachedTransferFaces()}; the wired addons and
+     * the wireless dock have nothing to scan, so this stays {@code 0} on all of them. The page draws a gold
+     * border around these faces and {@link #hasTransferAddon()} counts them, which is what lets the transfer
+     * page show a face that is already taken by the plugin itself.
      */
     private int attachedTransferFaces;
 
@@ -463,9 +462,9 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
     }
 
     /**
-     * True while this block has a transfer addon at all - one stored inside, or (on a dock) one placed on it
-     * - i.e. while the "Extension Transfer" page has anything to offer. Unlike the inventory proxy there is
-     * no per-addon limit here: all six faces may transfer at the same time.
+     * True while this block has a transfer addon at all - one stored inside, or one placed on a block that
+     * hosts placed plugins - i.e. while the "Extension Transfer" page has anything to offer. Unlike the
+     * inventory proxy there is no per-addon limit here: all six faces may transfer at the same time.
      */
     public boolean hasTransferAddon() {
         return transferAddonCount() > 0 || attachedTransferFaces != 0;
@@ -480,20 +479,42 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
     }
 
     /**
-     * Faces of this block a placed transfer addon hangs on. The dock scans its six neighbours; the wired
-     * addons have nothing to scan, because a plugin placed on one of them is an ordinary Oritech addon and
-     * not a way into this block's faces - only a dock's faces are the ones the transfer page shows.
+     * The block whose six faces the transfer page unfolds into its net: this block's own faces for every
+     * addon and dock, because that is where their transfer faces are.
+     * <p>
+     * It is an overridable accessor and not {@code getBlockState().getBlock()} inside the page, because a
+     * placed transfer addon shows the faces of the <b>host</b> it hangs on - the net, the gold border and the
+     * modes are about that block, not about the plugin (see {@code TransferAddonBlockEntity}).
+     */
+    public Block transferPageBlock() {
+        return getBlockState().getBlock();
+    }
+
+    /**
+     * State of {@link #transferPageBlock()}, or {@code null} while it cannot be resolved. The page needs it
+     * (not only the block) because the orientation decides which texture each face is drawn with.
+     */
+    @Nullable
+    public BlockState transferPageBlockState() {
+        return getBlockState();
+    }
+
+    /**
+     * Faces of this block a placed transfer addon hangs on. Neither the wired addons nor the wireless dock
+     * host one - a plugin standing on them is an ordinary Oritech addon - so both inherit this "nothing" and
+     * only a block entity that really can host a placed plugin overrides it (see
+     * {@code TransferAddonBlockEntity}).
      */
     protected int scanAttachedTransferFaces() {
         return 0;
     }
 
     /**
-     * Keeps {@link #attachedTransferFaces} in step with the world, called once per server tick: six block
-     * lookups on a dock, nothing anywhere else. Losing the last attached plugin drops the settings, exactly
-     * like taking the last stored one out of the container does.
+     * Keeps {@link #attachedTransferFaces} in step with the world, called once per server tick: whatever
+     * {@link #scanAttachedTransferFaces()} costs, nothing anywhere else. Losing the last attached plugin
+     * drops the settings, exactly like taking the last stored one out of the container does.
      */
-    private void refreshAttachedTransferFaces() {
+    protected void refreshAttachedTransferFaces() {
         var mask = scanAttachedTransferFaces();
         if (mask == attachedTransferFaces) return;
 
@@ -527,13 +548,6 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
     // ------------------------------------------------------------------ automation of the transfer faces
 
     /**
-     * How many items automation moves per face and tick. Eight is a fast but unremarkable rate - a hopper
-     * moves one item, an Oritech item pipe up to a stack - and it keeps a face that is fed and emptied at the
-     * same time from starving its own other direction.
-     */
-    private static final int AUTOMATION_ITEMS_PER_TICK = 8;
-
-    /**
      * Moves items for every face whose automation is switched on. Polled once per server tick by
      * {@link ExtensionAddonBlock#getTicker} (and by the wireless dock's own ticker).
      * <p>
@@ -544,8 +558,9 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
     public void serverTickTransfer() {
         if (level == null || level.isClientSide()) return;
 
-        // A plugin placed on a dock counts as a transfer addon, so this must run before the early return
-        // below: on the first tick after it is placed nothing is configured yet, but the page has to appear.
+        // The faces of the block may have changed since the last tick (a plugin that hangs on this block was
+        // placed or broken), so this runs before the early return below: on the first tick after a change
+        // nothing is configured yet, but the page has to appear or disappear.
         refreshAttachedTransferFaces();
 
         if (transferFaces.isEmpty() || !canTransferItems()) return;
@@ -562,66 +577,13 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
             // skipped. All the other faces are free.
             if (worldPosition.relative(face).equals(connectedMachinePos())) continue;
 
-            var neighbour = neighbourStorage(face);
+            var neighbour = MachineFaceStorage.storageAt(level, worldPosition, face);
             if (neighbour == null) continue;
 
             // The mode names the direction as seen from the machine, so "input" fills the machine from the
             // container on that side and "output" empties the machine into it.
-            if (mode.allowsExtract()) move(machine, neighbour);
-            if (mode.allowsInsert()) move(neighbour, machine);
-        }
-    }
-
-    /**
-     * The item storage of the block outside one face of this block - the container automation moves items
-     * with - or {@code null} while there is none (air, a machine without an inventory, an unloaded chunk).
-     * The side is asked for as the neighbour's own face pointing back at this block, which is what a pipe
-     * would ask with.
-     */
-    @Nullable
-    private ResourceHandler<ItemResource> neighbourStorage(Direction face) {
-        if (level == null) return null;
-
-        var neighbourPos = worldPosition.relative(face);
-        if (!level.isLoaded(neighbourPos)) return null;
-
-        var state = level.getBlockState(neighbourPos);
-        var blockEntity = level.getBlockEntity(neighbourPos);
-        return level.getCapability(Capabilities.Item.BLOCK, neighbourPos, state, blockEntity, face.getOpposite());
-    }
-
-    /**
-     * Moves up to {@link #AUTOMATION_ITEMS_PER_TICK} items of one stack from {@code from} to {@code to}, if the
-     * target takes any of it, and stops after that one stack.
-     * <p>
-     * Both halves run in a transaction, so nothing can be lost: the target is first asked how much it would
-     * take (that transaction is closed without committing, i.e. rolled back), and only then is exactly that
-     * amount extracted and re-inserted. The step is committed only while the two amounts match; if the
-     * inventory changed in between (another pipe, a target that filled up) the whole step rolls back instead
-     * of dropping items on the floor.
-     */
-    private static void move(ResourceHandler<ItemResource> from, ResourceHandler<ItemResource> to) {
-        for (int slot = 0; slot < from.size(); slot++) {
-            var resource = from.getResource(slot);
-            if (resource.isEmpty()) continue;
-
-            int wanted;
-            try (var probe = Transaction.openRoot()) {
-                wanted = to.insert(resource, AUTOMATION_ITEMS_PER_TICK, probe);
-            }
-            if (wanted <= 0) continue;
-
-            try (var transaction = Transaction.openRoot()) {
-                int extracted = from.extract(slot, resource, wanted, transaction);
-                if (extracted <= 0) continue;
-
-                int inserted = to.insert(resource, extracted, transaction);
-                if (inserted != extracted) continue;
-
-                transaction.commit();
-            }
-
-            return;
+            if (mode.allowsExtract()) MachineFaceStorage.move(machine, neighbour);
+            if (mode.allowsInsert()) MachineFaceStorage.move(neighbour, machine);
         }
     }
 
@@ -1178,7 +1140,14 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
 
     @Override
     public Component getDisplayName() {
-        return Component.translatable("container.oritechaddonsone." + type.id());
+        // Each variant names itself, so a GUI title always says which block is open: the wired and wireless
+        // addons by their type (see displayNameKey), a placed plugin by its own key.
+        return Component.translatable(displayNameKey());
+    }
+
+    /** Language key of this block's GUI title; overridable for a block that is not tied to an addon type. */
+    protected String displayNameKey() {
+        return "container.oritechaddonsone." + type.id();
     }
 
     @Override
