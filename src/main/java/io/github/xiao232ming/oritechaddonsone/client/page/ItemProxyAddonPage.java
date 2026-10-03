@@ -52,10 +52,10 @@ import io.github.xiao232ming.oritechaddonsone.network.ProxyNetworking;
  *     Oritech's own inventory proxy page: the machine's GUI slots as framed cells, the same prompt and the
  *     same click-to-select interaction (see {@link #drawPicker}),</li>
  *     <li>a right click on any face - or a left click on a configured one - removes the binding again,</li>
- *     <li>the panel's bottom right shows the counter {@code 可配置数: x/x} / {@code Configurable: x/x}:
- *     configured faces out of the number of stored inventory proxy addons, which is the maximum. It sits in
- *     the free band the layout keeps below the hotbar, right aligned to
- *     {@link ExtensionAddonLayout#counterRight()}, so it is off the inventory slots and off the tab
+ *     <li>the panel's top right corner shows the counter {@code 可配置数: x/x} / {@code Configurable: x/x}:
+ *     configured faces out of the number of stored inventory proxy addons, which is the maximum. It sits on
+ *     the panel's title row and is right aligned to {@link ExtensionAddonLayout#counterRight()} - the free
+ *     strip right of the inventory - so it is off the inventory slots, off the net and off the tab
  *     strip.</li>
  * </ul>
  * The binding itself is stored on the block entity and applied by the server, so a configured face really
@@ -167,17 +167,6 @@ public final class ItemProxyAddonPage implements AddonPage {
         return List.of(label(), Component.translatable(LABEL_KEY + ".tooltip"));
     }
 
-    /**
-     * The panel has to reach past the counter, which is the lowest thing this page draws: the counter sits
-     * in the free band below the hotbar and the panel's bottom border ends
-     * {@link ExtensionAddonLayout#PAGE_BOTTOM_BAND} pixels under it. Every other page draws less and asks
-     * for a shorter panel, which is what removes the empty band they used to show.
-     */
-    @Override
-    public int drawnHeight(ExtensionAddonLayout layout) {
-        return layout.proxyPageHeight();
-    }
-
     // ------------------------------------------------------------------ drawing
 
     @Override
@@ -252,13 +241,12 @@ public final class ItemProxyAddonPage implements AddonPage {
     }
 
     /**
-     * Draws the "Configurable: x/x" counter in the panel's bottom right corner.
+     * Draws the "Configurable: x/x" counter in the panel's top right corner.
      * <p>
-     * The panel keeps a free band below the hotbar row for exactly this line
-     * ({@link ExtensionAddonLayout#counterY()}), so the counter sits off the player inventory slots, and it
-     * is right aligned to {@link ExtensionAddonLayout#counterRight()} - the free strip right of the
-     * inventory and {@value ExtensionAddonLayout#COUNTER_MARGIN} pixels left of the panel's border, hence
-     * clear of the tab strip, which only overlaps the panel by
+     * It sits on the panel's title row ({@link ExtensionAddonLayout#counterY()}), next to the net but clear
+     * of it, and it is right aligned to {@link ExtensionAddonLayout#counterRight()} - the free strip right
+     * of the inventory and {@value ExtensionAddonLayout#COUNTER_MARGIN} pixels left of the panel's border,
+     * hence clear of the tab strip, which only overlaps the panel by
      * {@link ExtensionAddonLayout#TAB_OVERLAP} pixels.
      */
     private void drawCounter(AddonPageContext context, GuiGraphicsExtractor graphics, int configured, int maximum) {

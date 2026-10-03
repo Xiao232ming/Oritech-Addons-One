@@ -9,13 +9,11 @@ package io.github.xiao232ming.oritechaddonsone.menu;
  * The panel is sized for every page it can show, not only for the plugin grid: it is
  * {@value #RIGHT_GUTTER} pixels wider than vanilla's 176 columns (a free strip on the right, which the
  * Item Proxy page right aligns its counter in and which gives the slot picker room) and it reserves the
- * {@linkplain #PROXY_CONTENT_BOTTOM net} of that page above the player inventory, plus a
- * {@linkplain #BOTTOM_BAND band} below the hotbar for the counter. All three numbers are defined here,
- * so screen, menu and pages always agree on them.
+ * {@linkplain #PROXY_CONTENT_BOTTOM room} of that page above the player inventory, inside which that
+ * page's net is centred. Both numbers are defined here, so screen, menu and pages always agree on them.
  * <p>
- * That reservation is what makes one geometry serve every page, but it is also 46 pixels taller than the
- * plugin page (and the wireless page) needs, which used to show as a large empty band between the plugin
- * grid and the player inventory. The menu therefore keeps the one {@code imageHeight} height
+ * That room is what makes one geometry serve every page: it pushes the player inventory down below the
+ * net on a block with one or two plugin rows. The menu keeps the one {@code imageHeight} height
  * - the slot coordinates a client and the server derive from it have to agree - while a page may draw a
  * {@linkplain #pageHeight shorter panel} that ends just below its own content: an empty band is then
  * simply not part of the panel. The page framework asks each page for its
@@ -59,40 +57,47 @@ public record ExtensionAddonLayout(int slots, int columns, int rows, int firstSl
      */
     public static final int PROXY_NET_X = (WIDTH - PROXY_NET_WIDTH) / 2;
     /**
-     * Top edge of the net, in panel space: below the light bevel and the panel's own title label, and
-     * clear of the first player inventory row, which starts at {@link #PROXY_CONTENT_BOTTOM}.
-     */
-    public static final int PROXY_NET_Y = 28;
-    /** Gap the panel keeps between the net and the first player inventory row. */
-    public static final int CONTENT_GAP = 8;
-    /**
-     * Y the player inventory never starts above: the bottom of the net plus {@link #CONTENT_GAP} (80).
+     * Bottom of the room the panel reserves above the player inventory for the Item Proxy page, i.e. the Y
+     * the player inventory never starts above. It is a fixed 90 (five slot rows) and is not derived from
+     * the net any more, because the net is centred inside it ({@link #PROXY_NET_Y}): deriving it as
+     * {@code net + gap} would move the player inventory along every time the net moves.
      * <p>
      * This is the room the panel reserves for the Item Proxy page. Without it a block with one or two
      * plugin rows would place the player inventory over the net (at 48 and 66), so the inventory starts
-     * at {@code max(firstSlotY + rows * SLOT_SIZE + 12, PROXY_CONTENT_BOTTOM)}: at 80 for one and two
+     * at {@code max(firstSlotY + rows * SLOT_SIZE + 12, PROXY_CONTENT_BOTTOM)}: at 90 for one and two
      * rows and at its old value from three rows on - the panel only grows where the net really needs it.
      */
-    public static final int PROXY_CONTENT_BOTTOM = PROXY_NET_Y + PROXY_NET_HEIGHT + CONTENT_GAP;
+    public static final int PROXY_CONTENT_BOTTOM = 90;
     /**
-     * Height of the free band the panel keeps below the hotbar row. The counter of the Item Proxy page
-     * is drawn in it, which is what keeps the counter clear of the hotbar slots it used to sit on.
+     * Margin the net keeps inside that room, above and below it: half of what the room has left once the
+     * net is subtracted ({@code (PROXY_CONTENT_BOTTOM - PROXY_NET_HEIGHT) / 2 = 18}), which is what
+     * centres the net in the room instead of letting it hug the top edge.
      */
-    public static final int BOTTOM_BAND = 16;
+    public static final int PROXY_NET_MARGIN = (PROXY_CONTENT_BOTTOM - PROXY_NET_HEIGHT) / 2;
     /**
-     * Height of the band a page <em>without</em> a counter needs below the hotbar row: the two pixels of
-     * the panel's dark bottom bevel plus four pixels of panel, so the drawn panel ends with a normal
-     * looking border instead of the taller {@link #BOTTOM_BAND} the counter needs.
+     * Top edge of the net, in panel space: {@link #PROXY_NET_MARGIN} below the top of the room, so the net
+     * is centred in it (18 in the 90 pixel room, 10 pixels higher than the 28 it sat at). It stays clear
+     * of the panel's title label - drawn at Y 6, eight pixels tall - and of the first player inventory
+     * row, which starts at {@link #PROXY_CONTENT_BOTTOM}.
+     */
+    public static final int PROXY_NET_Y = PROXY_NET_MARGIN;
+    /**
+     * Height of the band a page needs below its own content, and at the least below the hotbar row: the
+     * two pixels of the panel's dark bottom bevel plus four pixels of panel, so the drawn panel ends with
+     * a normal looking border. No page reserves more than this: the Item Proxy page's counter used to sit
+     * in a taller band under the hotbar and has moved to the panel's top right corner, so that band is
+     * gone and the panel ends right under the player inventory.
      */
     public static final int PAGE_BOTTOM_BAND = 6;
     /**
      * Height the drawn panel does <em>not</em> need above the first content row: the panel's two pixel
-     * light bevel plus the gap to a row of content. A page measures itself as
-     * {@code TOP_BAND + content}, which is why the Item Proxy page's net (drawn from
-     * {@link #PROXY_NET_Y}) is measured from {@code TOP_BAND} as well.
+     * light bevel plus the gap to a row of content. A page measures itself as {@code TOP_BAND + content}.
      */
     public static final int TOP_BAND = 2;
-    /** Vertical inset of the counter's text inside {@link #BOTTOM_BAND}. */
+    /**
+     * Vertical inset of the counter's text inside the panel's top edge: with the two pixel light bevel
+     * that puts it at Y 6, level with the panel's title label and with the first tab of the strip.
+     */
     public static final int COUNTER_INSET = 4;
     /**
      * Distance the counter keeps from the panel's right border. The tab strip reaches
@@ -129,18 +134,24 @@ public record ExtensionAddonLayout(int slots, int columns, int rows, int firstSl
         return playerRowsY + 3 * SLOT_SIZE + 4;
     }
 
-    /** Height of the panel: the hotbar row plus the band the Item Proxy page's counter sits in. */
+    /**
+     * Height of the panel: the hotbar row plus the normal bottom border, i.e.
+     * {@code pageHeight(hotbarY + SLOT_SIZE)}, the tallest a page ever needs. Nothing is drawn below the
+     * player inventory any more - the Item Proxy page's counter moved to the top right corner - so the
+     * menu reserves no extra band there.
+     */
     private static int imageHeight(int hotbarY) {
-        return hotbarY + SLOT_SIZE + BOTTOM_BAND;
+        return hotbarY + SLOT_SIZE + TOP_BAND + PAGE_BOTTOM_BAND;
     }
 
     /**
-     * Y of the Item Proxy page's counter, in panel space: in the free band below the hotbar row, so the
-     * counter is off the inventory slots and off the tab strip (which only reaches
-     * {@link #TAB_OVERLAP} pixels into the panel).
+     * Y of the Item Proxy page's counter, in panel space: the panel's top right corner, level with the
+     * title label and with the first tab of the strip. It used to sit in the band below the hotbar row,
+     * which is what made that page taller than the player inventory; moving it up there is what lets the
+     * panel end right under the inventory.
      */
     public int counterY() {
-        return hotbarY + SLOT_SIZE + COUNTER_INSET;
+        return TOP_BAND + COUNTER_INSET;
     }
 
     /**
@@ -164,30 +175,18 @@ public record ExtensionAddonLayout(int slots, int columns, int rows, int firstSl
     // ------------------------------------------------------------------ drawn panel per page
 
     /**
-     * Bottom edge of the Item Proxy page's reservation, i.e. the lowest Y the panel ever has to reach. It
-     * is exactly {@link #imageHeight()}: the counter's line already sits inside {@link #BOTTOM_BAND}, so
-     * the menu height is the height this one page needs. Asking for more does not draw anything, it only
-     * pushes the panel past the rectangle everything else uses - the screen's click bounds, and the
-     * {@linkplain #imageHeight() menu height} the Item Proxy page's modal overlay fills to - so the panel
-     * hung below the GUI and kept a strip of undimmed panel at its bottom edge while Oritech's
-     * configuration page was open. An earlier version added the counter's line on top of that band again
-     * (3 pixels) which is exactly what it showed.
-     */
-    public int proxyPageHeight() {
-        return imageHeight();
-    }
-
-    /**
      * Height the drawn panel of a page needs whose own content ends at {@code contentBottom}: the two
      * pixel light bevel plus that content, and at least the whole player inventory - the three inventory
      * rows and the hotbar - plus the bottom border. A page passes the bottom of its own content here, so
-     * the dark bottom border lands just below that content instead of leaving the band the Item Proxy page
-     * reserved, which is the large empty area the plugin page used to show.
+     * the dark bottom border lands just below that content instead of leaving an empty band below it,
+     * which is the large empty area the plugin page used to show.
      * <p>
      * The menu keeps {@link #imageHeight() its own height} (which is
      * {@code pageHeight(imageHeight() - 2 - PAGE_BOTTOM_BAND)} for every layout), because the slot
      * coordinates of the client and of the server are derived from it; only the panel border and the
-     * player inventory label follow the page.
+     * player inventory label follow the page. The Item Proxy page needs no height of its own any more:
+     * its net and its counter sit at the top and the panel has to cover the player inventory either way,
+     * so it draws the menu's own height.
      */
     public int pageHeight(int contentBottom) {
         return Math.max(TOP_BAND + contentBottom + PAGE_BOTTOM_BAND,
