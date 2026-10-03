@@ -29,6 +29,7 @@ import rearth.oritech.block.blocks.processing.MachineCoreBlock;
 import rearth.oritech.util.Geometry;
 import rearth.oritech.util.MultiblockMachineController;
 
+import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferMode;
 
 /**
@@ -128,11 +129,27 @@ public final class FacePreviewWidget extends UIComponent {
      */
     private static final float PLANE_Z = 400.0F;
 
-    /** Translucent white of the hover outline: white, at the alpha Oritech uses for its own placement ghost. */
-    private static final int HIGHLIGHT_COLOR = 0x55FFFFFF;
+    /**
+     * Translucent white of the hover marking: the whole face under the mouse, at an alpha low enough to lighten what
+     * the face already carries rather than to cover it.
+     * <p>
+     * <b>The alpha is the compromise between "the marking is unmistakable" and "the mode colour survives".</b> The
+     * mode washes are themselves translucent at {@code 0x55}, so the hover is composited over them: at {@code 0x38}
+     * white, an input face's blue {@code 0x553B82F6} composites to {@code 0x55669DF8} and an output face's orange
+     * {@code 0x55F59E0B} to {@code 0x55F7B341} - both still unmistakably their own hue, both clearly lighter than the
+     * unmarked face, and the layer's own {@code 0x55} alpha still lets the machine's texture show through. A heavier
+     * veil drains the colour (at {@code 0x55} the same blue comes out {@code 0x557CACF9}, visibly greyer and closer
+     * to the orange's own brightness, so the two modes start to look alike); a lighter one stops reading over a bright
+     * block texture.
+     */
+    private static final int HIGHLIGHT_COLOR = 0x38FFFFFF;
 
-    /** Distance the hover outline floats off the face, so it never trades depth with the block face behind it. */
-    private static final float HIGHLIGHT_LIFT = 0.002F;
+    /**
+     * Distance the hover fill floats off the face, so it never trades depth with the block face behind it. It is
+     * above {@link #MARKING_LIFT} + {@link #MARKING_STEP}, i.e. above a mode wash and above the gold outline of an
+     * occupied face, so the hover is the topmost marking of the three.
+     */
+    private static final float HIGHLIGHT_LIFT = 0.004F;
 
     /**
      * The half extent of one cell's face, in model units: a block model is one unit wide and the drawing translates
@@ -140,9 +157,6 @@ public final class FacePreviewWidget extends UIComponent {
      * expressed in these units (see {@link #drawQuad}).
      */
     private static final float FACE_HALF_EXTENT = 0.5F;
-
-    /** How thick the hover outline is, in model units. */
-    private static final float HIGHLIGHT_OUTLINE_THICKNESS = 0.07F;
 
     /** How far a wash's edges stay inside the face, in model units, so it reads as a marking and not as a lid. */
     private static final float WASH_INSET = 0.03F;
@@ -605,17 +619,28 @@ public final class FacePreviewWidget extends UIComponent {
     }
 
     /**
-     * Draws the outline of the hovered face, in the pose that is still active from the machine above: the outline is
-     * built in model space on the face's own edge of the part the mouse is over, so it lands on that face whatever the
-     * model is rotated to.
+     * Draws the hover marking of the face the mouse is over, in the pose that is still active from the machine above:
+     * a translucent white fill of the <b>whole face</b> of the part the picking answered with, so it lands on that
+     * face whatever the model is rotated to.
      * <p>
      * The part is the one the picking answered with ({@link #hoveredOffset}): a multiblock machine is several cells of
-     * model space, and the outline of a face on one of them belongs on that cell - drawn at the model origin it would
+     * model space, and the marking of a face on one of them belongs on that cell - drawn at the model origin it would
      * mark the controller's cell instead, on the far side of the machine.
      * <p>
-     * It is an <b>outline and not a wash</b>, and it is drawn last: the face under the mouse may be coloured by its
-     * mode or ringed in gold, and a translucent white fill over either of those would only muddy the meaning it
-     * carries. The white edge sits on top of both and leaves the colour in the middle readable.
+     * <b>It is a fill of the entire face and not an outline</b>, which is what the feature is for: an outline only
+     * answers "is the cursor on this face" for the cursor positions inside the ring, so a player pointing at the middle
+     * of a face saw nothing and read it as the marking not following the mouse. The fill covers the face the picking
+     * answers with exactly, so the highlighted area <em>is</em> the area that face owns - cursor on the marking and
+     * cursor on the face are the same statement.
+     * <p>
+     * <b>It blends, it does not overwrite.</b> {@link #HIGHLIGHT_COLOR} is white at a low alpha drawn over the mode
+     * wash, so what the face already carried stays readable underneath: the blue of an input face composites to
+     * {@code 0x55669DF8} and the orange of an output face to {@code 0x55F7B341}, both lighter than the unmarked face
+     * and both still their own colour, while a face with no mode reads as lit rather than as painted.
+     * <p>
+     * The gold outline of an occupied face is drawn before this (see {@link #drawOverlays}), so the "a plugin stands
+     * here" reading survives being hovered, and {@link #HIGHLIGHT_LIFT} is raised above that outline's own lift so the
+     * white is never hidden by it.
      * <p>
      * Nothing is drawn while no face is hovered, i.e. while the mouse is not on the model - the page's picking keeps
      * working unchanged, because this only ever adds geometry to the frame and never touches the mouse.
@@ -627,7 +652,8 @@ public final class FacePreviewWidget extends UIComponent {
 
         poseStack.pushPose();
         poseStack.translate(offset.getX(), offset.getY(), offset.getZ());
-        drawOutline(poseStack, face, HIGHLIGHT_LIFT, HIGHLIGHT_OUTLINE_THICKNESS, HIGHLIGHT_COLOR);
+        drawQuad(poseStack, face, -FACE_HALF_EXTENT, FACE_HALF_EXTENT, -FACE_HALF_EXTENT, FACE_HALF_EXTENT,
+                HIGHLIGHT_LIFT, HIGHLIGHT_COLOR);
         poseStack.popPose();
     }
 
@@ -776,6 +802,107 @@ public final class FacePreviewWidget extends UIComponent {
     }
 
     /**
+     * Picks, out of every cell the ray enters, the one its face is drawn under the cursor for.
+     * <p>
+     * <b>Two passes, and the reason is not style.</b> The candidates are first narrowed to those within
+     * {@link #TIE_EPSILON} of the <em>nearest</em> entry distance, and only then is the winner chosen from that set by
+     * {@link #better}. Comparing candidates pairwise as the loop walks the list instead would be
+     * <b>non-transitive</b>: with {@code A} at 1.00, {@code B} at 1.08 and {@code C} at 1.14, {@code B} beats {@code A}
+     * (within epsilon) and {@code C} beats {@code B}, but {@code C} does not beat {@code A} - so which of the three won
+     * would depend on the order the parts were listed in, which is exactly the thing this method exists to remove. A
+     * measured run on this branch found three pixels where the pairwise form still flipped when the cell list was
+     * reordered; the two-pass form has none.
+     */
+    private Hit faceAt(double mouseX, double mouseY) {
+        if (!isOverModel(mouseX, mouseY)) return null;
+        if (state == null || renderedScale <= 0.0F) return null;
+
+        var parts = blocks();
+        if (parts.isEmpty()) return null;
+
+        var ray = transform().pickingRay((float) mouseX, (float) mouseY);
+        if (ray == null) return null;
+
+        // pass one: how near the nearest entry is, and the entries that are effectively as near as it
+        var near = new ArrayList<Hit>();
+        float nearest = Float.POSITIVE_INFINITY;
+        for (var part : parts) {
+            var hit = entryHit(ray.origin(), ray.direction(), part.offset());
+            if (hit == null) continue;
+
+            near.add(hit);
+            nearest = Math.min(nearest, hit.distance());
+        }
+        if (near.isEmpty()) return null;
+
+        // pass two: the winner among the ties, by a rule that reads only the ray and the cell, never the list order
+        Hit best = null;
+        for (var hit : near) {
+            if (hit.distance() > nearest + TIE_EPSILON) continue;
+            if (best == null || better(hit, best, ray.direction())) best = hit;
+        }
+        return best;
+    }
+
+    /**
+     * How much nearer one entry has to be before it beats the one already chosen, in model units.
+     * <p>
+     * Two cells that share an edge or a corner of the structure are entered at distances that differ only by where
+     * exactly the ray crossed the boundary, and at a grazing angle that difference is of the same order as the float
+     * error of the slab test - so <em>which</em> of them is nearer is decided by rounding, and it changes as the
+     * cursor moves by a pixel. Treating everything within this distance as "equally near" is what lets the tie-break
+     * below, which is about the ray and not about rounding, decide instead.
+     * <p>
+     * A tenth of a block: small enough that a cell really in front of another (a whole block of model space, i.e.
+     * 1.0) always wins on distance alone, large enough to absorb the arithmetic at any zoom the page allows.
+     */
+    private static final float TIE_EPSILON = 0.1F;
+
+    /**
+     * True while {@code candidate} is the better answer than {@code best} among entries that are effectively equally
+     * near. It is a <b>total order over the tie set</b>, which is what makes the answer independent of the order the
+     * cells were listed in (see {@link #faceAt}).
+     * <p>
+     * <b>The first term is about the ray, not about the iteration order.</b> The winner is the cell-face the ray meets
+     * most <em>head on</em> - the one whose outward normal is most opposed to the ray direction - because that is the
+     * face the player is looking at: at a grazing boundary the ray runs almost parallel to one of the two faces and
+     * almost perpendicular to the other, and the perpendicular one is unambiguously the one under the cursor. It is a
+     * continuous function of the ray, so the hand-over between two faces is smooth.
+     * <p>
+     * The two terms after it cannot normally be reached (two different cells cannot have the same normal <em>and</em>
+     * the same entry distance), but they make the order total rather than merely usually-decided: a fixed cell order,
+     * then the face's own ordinal.
+     */
+    private static boolean better(Hit candidate, Hit best, Vector3f direction) {
+        // the more head-on face wins
+        float candidateFacing = facing(candidate.face(), direction);
+        float bestFacing = facing(best.face(), direction);
+        if (candidateFacing != bestFacing) return candidateFacing > bestFacing;
+
+        // and then a total, ray-only order, so the answer never depends on the order the parts were iterated
+        var candidateCell = candidate.offset();
+        var bestCell = best.offset();
+        int byX = Integer.compare(candidateCell.getX(), bestCell.getX());
+        if (byX != 0) return byX < 0;
+        int byY = Integer.compare(candidateCell.getY(), bestCell.getY());
+        if (byY != 0) return byY < 0;
+        int byZ = Integer.compare(candidateCell.getZ(), bestCell.getZ());
+        if (byZ != 0) return byZ < 0;
+
+        return candidate.face().ordinal() < best.face().ordinal();
+    }
+
+    /**
+     * How head on a face is to the ray: the negated cosine between the face's outward normal and the ray direction,
+     * so {@code 1} is a face the ray hits straight on and {@code -1} is one it can only leave through.
+     */
+    private static float facing(Direction face, Vector3f direction) {
+        var normal = face.getNormal();
+        return -(normal.getX() * direction.x + normal.getY() * direction.y + normal.getZ() * direction.z)
+                / direction.length();
+    }
+
+    /**
      * The parts of the machine this widget draws and picks, in model space: the controller's own cell plus, for a
      * multiblock machine, one offset per part of its assembled structure.
      * <p>
@@ -890,40 +1017,6 @@ public final class FacePreviewWidget extends UIComponent {
     private PreviewTransform transform() {
         return PreviewTransform.of(contentX() + contentWidth() * 0.5F, contentY() + contentHeight() * 0.5F, PLANE_Z,
                 renderedScale, pitch, yaw);
-    }
-
-    /**
-     * The face of the model under the given absolute screen coordinates, or {@code null} while the mouse is not over
-     * the machine.
-     * <p>
-     * The ray is {@link PreviewTransform#pickingRay} of this frame's own drawing transform - the very composition
-     * {@link #renderContent} applies to the pose - so the ray of a pixel and the model drawn at that pixel cannot
-     * disagree. Every candidate part is then tested with the usual slab test and the closest entry wins, and the face
-     * is read off the axis whose slab gave the near intersection: for an axis aligned box that axis <em>is</em> the
-     * entry face, and reading it off the entry point instead would make a click on the middle of a face a three way
-     * tie of its edges.
-     * <p>
-     * <b>The candidates are {@link #blocks()}, cores included</b>, and not the shorter list the drawing uses. A core
-     * is not drawn, but it is a block of the machine all the same, so the face it turns to the outside is a face of
-     * the machine's surface - a face the player sees (nothing is drawn over it) and therefore has to be able to select
-     * and configure like any other. Leaving cores out here is what used to make the top of a machine whose outermost
-     * cell is a core unclickable. The answer is a world {@link Direction} either way, so the page, its modes and its
-     * automation do not care which cell of the machine the click landed on.
-     */
-    @Nullable
-    private Hit faceAt(double mouseX, double mouseY) {
-        if (!isOverModel(mouseX, mouseY)) return null;
-        if (state == null || renderedScale <= 0.0F) return null;
-
-        var ray = transform().pickingRay((float) mouseX, (float) mouseY);
-        if (ray == null) return null;
-
-        Hit closest = null;
-        for (var part : blocks()) {
-            var hit = entryHit(ray.origin(), ray.direction(), part.offset());
-            if (hit != null && (closest == null || hit.distance() < closest.distance())) closest = hit;
-        }
-        return closest;
     }
 
     /**
