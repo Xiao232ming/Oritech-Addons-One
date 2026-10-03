@@ -26,15 +26,17 @@ import io.github.xiao232ming.oritechaddonsone.network.ProxyNetworking;
 import io.github.xiao232ming.oritechaddonsone.network.TransferNetworking;
 
 /**
- * The configuration page the 3D preview page (传输插件) opens on a click on a face: the same Oritech panel the
- * cube net page uses - the block's item as its title icon, a prompt line, the three mode plates (输入/输出/输入
+ * The configuration page the transfer pages open on a click on a face: the same Oritech panel both use - the
+ * block's item as its title icon, a prompt line, the three mode plates (输入/输出/输入
  * 输出) with the face's current one sunken, and the 自动化 checkbox.
  * <p>
- * It is one class and not a copy inside the page because the two transfer pages have to stay the same page: a
+ * It is one class and not a copy inside each page because the two transfer pages have to stay the same page: a
  * player who learned on the net what the plates mean has to find the same plates, in the same place, in the same
  * colours on the model. The geometry, the surfaces and the mode names are shared already
  * ({@link AddonPickerPanel}, {@link TransferFaceStyle}); this class is the drawing, the hit tests and the send
- * path between them, so the preview page only decides <em>which</em> face is being configured.
+ * path between them, and the page that opens it supplies what the face does and where a change goes
+ * ({@link Current}, {@link Sink}) - the cube net page reads its settings from the menu, the preview page from the
+ * map the server sent, so this class can serve both without knowing either model.
  * <p>
  * What a click does is the cube net page's behaviour: a click on a plate sets that mode and leaves the page open,
  * so the plate turns dark and the player can pick another one; the automation checkbox only toggles and keeps the
@@ -73,12 +75,17 @@ public final class TransferFaceModal {
      * It has to be called <b>after</b> the page drew its own content, because it paints an opaque backdrop over
      * the panel and everything inside it is then drawn in Oritech's own panel coordinates through one translate -
      * the coordinate system {@link SurfaceWidget} expects.
+     * <p>
+     * <b>The caller owns the data.</b> This modal is shared by the two transfer pages, whose models are different -
+     * the cube net page keys a setting by {@link Direction} on one block, the preview page by cell and direction on a
+     * structure (see {@code CellFaceModes}) - so it neither reads nor writes a model itself. It is told which face it
+     * shows, what that face currently does ({@link Current}) and what a change should be sent to ({@link Sink}).
      *
      * @param occupied true while the plugin itself stands on this face, which makes it unconfigurable: the plates
      *                 are then dimmed and refuse the click, and the prompt explains why
      */
-    public static void render(AddonPageContext context, GuiGraphicsExtractor graphics, ExtensionAddonMenu menu,
-            Direction face, boolean occupied, double mouseX, double mouseY) {
+    public static void render(AddonPageContext context, GuiGraphicsExtractor graphics, Direction face, Current current,
+            boolean occupied, double mouseX, double mouseY) {
         var font = Minecraft.getInstance().font;
         var placed = AddonPickerPanel.place(context);
         var open = !occupied;
@@ -91,8 +98,8 @@ public final class TransferFaceModal {
         graphics.pose().translate(context.screenX(placed.innerX()), context.screenY(placed.innerY()));
 
         drawPanel(graphics);
-        drawPlates(graphics, font, menu, face, placed, open, mouseX, mouseY);
-        drawAutomation(graphics, font, menu, face, placed, open, mouseX, mouseY);
+        drawPlates(graphics, font, face, current, placed, open, mouseX, mouseY);
+        drawAutomation(graphics, font, current, placed, open, mouseX, mouseY);
         prompt(graphics, font, occupied);
         header(graphics, context, placed);
 
@@ -105,7 +112,7 @@ public final class TransferFaceModal {
      * @return true while the click belonged to the page, so the page behind it never sees it; false while the
      *         page is not open at all
      */
-    public static boolean mouseClicked(AddonPageContext context, ExtensionAddonMenu menu, Direction face,
+    public static boolean mouseClicked(AddonPageContext context, Direction face, Current current, Sink sink,
             boolean occupied, double mouseX, double mouseY, int button) {
         if (button == 1) {
             TransferPreviewPickerState.close();
@@ -120,22 +127,18 @@ public final class TransferFaceModal {
                 var mode = MODES.get(index);
                 // the plate of the mode this face already has is disabled: clicking it again does nothing, so
                 // the page neither closes nor repeats a mode the server already has
-                if (mode == currentMode(menu, face)) return true;
+                if (mode == current.mode()) return true;
 
                 // picking a direction keeps the automation switch of the face as it is
-                var automation = automationOf(menu, face);
-                TransferPreviewPickerState.select(mode, automation);
-                send(menu.position(), face, mode, automation);
+                var automation = current.automation();
+                sink.send(face, mode, automation);
                 return true;
             }
 
             if (isOverAutomation(placed, mouseX, mouseY)) {
-                var mode = currentMode(menu, face);
-                if (mode == TransferMode.NONE) return true;
+                if (current.mode() == TransferMode.NONE) return true;
 
-                var automation = !automationOf(menu, face);
-                TransferPreviewPickerState.select(mode, automation);
-                send(menu.position(), face, mode, automation);
+                sink.send(face, current.mode(), !current.automation());
                 return true;
             }
         }
@@ -144,6 +147,48 @@ public final class TransferFaceModal {
         // closes it, like a click outside a modal
         TransferPreviewPickerState.close();
         return true;
+    }
+
+    /**
+     * What the face the modal configures does right now, as the page that opened it reports it: the mode, the
+     * automation flag, and where the change is written to.
+     */
+    public interface Current {
+        TransferMode mode();
+
+        boolean automation();
+    }
+
+    /** Where a change the player makes in the modal is sent. */
+    public interface Sink {
+        void send(Direction face, TransferMode mode, boolean automation);
+    }
+
+    /**
+     * The {@link Current} of a page that keys its settings by direction and has them only in the menu - the cube net
+     * page, whose model is one block's six faces.
+     */
+    public static Current current(ExtensionAddonMenu menu, Direction face) {
+        return new Current() {
+            @Override
+            public TransferMode mode() {
+                return menu.transferMode(face);
+            }
+
+            @Override
+            public boolean automation() {
+                return menu.transferAutomation(face);
+            }
+        };
+    }
+
+    /**
+     * The {@link Sink} of a page that keys its settings by direction - the cube net page. The direction and the
+     * automation flag travel as the one packed value the block entity and the menu use for a face.
+     */
+    public static Sink sink(BlockPos pos) {
+        return (face, mode, automation) -> ClientPacketDistributor.sendToServer(new TransferNetworking.SetTransferMode(
+                pos, ProxyNetworking.faceIndex(face), TransferFaceModes.pack(mode, automation)));
     }
 
     /** The panel itself: Oritech's nine patch inside a darker frame, as on the cube net page. */
@@ -155,20 +200,20 @@ public final class TransferFaceModal {
     }
 
     /** The three mode plates, Oritech's own button surfaces, with the face's current mode sunken in. */
-    private static void drawPlates(GuiGraphicsExtractor graphics, Font font, ExtensionAddonMenu menu, Direction face,
+    private static void drawPlates(GuiGraphicsExtractor graphics, Font font, Direction face, Current current,
             AddonPickerPanel.Placed placed, boolean open, double mouseX, double mouseY) {
-        var current = modeOf(menu, face);
+        var mode = current.mode();
 
         for (int index = 0; index < MODES.size(); index++) {
-            var mode = MODES.get(index);
+            var plate = MODES.get(index);
             int x = plateX(index);
             int y = BUTTON_Y;
 
-            var surface = !open || mode == current ? OritechSurface.PANEL_DARK
+            var surface = !open || plate == mode ? OritechSurface.PANEL_DARK
                     : isOverPlate(placed, index, mouseX, mouseY) ? OritechSurface.PANEL_HOVER : OritechSurface.PANEL;
             surface.render(graphics, x, y, BUTTON_WIDTH, BUTTON_HEIGHT);
 
-            var text = Component.translatable(TransferFaceStyle.modeKey(mode)).getString();
+            var text = Component.translatable(TransferFaceStyle.modeKey(plate)).getString();
             graphics.text(font, text, x + (BUTTON_WIDTH - font.width(text)) / 2, y + (BUTTON_HEIGHT - 8) / 2,
                     open ? AddonPanelStyle.PANEL_TEXT : AddonPanelStyle.PANEL_TEXT_DIM, false);
         }
@@ -182,10 +227,10 @@ public final class TransferFaceModal {
      * The row is dimmed and refuses clicks while the face has no direction yet: a face that transfers nothing has
      * nothing to move on its own, so the switch only becomes meaningful together with a mode.
      */
-    private static void drawAutomation(GuiGraphicsExtractor graphics, Font font, ExtensionAddonMenu menu,
-            Direction face, AddonPickerPanel.Placed placed, boolean open, double mouseX, double mouseY) {
-        var enabled = open && modeOf(menu, face) != TransferMode.NONE;
-        var on = enabled && automationOf(menu, face);
+    private static void drawAutomation(GuiGraphicsExtractor graphics, Font font, Current current,
+            AddonPickerPanel.Placed placed, boolean open, double mouseX, double mouseY) {
+        var enabled = open && current.mode() != TransferMode.NONE;
+        var on = enabled && current.automation();
         var label = Component.translatable(AUTOMATION_KEY).getString();
 
         int boxX = automationBoxX(font, label);
@@ -299,12 +344,12 @@ public final class TransferFaceModal {
     /** What the open configuration page of this face set a moment ago, or {@code null} while it is closed. */
     @Nullable
     private static TransferPreviewPickerState.Pending pending(ExtensionAddonMenu menu, Direction face) {
-        return TransferPreviewPickerState.isOpen(menu.position(), face) ? TransferPreviewPickerState.pending() : null;
-    }
+        var cell = TransferPreviewPickerState.openCell();
+        if (cell == null) return null;
 
-    /** The mode the server already knows for this face, i.e. without the page's pending value. */
-    private static TransferMode currentMode(ExtensionAddonMenu menu, Direction face) {
-        return menu.transferMode(face);
+        return TransferPreviewPickerState.isOpen(menu.position(), cell, face)
+                ? TransferPreviewPickerState.pending()
+                : null;
     }
 
     /**
@@ -313,17 +358,7 @@ public final class TransferFaceModal {
      * the face does not read as configured until the server has answered.
      */
     public static void clear(BlockPos pos, Direction face) {
-        send(pos, face, TransferMode.NONE, false);
-    }
-
-    /**
-     * Tells the server what a face should do: the one place this page talks back. The direction and the
-     * automation flag travel as the one packed value the block entity and the menu use for a face, on the same
-     * packet the cube net page sends - both plugins have the same per-face settings, and the server applies them
-     * on whichever plugin block the position names.
-     */
-    private static void send(BlockPos pos, Direction face, TransferMode mode, boolean automation) {
         ClientPacketDistributor.sendToServer(new TransferNetworking.SetTransferMode(
-                pos, ProxyNetworking.faceIndex(face), TransferFaceModes.pack(mode, automation)));
+                pos, ProxyNetworking.faceIndex(face), TransferFaceModes.pack(TransferMode.NONE, false)));
     }
 }

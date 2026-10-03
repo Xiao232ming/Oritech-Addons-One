@@ -11,6 +11,7 @@ import io.github.xiao232ming.oritechaddonsone.client.page.AddonPageContext;
 import io.github.xiao232ming.oritechaddonsone.client.page.AddonPageRegistry;
 import io.github.xiao232ming.oritechaddonsone.client.page.AddonTabStrip;
 import io.github.xiao232ming.oritechaddonsone.client.page.ProxyPickerState;
+import io.github.xiao232ming.oritechaddonsone.client.page.TransferFaceState;
 import io.github.xiao232ming.oritechaddonsone.client.page.TransferPickerState;
 import io.github.xiao232ming.oritechaddonsone.client.page.TransferPreviewPickerState;
 import io.github.xiao232ming.oritechaddonsone.client.page.TransferPreviewState;
@@ -165,6 +166,9 @@ public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddon
         TransferPreviewPickerState.clear();
         // only this GUI's own model: another addon screen can be open at the same time
         TransferPreviewState.clear(this.menu.position());
+        // and the cell-face map the server sent for this block, for the same reason - the next time this GUI is
+        // opened the server sends it again with the menu
+        TransferFaceState.clear(this.menu.position());
     }
 
     /**

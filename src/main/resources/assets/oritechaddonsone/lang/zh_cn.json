@@ -102,6 +102,7 @@
   "gui.oritechaddonsone.page.transfer_preview": "传输预览",
   "gui.oritechaddonsone.page.transfer_preview.tooltip": "所服务机器的可旋转 3D 模型：拖动可旋转，点击某个面打开它的传输设置",
   "gui.oritechaddonsone.preview.hint": "拖动旋转模型 —— 点击某个面进行配置",
+  "gui.oritechaddonsone.preview.counter": "已配置面数：%s",
   "gui.oritechaddonsone.preview.no_machine": "该插件所服务的机器未加载",
   "gui.oritechaddonsone.transfer.side.north": "北",
   "gui.oritechaddonsone.transfer.side.south": "南",

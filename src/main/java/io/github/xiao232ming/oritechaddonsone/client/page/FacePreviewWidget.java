@@ -2,6 +2,7 @@ package io.github.xiao232ming.oritechaddonsone.client.page;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.core.Direction;
@@ -111,12 +112,20 @@ public final class FacePreviewWidget extends BlockPreviewWidget {
     private Direction pickedFace;
 
     /**
-     * What each face of the machine is configured to do, indexed by {@link Direction#ordinal()}, or {@code null}
-     * while the page has not said. The page sets this once per frame from the menu, so a mode the server has just
-     * written appears with the next frame and a mode the page has only sent (its pending value) appears at once.
+     * What every <b>cell-face</b> of the machine is configured to do, as a map from the cell it belongs to and the
+     * face of that cell, or {@code null} while the page has not said. The page sets this once per frame from what the
+     * server reported, so a mode the server has just written appears with the next frame and a mode the page has only
+     * sent (its pending value) appears at once.
+     * <p>
+     * It is a map and no longer a list indexed by direction: 传输插件 configures one face of one cell of the machine's
+     * structure (see {@code CellFaceModes}), and the north face of one cell is not the north face of another.
      */
     @Nullable
-    private List<TransferMode> faceModes;
+    private Map<CellFace, TransferMode> faceModes;
+
+    /** One cell of the machine and one of its faces: the key a setting is stored and drawn under. */
+    public record CellFace(Vec3i cell, Direction face) {
+    }
 
     /**
      * Faces of the machine a plugin of this mod occupies, as the bitmask the page's menu reports. {@code 0} while
@@ -132,16 +141,70 @@ public final class FacePreviewWidget extends BlockPreviewWidget {
     }
 
     /**
-     * Sets what the frame after this one marks on the model: the mode of every face, and which faces a plugin
-     * occupies. The page calls this once per frame, before it renders this widget, so the model always shows what the
-     * menu (and the pending value the page has just sent) says rather than a copy of its own.
+     * Sets what the frame after this one marks on the model: the mode of every configured cell-face, and which faces
+     * a plugin occupies. The page calls this once per frame, before it renders this widget, so the model always shows
+     * what the server last reported (and the pending value the page has just sent) rather than a copy of its own.
      *
-     * @param modes    the mode of every {@link Direction}, indexed by its ordinal
-     * @param occupied bitmask over {@link Direction#ordinal()} of the faces a plugin occupies
+     * @param modes    the mode of every <b>configured</b> cell-face; a cell-face that is absent transfers nothing
+     * @param occupied bitmask over {@link Direction#ordinal()} of the faces of the controller's own cell a plugin
+     *                 occupies - the only cell that can be occupied, because a plugin is one block
      */
-    public void setFaceOverlays(List<TransferMode> modes, int occupied) {
-        this.faceModes = List.copyOf(modes);
+    public void setFaceOverlays(Map<CellFace, TransferMode> modes, int occupied) {
+        this.faceModes = Map.copyOf(modes);
         this.occupiedFaces = occupied;
+    }
+
+    /**
+     * The mode of one face of one cell, {@link TransferMode#NONE} while the page has said nothing about it or nothing
+     * is configured there.
+     */
+    public TransferMode modeOf(Vec3i cell, Direction face) {
+        var modes = faceModes;
+        if (modes == null) return TransferMode.NONE;
+
+        var mode = modes.get(new CellFace(cell, face));
+        return mode == null ? TransferMode.NONE : mode;
+    }
+
+    /**
+     * How many cell-faces carry a mode in the frame the page last handed over. It is what the page's counter reports:
+     * a count of what is configured, with no maximum anywhere near it (see the page's {@code drawCounter}).
+     */
+    public int configuredFaces() {
+        var modes = faceModes;
+        if (modes == null) return 0;
+
+        int count = 0;
+        for (var mode : modes.values()) {
+            if (mode != TransferMode.NONE) count++;
+        }
+        return count;
+    }
+
+    /**
+     * Every cell-face of the machine's <b>outer surface</b>: the faces of the parts that no other part of the
+     * structure covers, which are the ones a player can see and therefore the only ones the page lets configure.
+     * <p>
+     * A core contributes here like any other part, because a core is a cell of the machine even though it is not drawn
+     * (see {@link #partOffsets()}): a face of the structure that happens to belong to a core is a face of the machine
+     * and has to be configurable.
+     */
+    public List<CellFace> surfaceCells() {
+        var parts = partOffsets();
+        var cells = new ArrayList<CellFace>(parts.size() * 6);
+        for (var part : parts) {
+            for (var face : Direction.values()) {
+                if (!isSurface(parts, part, face)) continue;
+                cells.add(new CellFace(part, face));
+            }
+        }
+        return List.copyOf(cells);
+    }
+
+    /** True while no other part of the structure sits on the given side of the given part. */
+    private boolean isSurface(List<Vec3i> parts, Vec3i part, Direction face) {
+        var neighbour = part.offset(face.getUnitVec3i());
+        return !parts.contains(neighbour);
     }
 
     /**
@@ -245,18 +308,23 @@ public final class FacePreviewWidget extends BlockPreviewWidget {
     }
 
     /**
-     * Where each of the machine's six faces is marked, as the renderer wants it: which part carries the marking and
-     * what that marking is.
+     * Where each configured or occupied <b>cell-face</b> of the machine is marked, as the renderer wants it: which
+     * part carries the marking and what that marking is.
      * <p>
-     * One entry per direction, and each names the cell of {@link #surfaceCell(Direction)} - the part whose face on
-     * that side is on the machine's outer surface, which is the one the player sees. Directions with nothing to say
-     * are left out, so a face that is neither configured nor occupied carries no quad at all:
+     * One entry per cell-face, and the cell it names is the cell the setting belongs to - <b>not</b> a
+     * representative cell worked out from the direction. That indirection was the old model's: with a setting per
+     * world direction there was one face per direction and the page had to guess which cell carried it, so a marking
+     * landed on whichever cell happened to be outermost on that side. A cell-face setting names its cell outright, so
+     * the marking is drawn exactly where the player clicked, even when two cells of the same side are configured
+     * differently.
+     * <p>
+     * Cell-faces with nothing to say carry no quad at all:
      * <ul>
-     *     <li>a face with a mode carries that mode's wash (see {@link TransferFaceStyle#wash}),</li>
-     *     <li>a face a plugin occupies carries the gold outline of {@link TransferFaceStyle#GOLD} - and it may well
-     *     carry a wash as well, so a face that was configured before the plugin was placed keeps showing what it does
-     *     under the outline,</li>
-     *     <li>a face that is neither is not marked ({@link TransferMode#NONE} and no occupied bit).</li>
+     *     <li>a cell-face with a mode carries that mode's wash (see {@link TransferFaceStyle#wash}),</li>
+     *     <li>a face of the controller's own cell that a plugin occupies carries the gold outline of
+     *     {@link TransferFaceStyle#GOLD} - and it may well carry a wash as well, so a cell-face that was configured
+     *     before the plugin was placed keeps showing what it does under the outline,</li>
+     *     <li>a cell-face that is neither is not marked ({@link TransferMode#NONE} and no occupied bit).</li>
      * </ul>
      * The overlay is built here rather than in the renderer because this is where the part list lives: the renderer
      * only draws the quads it is handed.
@@ -266,23 +334,44 @@ public final class FacePreviewWidget extends BlockPreviewWidget {
         if (modes == null) return List.of();
 
         var overlays = new ArrayList<MachinePreviewRenderState.Overlay>();
+        for (var entry : modes.entrySet()) {
+            if (entry.getValue() == TransferMode.NONE) continue;
+
+            overlays.add(new MachinePreviewRenderState.Overlay(entry.getKey().cell(), entry.getKey().face(),
+                    entry.getValue(), isOccupied(entry.getKey())));
+        }
+
+        // the occupied faces of the controller's own cell: they carry no mode of their own here - an entry with a
+        // mode was already added above - so this only covers the ones a plugin took without anything configured
         for (var face : Direction.values()) {
-            var mode = modes.size() > face.ordinal() ? modes.get(face.ordinal()) : TransferMode.NONE;
-            boolean occupied = (occupiedFaces & 1 << face.ordinal()) != 0;
-            if (mode == TransferMode.NONE && !occupied) continue;
+            if ((occupiedFaces & 1 << face.ordinal()) == 0) continue;
+            if (modes.containsKey(new CellFace(Vec3i.ZERO, face))) continue;
 
-            var offset = surfaceCell(face);
-            if (offset == null) continue;
-
-            overlays.add(new MachinePreviewRenderState.Overlay(offset, face, mode, occupied));
+            overlays.add(new MachinePreviewRenderState.Overlay(Vec3i.ZERO, face, TransferMode.NONE, true));
         }
         return overlays;
+    }
+
+    /** True while the given cell-face is one a plugin of this mod occupies, i.e. a face of the controller's cell. */
+    private boolean isOccupied(CellFace cellFace) {
+        if (!cellFace.cell().equals(Vec3i.ZERO)) return false;
+        return (occupiedFaces & 1 << cellFace.face().ordinal()) != 0;
     }
 
     /** Face the last drawn frame had under the mouse, or {@code null} while it was outside the model. */
     @Nullable
     public Direction hoveredFace() {
         return hoveredFace;
+    }
+
+    /**
+     * The cell of the machine the last drawn frame had under the mouse, or {@code null} while it was outside the
+     * model. It belongs to {@link #hoveredFace()}: the two together name the cell-face the player is pointing at, which
+     * is what the page's tooltip describes.
+     */
+    @Nullable
+    public Vec3i hoveredOffset() {
+        return hoveredOffset;
     }
 
     /**
@@ -532,53 +621,10 @@ public final class FacePreviewWidget extends BlockPreviewWidget {
      * <p>
      * <b>The picking does not read it</b> (see {@link #faceAt(double, double)}): a core is invisible, but it is still
      * a block of the machine, so the face it turns to the outside is a surface the player can see and therefore has to
-     * be selectable. The markings follow the same rule ({@link #surfaceCell(Direction)}).
+     * be selectable. The markings follow the same rule ({@link #surfaceCells()}).
      */
     private List<BlockEntry> visibleBlocks() {
         return blocks().stream().filter(entry -> !isCore(entry)).toList();
-    }
-
-    /**
-     * The cell whose face on the given side is on the machine's outer surface: the cell of {@link #blocks()} - cores
-     * included - that lies furthest along that direction. That is where the face the page colours and marks lives,
-     * because the machine is a solid block of cells and the furthest cell along a direction is the one whose face on
-     * that side nothing else covers.
-     * <p>
-     * A hidden core may be that cell: Oritech's cores sit inside an assembled machine but they are ordinary blocks of
-     * it, so the outermost cell on some side can well be one - and then the marking belongs on its face, which is a
-     * face the player sees and can configure even though the block itself is not drawn.
-     * <p>
-     * Ties - several cells equally far along the direction - are broken towards the middle of the structure, so a
-     * marking sits in the middle of that side rather than in a corner it picked for no reason.
-     */
-    @Nullable
-    private Vec3i surfaceCell(Direction face) {
-        var parts = blocks();
-        if (parts.isEmpty()) return null;
-
-        int axis = face.getAxis() == Direction.Axis.X ? 0 : face.getAxis() == Direction.Axis.Y ? 1 : 2;
-        boolean positive = face.getAxisDirection() == Direction.AxisDirection.POSITIVE;
-        // the middle of the structure on that axis, for the tie break
-        float middle = 0.0F;
-        for (var part : parts) {
-            middle += component(part.offset(), axis);
-        }
-        middle /= parts.size();
-
-        BlockEntry best = null;
-        float bestDistance = Float.NEGATIVE_INFINITY;
-        float bestOffMiddle = Float.POSITIVE_INFINITY;
-        for (var part : parts) {
-            float value = component(part.offset(), axis);
-            float distance = positive ? value : -value;
-            float offMiddle = Math.abs(value - middle);
-            if (distance > bestDistance || (distance == bestDistance && offMiddle < bestOffMiddle)) {
-                best = part;
-                bestDistance = distance;
-                bestOffMiddle = offMiddle;
-            }
-        }
-        return best == null ? null : best.offset();
     }
 
     /** One coordinate of a cell offset. */
@@ -592,14 +638,18 @@ public final class FacePreviewWidget extends BlockPreviewWidget {
 
     /**
      * Works out the centre and the scale of the model, exactly like the stock widget works them out for the frame
-     * it is about to submit - over every part of the machine ({@link #partOffsets()}), so a multiblock machine is
-     * measured as the whole structure it is drawn as rather than as its core cell.
+     * it is about to submit - over <b>every part of the machine</b> ({@link #partOffsets()}, which is the same list the
+     * picking uses), so a multiblock machine is measured as the whole structure it is drawn as rather than as its
+     * controller cell, and a core is measured like any other cell even though it is not drawn.
+     * <p>
+     * <b>The centre is the centre of the structure.</b> Measuring the <em>drawn</em> parts instead was what once made
+     * the model rotate about the controller's own cell: Oritech's part list names the machine's cores, a core is not
+     * drawn, and a machine whose outer cells are all cores collapsed to the controller cell alone - a bounding box of
+     * one block, whose centre is the controller. Using the same list as the picking is what keeps the rotation centre
+     * on the structure the player sees, and it keeps drawing and picking measured from one set of numbers.
      */
     private void measure() {
-        var positions = new ArrayList<Vec3i>();
-        for (var entry : visibleBlocks()) {
-            positions.add(entry.offset());
-        }
+        var positions = partOffsets();
         if (positions.isEmpty()) {
             renderedScale = 0.0F;
             return;

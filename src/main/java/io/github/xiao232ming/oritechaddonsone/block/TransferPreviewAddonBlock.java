@@ -4,6 +4,7 @@ import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -20,6 +21,7 @@ import rearth.oritech.block.blocks.addons.MachineAddonBlock;
 import rearth.oritech.init.BlockContent;
 
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferPreviewAddonBlockEntity;
+import io.github.xiao232ming.oritechaddonsone.network.TransferNetworking;
 
 /**
  * 传输插件 - the transfer preview plugin as a placed block.
@@ -192,6 +194,16 @@ public class TransferPreviewAddonBlock extends PluginAddonBlock {
 
         // resolved here, on the server, and sent along with the menu: the client cannot look it up (see
         // canOpenScreen) and the page needs it to build the model
-        return PluginAddonMenus.openPluginMenu(level, pos, player, plugin.servedMachinePos());
+        var opened = PluginAddonMenus.openPluginMenu(level, pos, player, plugin.servedMachinePos());
+
+        // The page draws what every cell-face of that machine does, and that map is the server's: it cannot travel
+        // with the menu, whose container data is a fixed set of slots and cannot hold one setting per face of every
+        // cell of a structure (see TransferNetworking.FaceModes). It is sent right after the menu, so the page has
+        // it before the first frame it draws - and again after every change the player makes.
+        if (opened == InteractionResult.SUCCESS && player instanceof ServerPlayer serverPlayer) {
+            TransferNetworking.sendFaceModes(serverPlayer, pos, plugin);
+        }
+
+        return opened;
     }
 }
