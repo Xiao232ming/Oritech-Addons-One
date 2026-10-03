@@ -11,6 +11,7 @@ import io.github.xiao232ming.oritechaddonsone.client.page.AddonPageRegistry;
 import io.github.xiao232ming.oritechaddonsone.client.page.AddonTabStrip;
 import io.github.xiao232ming.oritechaddonsone.client.page.ProxyPickerState;
 import io.github.xiao232ming.oritechaddonsone.client.page.TransferPickerState;
+import io.github.xiao232ming.oritechaddonsone.client.page.TransferPreviewState;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonLayout;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonMenu;
 
@@ -39,6 +40,14 @@ public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddon
 
     /** Where the panel currently is; rebuilt in {@link #init()} because the screen can be resized. */
     private AddonPageContext context;
+
+    /**
+     * True while the visible page is the one that drags something of its own - the 3D preview of 传输插件, whose
+     * model is rotated by dragging over it. Only then are {@link #mouseDragged} / {@link #mouseReleased} forwarded
+     * to the page: every other page keeps vanilla's drag handling untouched, so a page can never accidentally eat
+     * the drag of an item the player is moving across a slot.
+     */
+    private boolean pageDrags;
 
     public ExtensionAddonScreen(ExtensionAddonMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
@@ -78,6 +87,9 @@ public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddon
         var page = this.tabs.selectedPage();
         this.menu.setPluginPageActive(page == AddonPageRegistry.pluginPage());
         this.menu.setWirelessPageActive(page == AddonPageRegistry.wirelessPage());
+        // the preview plugin's whole GUI is its 3D page: the player inventory stays out of it the way it stays out
+        // of the modal step below, so nothing is drawn over the panel and no click can reach a slot behind it
+        this.pageDrags = page == AddonPageRegistry.transferPreviewPage();
         // leaving one of the two picking pages closes whatever picker was open on it, so coming back starts
         // fresh
         if (page != AddonPageRegistry.proxyPage()) {
@@ -92,7 +104,7 @@ public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddon
         // inventory proxy screen. The slot positions, their ids and everything the server sees are untouched.
         var modalOpen = ProxyPickerState.isOpen(this.menu.position())
                 || TransferPickerState.isOpen(this.menu.position());
-        this.menu.setPlayerSlotsActive(!modalOpen);
+        this.menu.setPlayerSlotsActive(!modalOpen && !this.menu.previewOnly());
     }
 
     /**
@@ -120,14 +132,17 @@ public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddon
 
     /**
      * Forgets the slot layouts the Item Proxy page asked the server for and the pickers both item pages had
-     * open. The layouts describe one machine, so keeping them past the GUI would only leak memory (and show a
-     * stale machine after a relink).
+     * open, and the rendered preview state of the 3D preview page. The layouts describe one machine, so keeping
+     * them past the GUI would only leak memory (and show a stale machine after a relink); the preview state holds a
+     * built 3D model of one machine, which is rebuilt when its GUI is opened again.
      */
     @Override
     public void removed() {
         super.removed();
         ProxyPickerState.clear();
         TransferPickerState.clear();
+        // only this GUI's own model: another addon screen can be open at the same time
+        TransferPreviewState.clear(this.menu.position());
     }
 
     /**
@@ -174,7 +189,8 @@ public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddon
      * of its own. No page uses this today (the wireless page's reserved slot shows no text at all), but the
      * hook is what such a control would be explained with.
      */
-    private void renderPageTooltip(GuiGraphics graphics, int mouseX, int mouseY) {        if (this.context == null) return;
+    private void renderPageTooltip(GuiGraphics graphics, int mouseX, int mouseY) {
+        if (this.context == null) return;
         if (this.hoveredSlot != null && this.hoveredSlot.hasItem()) return;
 
         var lines = this.tabs.selectedPage().tooltipAt(this.context, mouseX - this.leftPos, mouseY - this.topPos);
@@ -200,6 +216,47 @@ public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddon
         }
 
         return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    /**
+     * Forwards a drag to the visible page while it is the page that drags something of its own - the 3D preview of
+     * 传输插件, which rotates its model while the player drags over it. The page decides whether the drag belongs to
+     * it by remembering where its own click landed ({@link AddonPage#mouseClicked}), so a drag that started on a
+     * slot reaches vanilla's item dragging unchanged.
+     * <p>
+     * The coordinates are converted to the page's panel relative space exactly like they are for
+     * {@link #mouseClicked}, and the movement is passed along so a page never has to remember the previous mouse
+     * position itself.
+     */
+    @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        if (!this.pageDrags || this.context == null) {
+            return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+        }
+
+        var relativeX = mouseX - this.leftPos;
+        var relativeY = mouseY - this.topPos;
+        if (this.tabs.selectedPage().mouseDragged(this.context, relativeX, relativeY, dragX, dragY, button)) {
+            return true;
+        }
+
+        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+    }
+
+    /**
+     * Tells the visible page that the button is up, so it can end a drag of its own even when the mouse left the
+     * control it started on. The release is forwarded for the drag pages only, exactly like
+     * {@link #mouseDragged}, and the click itself still reaches vanilla afterwards - a page that only watched a
+     * drag must not swallow the release of a click that belongs to a slot.
+     */
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (this.pageDrags && this.context != null) {
+            this.tabs.selectedPage().mouseReleased(this.context, mouseX - this.leftPos, mouseY - this.topPos,
+                    button);
+        }
+
+        return super.mouseReleased(mouseX, mouseY, button);
     }
 
     /**

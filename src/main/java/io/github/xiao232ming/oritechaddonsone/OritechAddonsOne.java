@@ -44,11 +44,14 @@ import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonType;
 import io.github.xiao232ming.oritechaddonsone.block.PluginAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.block.TransferAddonBlock;
+import io.github.xiao232ming.oritechaddonsone.block.TransferPreviewAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.block.WirelessExtensionAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ChunkAnchorAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtenderFaceStorage;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEntity;
+import io.github.xiao232ming.oritechaddonsone.block.entity.MachinePluginStorage;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferAddonBlockEntity;
+import io.github.xiao232ming.oritechaddonsone.block.entity.TransferPreviewAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.WirelessExtensionAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonLayout;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonMenu;
@@ -190,6 +193,25 @@ public class OritechAddonsOne {
             blockProperties());
 
     /**
+     * 传输插件 - the second transfer plugin, whose <b>function</b> is exactly the one of {@link #TRANSFER_ADDON} and
+     * whose page configures the faces on a rotatable 3D model of the machine it serves instead of on a cube net.
+     * <p>
+     * It supports both placements: hung on Oritech's machine extender it acts on the machine that extender was
+     * claimed by, and hung directly on an Oritech machine it acts on that machine - and in both cases the pipe and
+     * hopper side is served by the plugin's own faces (see {@code TransferPreviewAddonBlockEntity}). Because the
+     * machine is a real block of the world, the preview plugin needs its own block entity type
+     * ({@link #TRANSFER_PREVIEW_ADDON_ENTITY}).
+     * <p>
+     * Like the transfer addon it is a neutral {@link PluginAddonBlock}, and the Extension Addon Type II accepts it
+     * because that type takes every Oritech addon that is not one of the stat plugins. Its model and textures are its
+     * own, see {@code models/block/transfer_preview_addon_on.json}.
+     */
+    public static final DeferredBlock<TransferPreviewAddonBlock> TRANSFER_PREVIEW_ADDON = BLOCKS.registerBlock(
+            "transfer_preview_addon",
+            properties -> new TransferPreviewAddonBlock(properties, pluginAddonSettings()),
+            blockProperties());
+
+    /**
      * Block items of all three types. They forward the block's tooltip to the item (the bridge Oritech
      * uses for its own blocks) and use the block name as their item name.
      * <p>
@@ -264,6 +286,15 @@ public class OritechAddonsOne {
             properties -> new PluginAddonItem(TRANSFER_ADDON.get(), properties),
             new Item.Properties());
 
+    /**
+     * Block item of the transfer preview plugin. Like the anchor and the transfer addon it changes no stat, so it is
+     * registered without a bonus number and its description key has no placeholder.
+     */
+    public static final DeferredItem<BlockItem> TRANSFER_PREVIEW_ADDON_ITEM = ITEMS.registerItem(
+            "transfer_preview_addon",
+            properties -> new PluginAddonItem(TRANSFER_PREVIEW_ADDON.get(), properties),
+            new Item.Properties());
+
     /** All plugin types share one block entity type, the type is read from the owning block. */
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<ExtensionAddonBlockEntity>> EXTENSION_ADDON_ENTITY =
             BLOCK_ENTITIES.register("extension_addon",
@@ -317,6 +348,16 @@ public class OritechAddonsOne {
                     () -> BlockEntityType.Builder.of(TransferAddonBlockEntity::new, TRANSFER_ADDON.get())
                             .build(null));
 
+    /**
+     * Block entity type of the transfer preview plugin: the same shape as {@link #TRANSFER_ADDON_ENTITY} - the plugin
+     * is an {@code ExtensionAddonBlockEntity} subclass, so it uses the menu and the per-face settings of an Extension
+     * Addon - and its own type because it works on a different machine (see {@code TransferPreviewAddonBlockEntity}).
+     */
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TransferPreviewAddonBlockEntity>> TRANSFER_PREVIEW_ADDON_ENTITY =
+            BLOCK_ENTITIES.register("transfer_preview_addon",
+                    () -> BlockEntityType.Builder.of(TransferPreviewAddonBlockEntity::new, TRANSFER_PREVIEW_ADDON.get())
+                            .build(null));
+
     public static final DeferredHolder<MenuType<?>, MenuType<ExtensionAddonMenu>> EXTENSION_ADDON_MENU =
             MENUS.register("extension_addon", () -> IMenuTypeExtension.create(ExtensionAddonMenu::new));
 
@@ -336,6 +377,7 @@ public class OritechAddonsOne {
                         output.accept(TANK_ADDON_ITEM.get());
                         output.accept(CHUNK_ANCHOR_ADDON_ITEM.get());
                         output.accept(TRANSFER_ADDON_ITEM.get());
+                        output.accept(TRANSFER_PREVIEW_ADDON_ITEM.get());
                     })
                     .build());
 
@@ -528,6 +570,24 @@ public class OritechAddonsOne {
                             BlockEntitiesContent.ADDON_ENTITY.builtInRegistryHolder().getRegisteredName(),
                             blockEntity.getBlockPos(), side);
                     return ExtenderFaceStorage.handlerFor(blockEntity, side);
+                });
+
+        // The preview plugin hung directly on a machine: its own faces are the connection (the machine's own faces
+        // belong to Oritech), so the provider is registered for the plugin's own block entity type - the type that
+        // creates exactly that block - and it answers nowhere else: a plugin on a wall, a plugin whose machine was
+        // broken and a face with no mode all resolve to "no inventory" inside the storage. Registering it for the
+        // machines of Oritech instead would not work at all: Oritech registers its own item provider for those block
+        // entity types, and a type answers with the first provider that returns something.
+        var previewType = TRANSFER_PREVIEW_ADDON_ENTITY.get();
+        event.registerBlockEntity(Capabilities.ItemHandler.BLOCK, previewType,
+                (blockEntity, side) -> {
+                    if (!(blockEntity instanceof TransferPreviewAddonBlockEntity plugin)) return null;
+                    if (plugin.servedMachinePos() == null) return null;
+
+                    LOGGER.debug("[transfer] capability: preview plugin provider called for {} ({}), side {}",
+                            previewType.builtInRegistryHolder().getRegisteredName(),
+                            blockEntity.getBlockPos(), side);
+                    return MachinePluginStorage.handlerFor(plugin, side);
                 });
     }
 }

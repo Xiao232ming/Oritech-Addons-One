@@ -23,6 +23,7 @@ import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEn
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferFaceModes;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferMode;
+import io.github.xiao232ming.oritechaddonsone.block.entity.TransferPreviewAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.WirelessExtensionAddonBlockEntity;
 
 /**
@@ -526,6 +527,20 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
      */
     public boolean transferOnly() {
         return blockEntity() instanceof TransferAddonBlockEntity;
+    }
+
+    /**
+     * True while this menu belongs to 传输插件, the transfer preview plugin. Such a plugin is not a container of
+     * plugins either and has exactly one page: the rotatable 3D preview of the machine it serves. The page list is
+     * therefore narrowed to that one page (see {@code AddonPageRegistry#pages}), so the plugin grid, the wireless
+     * page and the Item Proxy page stay out of the GUI.
+     * <p>
+     * Like {@link #transferOnly()} the question is answered from the block entity, which exists on both sides - the
+     * server has it while the GUI is open, the client has it because the plugin is a block in its own level - so
+     * the screen and the page registry need no separate flag and no second menu class.
+     */
+    public boolean previewOnly() {
+        return blockEntity() instanceof TransferPreviewAddonBlockEntity;
     }
 
     /**

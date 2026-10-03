@@ -30,6 +30,15 @@ public class OritechAddonsOneClient {
         OritechAddonsOne.LOGGER.debug("In-game config screen registered for {}", OritechAddonsOne.MODID);
     }
 
+    /**
+     * The one screen of this mod's GUI, for every block that opens {@code EXTENSION_ADDON_MENU}.
+     * <p>
+     * One menu type serves all of them - the wired addons, the wireless docks and both transfer plugins - so which
+     * pages a block shows is decided by the menu itself from the block it belongs to: a placed transfer plugin
+     * reports the transfer page only, a preview plugin its 3D preview page only, everything else the whole set (see
+     * {@code AddonPageRegistry#pages}). The screen then draws whichever page is selected, so this registration needs
+     * no branch per block.
+     */
     @SubscribeEvent
     static void registerScreens(RegisterMenuScreensEvent event) {
         event.register(OritechAddonsOne.EXTENSION_ADDON_MENU.get(), ExtensionAddonScreen::new);
