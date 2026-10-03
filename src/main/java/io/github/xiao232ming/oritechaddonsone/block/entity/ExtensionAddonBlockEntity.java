@@ -210,6 +210,23 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         return nameKeyAt(level, connectedMachinePos());
     }
 
+    /**
+     * The machine this addon works on as a <b>page</b> would show it, or {@code null} while it works on none.
+     * <p>
+     * It is {@link #connectedMachinePos()} with the one difference a client forces: Oritech writes the position of the
+     * machine that claimed this block into the block's own controller <em>offset</em>, and that offset is save data of
+     * a plain block entity which never reaches a client - so on the client {@code getControllerPos()} answers the
+     * addon's own position and the client cannot tell "no machine" apart from "cannot see the machine". This method
+     * answers "the machine, or nothing" on both sides, which is all a page needs to decide whether it has something to
+     * draw. Nothing that has to be right is decided here: the server keeps the real answer, and a page that shows no
+     * machine cannot configure one either.
+     */
+    @Nullable
+    public BlockPos servedMachinePos() {
+        var controller = getControllerPos();
+        return controller == null || controller.equals(worldPosition) ? null : controller;
+    }
+
     /** Translation key of the block at the given position, or {@code null} while it cannot be resolved. */
     @Nullable
     public static String nameKeyAt(@Nullable Level level, @Nullable BlockPos pos) {
@@ -462,12 +479,41 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
     }
 
     /**
+     * Number of transfer <b>preview</b> plugins stored in this block (a stack of them counts per item).
+     * <p>
+     * The two transfer plugins are separate here only because their pages are separate: 扩展传输插件 is configured
+     * on the cube net of the block's own faces ({@link #hasTransferAddon()}), 传输插件 on a 3D model of the machine
+     * ({@link #hasTransferPreviewAddon()}). What they do to the machine's items is the same thing, which is why
+     * {@link #canTransferItems()} counts both.
+     */
+    public int transferPreviewAddonCount() {
+        return countPlugins(OritechAddonsOne.TRANSFER_PREVIEW_ADDON.get());
+    }
+
+    /**
      * True while this block has a transfer addon at all - one stored inside, or one placed on a block that
      * hosts placed plugins - i.e. while the "Extension Transfer" page has anything to offer. Unlike the
      * inventory proxy there is no per-addon limit here: all six faces may transfer at the same time.
+     * <p>
+     * Only {@link OritechAddonsOne#TRANSFER_ADDON} counts. 传输插件 is a transfer plugin in every other respect (see
+     * {@link #canTransferItems()}), but it is not configured on this page: its own page
+     * ({@link #hasTransferPreviewAddon()}) draws the machine instead of the block's faces, so counting it here would
+     * open a second, redundant page for the same six faces.
      */
     public boolean hasTransferAddon() {
         return transferAddonCount() > 0 || attachedTransferFaces != 0;
+    }
+
+    /**
+     * True while the 传输插件 page has anything to show, i.e. while a transfer preview plugin is stored in this
+     * block's plugin slots.
+     * <p>
+     * Like the Item Proxy and Extension Transfer pages this is answered from the container, which the client holds
+     * the same contents of because the plugin slots are menu slots - so the tab appears and disappears while the GUI
+     * is open, without reopening it.
+     */
+    public boolean hasTransferPreviewAddon() {
+        return transferPreviewAddonCount() > 0;
     }
 
     /**
@@ -522,9 +568,14 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         reconcileTransferModes();
     }
 
-    /** True while this block may transfer the machine's items at all; see {@link #hasTransferAddon()}. */
+    /**
+     * True while this block may transfer the machine's items at all, i.e. while one of the two transfer plugins
+     * ({@link #hasTransferAddon()} or {@link #hasTransferPreviewAddon()}) is stored or placed on it. Both plugins
+     * move the same machine's items through the same faces with the same per-face modes, so this is the one gate the
+     * automation and the packet path ask.
+     */
     public boolean canTransferItems() {
-        return hasTransferAddon();
+        return hasTransferAddon() || hasTransferPreviewAddon();
     }
 
     /** The per-face transfer modes of this block; never {@code null}, empty while nothing is configured. */
@@ -590,14 +641,15 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
     }
 
     /**
-     * Drops every mode while the block no longer holds a transfer addon. Called from
-     * {@link #contentsChanged}: a block that lost its last transfer addon must stop feeding or emptying the
-     * machine through its faces.
+     * Drops every mode while the block no longer holds a transfer addon of either kind. Called from
+     * {@link #contentsChanged}: a block that lost its last transfer plugin must stop feeding or emptying the
+     * machine through its faces. Both plugins share the per-face modes of this block, so either of them being
+     * present (see {@link #canTransferItems()}) keeps them.
      */
     private void reconcileTransferModes() {
         if (level == null || level.isClientSide()) return;
         if (transferFaces.isEmpty()) return;
-        if (hasTransferAddon()) return;
+        if (canTransferItems()) return;
 
         transferFaces.clear();
         setChanged();

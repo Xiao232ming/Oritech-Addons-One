@@ -16,6 +16,8 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 
+import rearth.oritech.block.blocks.addons.MachineAddonBlock;
+
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferPreviewAddonBlockEntity;
 
 /**
@@ -110,38 +112,80 @@ public class TransferPreviewAddonBlock extends PluginAddonBlock {
     }
 
     /**
+     * The plugin with an item in the hand. Since 1.21.9 a block only reaches its own "empty hand" hook
+     * ({@link #useWithoutItem}) when the item hook gives the click back with
+     * {@link InteractionResult#TRY_WITH_EMPTY_HAND}; the default of {@code BlockBehaviour} does exactly that.
+     * <p>
+     * This class therefore has to give the click back <b>instead of</b> opening the screen for the empty hand, and it
+     * has to do so whenever it is not serving a machine: the hook it delegates to is the plugin's own
+     * {@link #useWithoutItem}, which opens the screen once and gives everything else to Oritech. Returning
+     * {@code PASS} here instead - which is what {@link #openPluginMenu} answers for a plugin that does not serve a
+     * machine - would consume the click before that hook is ever reached, so a placed plugin could not be opened at
+     * all: the block's own screen would be unreachable for an empty hand and an item in the hand would be offered to
+     * the item instead (a block item would try - and fail - to be placed).
+     */
+    @Override
+    public InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player,
+            InteractionHand hand, BlockHitResult hit) {
+        // nothing to do with this plugin as an addon: the click belongs to the empty hand hook and to Oritech
+        if (!isClaimedByAHost(state)) return InteractionResult.TRY_WITH_EMPTY_HAND;
+
+        return openPluginMenu(level, pos, player);
+    }
+
+    /**
      * Right-clicking a placed preview plugin that serves a machine opens the plugin's own screen: the 3D preview
      * of that machine and the six faces to configure. Anything else - a plugin standing on a wall, one with no
      * host - keeps Oritech's own behaviour.
      */
     @Override
     public InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
-        var opened = openPluginMenu(level, pos, player);
-        return opened == InteractionResult.PASS ? super.useWithoutItem(state, level, pos, player, hit) : opened;
-    }
+        // the reason this hook exists on the client as well is that the screen a placed plugin opens is part of
+        // the plugin, not of Oritech's machine GUI; see openPluginMenu
+        if (!isClaimedByAHost(state)) return super.useWithoutItem(state, level, pos, player, hit);
 
-    /**
-     * The same as {@link #useWithoutItem}: an item in the hand must not swallow the click that opens the screen,
-     * exactly like on the wired addon.
-     */
-    @Override
-    public InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player,
-            InteractionHand hand, BlockHitResult hit) {
-        var opened = openPluginMenu(level, pos, player);
-        return opened == InteractionResult.PASS ? super.useItemOn(stack, state, level, pos, player, hand, hit)
-                : opened;
+        return openPluginMenu(level, pos, player);
     }
 
     /**
      * Opens the plugin's own screen while it serves a machine, and reports {@code PASS} - i.e. "leave this click to
-     * Oritech" - for every other placement. The host is read from the block entity, so the same question ("do I
-     * serve a machine?") is answered in one place, and a plugin that hangs on neither a machine nor an extender
-     * keeps Oritech's ordinary addon click.
+     * Oritech" - for every other placement.
+     * <p>
+     * The two sides answer the "do I serve a machine?" question differently, because they <b>can</b>: the server
+     * resolves the machine from the world, the client cannot. Oritech keeps the position of the machine that claimed
+     * an addon in the addon's own block entity as a controller <em>offset</em>, and that offset is save data of a
+     * plain (not networked) block entity - it is written on the server and never reaches a client. On the client
+     * {@code getControllerPos()} therefore answers the plugin's own position, every host lookup built on it fails and
+     * the client would answer "I serve nothing" for a plugin that is really in use.
+     * <p>
+     * Because the block interaction runs on both sides and only the server can open a menu, the client must not make
+     * its answer depend on that lookup: it is what made a placed plugin impossible to open. The client uses the one
+     * piece of the answer that <b>is</b> synced - the {@code addon_used} flag of the block state, which Oritech's addon
+     * scan writes into the plugin for both hosts (a machine that claimed the plugin, or an extender a machine
+     * claimed) - and then treats an attached plugin as openable. The server stays authoritative: it opens the menu
+     * only while {@link TransferPreviewAddonBlockEntity#servedMachinePos()} really resolves, so a plugin that hangs on
+     * neither a machine nor an extender keeps Oritech's ordinary addon click, its faces answer nothing and nothing
+     * is moved, whatever the client believed.
+     * <p>
+     * Opening the screen on the client is not a duplicate of the server's own open: on the client
+     * {@link PluginAddonMenus#openPluginMenu} opens nothing at all (the server owns menus and tells the client about
+     * the one it opened), so all the client's call decides is that the click is consumed here.
      */
     private static InteractionResult openPluginMenu(Level level, BlockPos pos, Player player) {
+        if (level.isClientSide()) return InteractionResult.SUCCESS;
         if (!(level.getBlockEntity(pos) instanceof TransferPreviewAddonBlockEntity plugin)) return InteractionResult.PASS;
         if (plugin.servedMachinePos() == null) return InteractionResult.PASS;
 
         return PluginAddonMenus.openPluginMenu(level, pos, player);
+    }
+
+    /**
+     * True while Oritech has attached this plugin to a host, i.e. while its {@code addon_used} flag is set. It is the
+     * only half of the "I serve a machine" answer a client can read: Oritech's addon scan sets the flag for a plugin a
+     * machine claimed directly and for a plugin hung on an extender a machine claimed, and it is a block state, so
+     * both sides see the same value.
+     */
+    private static boolean isClaimedByAHost(BlockState state) {
+        return state.hasProperty(MachineAddonBlock.ADDON_USED) && state.getValue(MachineAddonBlock.ADDON_USED);
     }
 }

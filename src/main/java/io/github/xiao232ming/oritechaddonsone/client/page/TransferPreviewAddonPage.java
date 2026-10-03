@@ -49,6 +49,13 @@ import io.github.xiao232ming.oritechaddonsone.network.TransferNetworking;
  * face, picking the switch toggles its automation, and a right click on the face clears it again. A face that is
  * <b>occupied</b> - the machine sits on it, or another plugin of this mod stands on it - is named in gold in the face
  * list and refused, both here and on the server.
+ * <p>
+ * <b>The page is the same one in both screens.</b> It is the only page of 传输插件 while the plugin is placed in the
+ * world, and it is one of the pages of an Extension Addon while the plugin is stored in its slots. Which block entity
+ * it configures never depends on that: everything it reads (the modes, the automation flags, the occupied faces) and
+ * everything it writes comes from the menu it was handed (see {@link ExtensionAddonMenu#transferPreviewMachinePos()}),
+ * and that menu is the block the screen was opened for - the placed plugin, or the addon. The stored case simply has
+ * no plugin block to draw into the model, because that plugin is not in the world.
  */
 public final class TransferPreviewAddonPage implements AddonPage {
 
@@ -374,23 +381,33 @@ public final class TransferPreviewAddonPage implements AddonPage {
     // ------------------------------------------------------------------ helpers
 
     /**
-     * The machine the page renders: the plugin's own controller position, which Oritech's addon scan writes for both
-     * placements and which the block entity's data sync carries to this client - the <b>extender's</b> own controller
-     * position is server side save data and never arrives here.
+     * The machine the page renders, as the menu it belongs to resolves it: the machine a placed plugin serves, or -
+     * while the page is shown inside an Extension Addon that stores a preview plugin - the machine that addon works
+     * on. The page therefore never has to know which of the two screens it is drawn in; it configures whatever the
+     * menu addresses.
      */
     @Nullable
     private static BlockPos machinePos(ExtensionAddonMenu menu) {
-        if (!(menu.blockEntity() instanceof TransferPreviewAddonBlockEntity plugin)) return null;
-
-        var controller = plugin.getControllerPos();
-        return controller == null || controller.equals(plugin.getBlockPos()) ? null : controller;
+        return menu.transferPreviewMachinePos();
     }
 
     /** The preview currently built for this menu, or {@code null} while there is none to draw. */
     @Nullable
     private static TransferPreviewState.Preview currentPreview(AddonPageContext context) {
         return TransferPreviewState.preview(context.menu().position(), machinePos(context.menu()),
-                context.screenX(previewX(context)), context.screenY(PREVIEW_Y), PREVIEW_WIDTH, PREVIEW_HEIGHT);
+                pluginBlockPos(context.menu()), context.screenX(previewX(context)), context.screenY(PREVIEW_Y),
+                PREVIEW_WIDTH, PREVIEW_HEIGHT);
+    }
+
+    /**
+     * Position of the preview plugin whose block belongs into the model, i.e. the menu's own position while the menu
+     * belongs to a <b>placed</b> plugin, or {@code null} while it belongs to an Extension Addon that merely stores
+     * one. Only the placed plugin stands on a face of the machine, so only it says anything about which face of the
+     * machine is taken - a stored plugin is not in the world and its slot is not a face of the machine.
+     */
+    @Nullable
+    private static BlockPos pluginBlockPos(ExtensionAddonMenu menu) {
+        return menu.blockEntity() instanceof TransferPreviewAddonBlockEntity ? menu.position() : null;
     }
 
     /** X of a panel relative coordinate, converted to the absolute space the model lives in. */

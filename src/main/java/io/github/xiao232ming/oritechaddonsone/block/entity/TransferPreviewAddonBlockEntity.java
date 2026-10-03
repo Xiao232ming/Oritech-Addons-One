@@ -154,11 +154,16 @@ public class TransferPreviewAddonBlockEntity extends ExtensionAddonBlockEntity {
 
     /**
      * The machine this plugin works on, or {@code null} while it serves none: the machine the host extender was
-     * claimed by, or the machine the plugin itself is attached to. Resolved through the world, so it is the server's
-     * answer - the page never calls it, because the extender's own controller position is server side save data that
-     * does not reach the client; the page renders the machine of the plugin's own controller position instead, which
-     * Oritech's addon scan writes for both placements and which the block entity's data sync carries.
+     * claimed by, or the machine the plugin itself is attached to.
+     * <p>
+     * Extends the base class's answer - that one is the plugin's own controller position - by the extender case: while
+     * the plugin hangs on an extender, the machine is the one <b>behind</b> that extender, which is the machine whose
+     * items the extender's faces move. Resolving it that way is the server's answer, because the extender's own
+     * controller position is save data that never reaches a client; the page asks this method too, and on a client it
+     * gets the base class's answer, i.e. the machine Oritech's addon scan wrote into the plugin for either placement
+     * (see {@link ExtensionAddonBlockEntity#servedMachinePos()}).
      */
+    @Override
     @Nullable
     public BlockPos servedMachinePos() {
         if (hangsOnExtender()) {
