@@ -82,5 +82,16 @@
   "gui.oritechaddonsone.proxy.side.east": "右",
   "gui.oritechaddonsone.proxy.side.west": "左",
   "gui.oritechaddonsone.proxy.side.up": "上",
-  "gui.oritechaddonsone.proxy.side.down": "下"
+  "gui.oritechaddonsone.proxy.side.down": "下",
+  "block.oritechaddonsone.transfer_addon": "扩展传输插件",
+  "container.oritechaddonsone.transfer_addon": "扩展传输插件",
+  "tooltip.oritechaddonsone.transfer_addon.desc": "可通过它的面为机器输入输出物品",
+  "gui.oritechaddonsone.page.transfer": "扩展传输",
+  "gui.oritechaddonsone.page.transfer.tooltip": "本方块六个面的展开图：点击某个面，选择它向机器输入、从机器输出，还是双向",
+  "gui.oritechaddonsone.transfer.counter": "可配置数：%s/%s",
+  "gui.oritechaddonsone.transfer.prompt": "为该面选择传输模式",
+  "gui.oritechaddonsone.transfer.mode.input": "输入",
+  "gui.oritechaddonsone.transfer.mode.output": "输出",
+  "gui.oritechaddonsone.transfer.mode.both": "输入输出",
+  "gui.oritechaddonsone.transfer.mode.none": "未设置"
 }

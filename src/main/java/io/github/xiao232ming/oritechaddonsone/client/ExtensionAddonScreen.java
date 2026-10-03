@@ -10,6 +10,7 @@ import io.github.xiao232ming.oritechaddonsone.client.page.AddonPageContext;
 import io.github.xiao232ming.oritechaddonsone.client.page.AddonPageRegistry;
 import io.github.xiao232ming.oritechaddonsone.client.page.AddonTabStrip;
 import io.github.xiao232ming.oritechaddonsone.client.page.ProxyPickerState;
+import io.github.xiao232ming.oritechaddonsone.client.page.TransferPickerState;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonLayout;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonMenu;
 
@@ -77,15 +78,21 @@ public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddon
         var page = this.tabs.selectedPage();
         this.menu.setPluginPageActive(page == AddonPageRegistry.pluginPage());
         this.menu.setWirelessPageActive(page == AddonPageRegistry.wirelessPage());
-        // leaving the Item Proxy page closes whatever picker was open on it, so coming back starts fresh
+        // leaving one of the two picking pages closes whatever picker was open on it, so coming back starts
+        // fresh
         if (page != AddonPageRegistry.proxyPage()) {
             ProxyPickerState.close();
         }
-        // The Item Proxy page's configuration panel is an opaque modal step over the whole panel, and the
-        // player inventory is drawn after the page - so the inventory is hidden while that panel is open,
-        // which is what makes the panel read as a full page like Oritech's own inventory proxy screen. The
-        // slot positions, their ids and everything the server sees are untouched.
-        this.menu.setPlayerSlotsActive(!ProxyPickerState.isOpen(this.menu.position()));
+        if (page != AddonPageRegistry.transferPage()) {
+            TransferPickerState.close();
+        }
+        // The Item Proxy and Extension Transfer pages' configuration panels are opaque modal steps over the
+        // whole panel, and the player inventory is drawn after the page - so the inventory is hidden while
+        // one of those panels is open, which is what makes the panel read as a full page like Oritech's own
+        // inventory proxy screen. The slot positions, their ids and everything the server sees are untouched.
+        var modalOpen = ProxyPickerState.isOpen(this.menu.position())
+                || TransferPickerState.isOpen(this.menu.position());
+        this.menu.setPlayerSlotsActive(!modalOpen);
     }
 
     /**
@@ -112,13 +119,15 @@ public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddon
     }
 
     /**
-     * Forgets the slot layouts the Item Proxy page asked the server for. They describe one machine, so
-     * keeping them past the GUI would only leak memory (and show a stale machine after a relink).
+     * Forgets the slot layouts the Item Proxy page asked the server for and the pickers both item pages had
+     * open. The layouts describe one machine, so keeping them past the GUI would only leak memory (and show a
+     * stale machine after a relink).
      */
     @Override
     public void removed() {
         super.removed();
         ProxyPickerState.clear();
+        TransferPickerState.clear();
     }
 
     /**

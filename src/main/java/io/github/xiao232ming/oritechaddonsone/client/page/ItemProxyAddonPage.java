@@ -1,6 +1,5 @@
 package io.github.xiao232ming.oritechaddonsone.client.page;
 
-import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 
@@ -57,7 +56,7 @@ import io.github.xiao232ming.oritechaddonsone.network.ProxyNetworking;
  * <b>Coordinates.</b> Every position in this class is a panel relative coordinate: the net is
  * {@link ExtensionAddonLayout#PROXY_NET_X}/{@link ExtensionAddonLayout#PROXY_NET_Y} of
  * {@link ExtensionAddonLayout}, the configuration page is
- * {@link ProxyPickerState#place(AddonPageContext, List)}, and both are mapped to the screen with
+ * {@link AddonPickerPanel#place(AddonPageContext)}, and both are mapped to the screen with
  * {@link AddonPageContext#screenX(int)}/{@link AddonPageContext#screenY(int)} at the single place that
  * draws them. The hit tests, the tooltips and the drawing therefore always describe the same rectangle -
  * an earlier version translated the net by something else than the panel's origin, which put the pixels
@@ -84,21 +83,14 @@ public final class ItemProxyAddonPage implements AddonPage {
      * {@code OritechWidgetScreen} as {@code (176, 100)}. The configuration page is that panel, so the
      * machine's GUI slots keep the coordinates Oritech gives them.
      */
-    public static final int PANEL_WIDTH = 176;
-    public static final int PANEL_HEIGHT = 100;
-    /**
-     * Y of Oritech's prompt line inside that panel ({@code InventoryProxyScreen} uses {@code 85}, its
-     * {@code LabelWidget} is {@code 176} wide and centred, ten pixels tall).
-     */
-    public static final int PROMPT_Y = 85;
+    /** The configuration page's own geometry; the definitions live in {@link AddonPickerPanel}. */
+    public static final int PANEL_WIDTH = AddonPickerPanel.WIDTH;
+    public static final int PANEL_HEIGHT = AddonPickerPanel.HEIGHT;
+    public static final int PROMPT_Y = AddonPickerPanel.PROMPT_Y;
+    public static final int ICON_SIZE = AddonPickerPanel.ICON_SIZE;
+    private static final int ICON_PADDING = AddonPickerPanel.ICON_PADDING;
     /** Frame drawn around the panel, so Oritech's light panel reads against our light grey body. */
     private static final int PANEL_FRAME = 2;
-    /**
-     * Size of Oritech's title icon ({@code OritechWidgetScreen#addTitle()} builds a {@code 28x28} widget)
-     * and the padding it keeps inside it, which centres the 16x16 item.
-     */
-    public static final int ICON_SIZE = 28;
-    private static final int ICON_PADDING = 3;
     /**
      * Size of the selection plate Oritech puts inside a slot of its inventory proxy screen, and its
      * offset inside the 16x16 cell - its screen builds
@@ -121,34 +113,6 @@ public final class ItemProxyAddonPage implements AddonPage {
      */
     private static final ResourceLocation ICON =
             ResourceLocation.fromNamespaceAndPath("oritechaddonsone", "textures/gui/item_proxy_tab.png");
-
-    /**
-     * Size of one face of the net, in pixels ({@link ExtensionAddonLayout#PROXY_FACE}). 18 keeps the whole
-     * net inside the free part of the panel.
-     */
-    private static final int FACE = ExtensionAddonLayout.PROXY_FACE;
-    /** Left edge of the net, in panel space, from the layout so panel and page cannot drift apart. */
-    private static final int NET_X = ExtensionAddonLayout.PROXY_NET_X;
-    /**
-     * Top edge of the net, in panel space, from the layout: below the panel's title label, and the layout
-     * keeps the player inventory below {@link ExtensionAddonLayout#PROXY_CONTENT_BOTTOM} for it.
-     */
-    private static final int NET_Y = ExtensionAddonLayout.PROXY_NET_Y;
-
-    /**
-     * Cell of every face inside the net, in face units, in the one frame the page always draws: the addon's
-     * interface face ({@link FaceTextures#front()}) in the middle, the face opposite it at the right end of
-     * the row, and the four remaining faces around them - the viewer's right and left next to the middle,
-     * the other two above and below it. Every cell therefore carries the texture its own face really uses
-     * (see {@link FaceTextures}), and the net reads like the block unfolded from the side the player looks
-     * at, whatever direction the block was placed in.
-     */
-    private static final int[] CELL_FRONT = {1, 1};
-    private static final int[] CELL_BACK = {3, 1};
-    private static final int[] CELL_RIGHT = {2, 1};
-    private static final int[] CELL_LEFT = {0, 1};
-    private static final int[] CELL_UP = {1, 0};
-    private static final int[] CELL_DOWN = {1, 2};
 
     @Override
     public String id() {
@@ -177,10 +141,11 @@ public final class ItemProxyAddonPage implements AddonPage {
             double mouseX, double mouseY) {
         var menu = context.menu();
         var textures = FaceTextures.of(menu.addonBlock(), menu.addonBlockState());
-        var cells = cells(textures);
+        var cells = AddonFaceNet.cells(textures);
 
         for (var face : Direction.values()) {
-            drawFace(context, graphics, face, cells, textures, menu.isProxyFaceConfigured(face));
+            AddonFaceNet.drawFace(context, graphics, face, cells, textures,
+                    menu.isProxyFaceConfigured(face) ? CONFIGURED : null);
         }
 
         drawCounter(context, graphics, menu.configuredProxyFaces(), menu.inventoryProxyCount());
@@ -190,59 +155,17 @@ public final class ItemProxyAddonPage implements AddonPage {
     }
 
     /**
-     * Draws one face of the net, with its frame and its "configured" marker.
-     * <p>
-     * The cell is a panel relative coordinate ({@code PROXY_NET_X + column * PROXY_FACE}) and is mapped to
-     * the screen through {@link AddonPageContext#screenX(int)} - the very same mapping
-     * {@link #faceAt} uses for the click and hover test, so what the player sees is what the player clicks.
+     * Wash of a face that really proxies something: a translucent green plus a two tone border, painted by
+     * {@link AddonFaceNet#drawFace} between the face's texture and its outline, so the net shows at a glance
+     * which faces are configured.
      */
-    private void drawFace(AddonPageContext context, GuiGraphics graphics, Direction face, Map<Direction, int[]> cells,
-            FaceTextures textures, boolean isConfigured) {
-        int x = context.screenX(localFaceX(cells, face));
-        int y = context.screenY(localFaceY(cells, face));
-
-        var texture = textures.face(face);
-        if (texture.flipVertically()) {
-            // the flat addon models sample the side textures from the lower half of their texture; the net
-            // draws the full 16x16 sprite, so the flip is a vertical mirror around the face's own centre
-            graphics.pose().pushPose();
-            graphics.pose().translate(x, y + FACE, 0f);
-            graphics.pose().scale(1f, -1f, 1f);
-            graphics.blit(texture.texture(), 0, 0, FACE, FACE, 0f, 0f, 16, 16, 16, 16);
-            graphics.pose().popPose();
-        } else {
-            graphics.blit(texture.texture(), x, y, FACE, FACE, 0f, 0f, 16, 16, 16, 16);
-        }
-
-        // a configured face gets a green wash, so the net shows at a glance which faces really proxy
-        if (isConfigured) {
-            graphics.fill(x, y, x + FACE, y + FACE, 0x552ECC71);
-            graphics.fill(x, y, x + FACE, y + 1, 0xFF2ECC71);
-            graphics.fill(x, y + FACE - 1, x + FACE, y + FACE, 0xFF1E8C4C);
-            graphics.fill(x, y, x + 1, y + FACE, 0xFF2ECC71);
-            graphics.fill(x + FACE - 1, y, x + FACE, y + FACE, 0xFF1E8C4C);
-        }
-
-        // 1px outline so neighbouring faces of the net stay distinguishable
-        graphics.fill(x, y, x + FACE, y + 1, AddonPanelStyle.SLOT_DARK);
-        graphics.fill(x, y + FACE - 1, x + FACE, y + FACE, AddonPanelStyle.SLOT_DARK);
-        graphics.fill(x, y, x + 1, y + FACE, AddonPanelStyle.SLOT_DARK);
-        graphics.fill(x + FACE - 1, y, x + FACE, y + FACE, AddonPanelStyle.SLOT_DARK);
-    }
-
-    /**
-     * Left edge of one face of the net, in panel space. This is the single definition of where a face is;
-     * drawing ({@link #drawFace}), clicking and hovering ({@link #faceAt}) all read it, so they cannot drift
-     * apart.
-     */
-    private static int localFaceX(Map<Direction, int[]> cells, Direction face) {
-        return NET_X + cells.get(face)[0] * FACE;
-    }
-
-    /** Top edge of one face of the net, in panel space; see {@link #localFaceX}. */
-    private static int localFaceY(Map<Direction, int[]> cells, Direction face) {
-        return NET_Y + cells.get(face)[1] * FACE;
-    }
+    private static final AddonFaceNet.Wash CONFIGURED = (graphics, x, y, size) -> {
+        graphics.fill(x, y, x + size, y + size, 0x552ECC71);
+        graphics.fill(x, y, x + size, y + 1, 0xFF2ECC71);
+        graphics.fill(x, y + size - 1, x + size, y + size, 0xFF1E8C4C);
+        graphics.fill(x, y, x + 1, y + size, 0xFF2ECC71);
+        graphics.fill(x + size - 1, y, x + size, y + size, 0xFF1E8C4C);
+    };
 
     /**
      * Draws the "Configurable: x/x" counter in the panel's top right corner.
@@ -286,7 +209,7 @@ public final class ItemProxyAddonPage implements AddonPage {
      * dark, so the player can read off which slot was taken and pick another one - and it is closed by the
      * right mouse button or by a click anywhere that is not a slot, the same "the slots are the only
      * controls" interaction Oritech's own screen has. The panel is
-     * {@linkplain ProxyPickerState#place placed} fully inside our panel - centred horizontally, and as high
+     * {@linkplain AddonPickerPanel#place placed} fully inside our panel - centred horizontally, and as high
      * as the title icon above it allows - so it can never be clipped by the window edge, and it is never
      * resized, so the machine's slot layout stays Oritech's own.
      */
@@ -294,7 +217,7 @@ public final class ItemProxyAddonPage implements AddonPage {
             Direction face, double mouseX, double mouseY) {
         var slots = ProxyPickerState.layout(menu.position(), face);
         var font = Minecraft.getInstance().font;
-        var placed = ProxyPickerState.place(context, slots == null ? List.of() : slots);
+        var placed = AddonPickerPanel.place(context);
 
         // a dark backdrop over the drawn panel, so the picker reads as a modal step and neither the net
         // nor the counter behind it shows through. It is drawn first and in screen space, so it can never
@@ -348,7 +271,7 @@ public final class ItemProxyAddonPage implements AddonPage {
      * own ten pixels, which would leave the frame of the cell dead.
      */
     private void drawSlots(GuiGraphics graphics, ExtensionAddonMenu menu, Direction face,
-            List<int[]> slots, ProxyPickerState.Placed placed, double mouseX, double mouseY) {
+            List<int[]> slots, AddonPickerPanel.Placed placed, double mouseX, double mouseY) {
         var selected = selectedSlot(menu, face);
 
         for (var slot : slots) {
@@ -358,7 +281,7 @@ public final class ItemProxyAddonPage implements AddonPage {
             // Oritech's own slot widget paints the frame at the slot's position
             new ItemSlotWidget(x, y).render(graphics, (int) mouseX, (int) mouseY, 0f);
 
-            var hovered = ProxyPickerState.isOverSlot(placed, slot, mouseX, mouseY);
+            var hovered = AddonPickerPanel.isOverSlot(placed, slot, mouseX, mouseY);
             var plate = selected != null && selected == slot[0]
                     ? OritechSurface.PANEL_DARK
                     : hovered ? OritechSurface.PANEL_HOVER : OritechSurface.PANEL;
@@ -415,7 +338,7 @@ public final class ItemProxyAddonPage implements AddonPage {
      * pose, so the icon is placed relative to the configuration panel.
      */
     private static void header(GuiGraphics graphics, AddonPageContext context,
-            ProxyPickerState.Placed placed) {
+            AddonPickerPanel.Placed placed) {
         int left = placed.iconX() - placed.innerX();
         int top = placed.iconY() - placed.innerY();
 
@@ -439,7 +362,7 @@ public final class ItemProxyAddonPage implements AddonPage {
         // that slot and leaves the page open, any other click closes it again
         if (openFace != null) return handlePickerClick(context, menu, openFace, mouseX, mouseY, button);
 
-        var face = faceAt(net(menu), mouseX, mouseY);
+        var face = AddonFaceNet.faceAt(net(menu), mouseX, mouseY);
         if (face == null) return false;
 
         var configured = menu.isProxyFaceConfigured(face);
@@ -476,7 +399,7 @@ public final class ItemProxyAddonPage implements AddonPage {
      * outside a modal.
      * <p>
      * The mouse position arrives panel relative, exactly like the drawn cells, so the test uses the same
-     * {@link ProxyPickerState#place(AddonPageContext, List) placement} the drawing does.
+     * {@link AddonPickerPanel#place(AddonPageContext) placement} the drawing does.
      */
     private boolean handlePickerClick(AddonPageContext context, ExtensionAddonMenu menu, Direction face,
             double mouseX, double mouseY, int button) {
@@ -487,10 +410,10 @@ public final class ItemProxyAddonPage implements AddonPage {
 
         var slots = ProxyPickerState.layout(menu.position(), face);
         if (slots != null) {
-            var placed = ProxyPickerState.place(context, slots);
+            var placed = AddonPickerPanel.place(context);
             var selected = selectedSlot(menu, face);
             for (var slot : slots) {
-                if (ProxyPickerState.isOverSlot(placed, slot, mouseX, mouseY)) {
+                if (AddonPickerPanel.isOverSlot(placed, slot, mouseX, mouseY)) {
                     // the plate of the slot this face already proxies is disabled: clicking it again does
                     // nothing, so the page neither closes nor sends a binding the server already has
                     if (selected != null && selected == slot[0]) return true;
@@ -515,7 +438,7 @@ public final class ItemProxyAddonPage implements AddonPage {
         // Oritech's own screen shows no tooltip on them either.
         if (openFace(menu) != null) return List.of();
 
-        var face = faceAt(net(menu), mouseX, mouseY);
+        var face = AddonFaceNet.faceAt(net(menu), mouseX, mouseY);
         if (face == null) return List.of();
 
         // Only whether that face proxies something. Which face it is, is the cell the mouse is on, and which
@@ -536,65 +459,9 @@ public final class ItemProxyAddonPage implements AddonPage {
         return null;
     }
 
-    /**
-     * Cell of every face inside the net, in the fixed frame the {@code CELL_*} constants describe: the
-     * interface face in the middle and the five other faces around it.
-     * <p>
-     * The frame is built around the interface face instead of rotating the drawing, which is what keeps the
-     * net looking the same whatever direction the addon was placed in while every cell still shows the
-     * texture its own face really has.
-     */
-    private static Map<Direction, int[]> cells(FaceTextures textures) {
-        var front = textures.front();
-        var right = rightOf(front);
-        var up = upOf(front);
-
-        var cells = new EnumMap<Direction, int[]>(Direction.class);
-        cells.put(front, CELL_FRONT);
-        cells.put(front.getOpposite(), CELL_BACK);
-        cells.put(right, CELL_RIGHT);
-        cells.put(right.getOpposite(), CELL_LEFT);
-        cells.put(up, CELL_UP);
-        cells.put(up.getOpposite(), CELL_DOWN);
-        return cells;
-    }
-
-    /**
-     * The direction to the viewer's right while they look at the given interface face from outside, i.e. the
-     * face that goes into the cell right of the middle.
-     */
-    private static Direction rightOf(Direction front) {
-        // A vertical interface face (a flat addon) has no inherent right; the four faces around it all carry
-        // the side texture, so east is as good as any and keeps the frame deterministic.
-        return front.getAxis().isVertical() ? Direction.EAST : front.getCounterClockWise();
-    }
-
-    /** The direction the viewer sees above the given interface face, i.e. the cell above the middle one. */
-    private static Direction upOf(Direction front) {
-        return switch (front) {
-            case UP -> Direction.NORTH;
-            case DOWN -> Direction.SOUTH;
-            default -> Direction.UP;
-        };
-    }
-
-    /**
-     * The face under the mouse, or {@code null} while it is not on the net. The mouse position is panel
-     * relative, so this reads the very same panel relative rectangles {@link #drawFace} draws.
-     */
-    @Nullable
-    private static Direction faceAt(Map<Direction, int[]> cells, double mouseX, double mouseY) {
-        for (var face : Direction.values()) {
-            double x = localFaceX(cells, face);
-            double y = localFaceY(cells, face);
-            if (mouseX >= x && mouseX < x + FACE && mouseY >= y && mouseY < y + FACE) return face;
-        }
-        return null;
-    }
-
-    /** The net of the menu's block: the cell of every face, in the frame {@link #cells(FaceTextures)} builds. */
+    /** The net of the menu's block: the cell of every face, in {@link AddonFaceNet}'s frame. */
     private static Map<Direction, int[]> net(ExtensionAddonMenu menu) {
-        return cells(FaceTextures.of(menu.addonBlock(), menu.addonBlockState()));
+        return AddonFaceNet.cells(FaceTextures.of(menu.addonBlock(), menu.addonBlockState()));
     }
 
     /** The item drawn as the configuration page's icon: the block this menu belongs to. */

@@ -319,8 +319,13 @@ public enum ExtensionAddonType {
      * <p>
      * The inventory proxy is one of them since the Item Proxy page exists: the page lets a face of this
      * block proxy one slot of the machine inventory, which is exactly what the proxy would do if it were
-     * attached to the machine directly (see {@code MachineProxyStorage}). Type I and III still refuse it,
-     * because proxying is not a stat the aggregated numbers could carry.
+     * attached to the machine directly (see {@code MachineFaceStorage}). Type I and III still refuse it,
+     * because proxying is not a stat the aggregated numbers could carry. The transfer addon of this mod is
+     * one of them as well, and it is also the reason that class handles whole-inventory transfer.
+     * <p>
+     * The two plugins of this mod are excluded as well: their effect (a bigger inventory / bigger tanks)
+     * is implemented by this mod instead of by Oritech, so they belong into the stat categories and not
+     * in type II.
      */
     public static Set<Block> type2Plugins() {
         if (type2 == null) {

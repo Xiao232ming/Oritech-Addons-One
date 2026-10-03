@@ -1,5 +1,6 @@
 package io.github.xiao232ming.oritechaddonsone.client.page;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonMenu;
@@ -11,10 +12,15 @@ import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonMenu;
  * showing, builds one tab per entry and draws whichever entry is selected. The plugin page is the first
  * page, so it is also the page a freshly opened GUI shows.
  * <p>
- * The list is built per menu, because a page can depend on what the block holds: the Item Proxy page only
- * makes sense while an Oritech inventory proxy addon is stored inside (it is that addon that gives the
- * block the ability to proxy a machine inventory), so it appears as a third tab when it does and is gone
- * again when the last proxy addon is taken out. Both variants - wired addon and wireless dock - get it.
+ * The list is built per menu, because a page can depend on what the block holds:
+ * <ul>
+ *     <li>the Item Proxy page only makes sense while an Oritech inventory proxy addon is stored inside (it is
+ *     that addon that gives the block the ability to proxy a machine inventory),</li>
+ *     <li>the Extension Transfer page only makes sense while a transfer addon of this mod is stored inside
+ *     (it is that addon that lets the machine's items be fed through the block's faces).</li>
+ * </ul>
+ * A page therefore appears as another tab as soon as its addon is put in and is gone again when the last one
+ * is taken out. Both variants - wired addon and wireless dock - get them.
  */
 public final class AddonPageRegistry {
 
@@ -27,6 +33,9 @@ public final class AddonPageRegistry {
     /** The Item Proxy page: the face net and the machine inventory a face proxies. */
     private static final AddonPage PROXY = new ItemProxyAddonPage();
 
+    /** The Extension Transfer page: the face net and what each face does with the machine's items. */
+    private static final AddonPage TRANSFER = new TransferAddonPage();
+
     private AddonPageRegistry() {
     }
 
@@ -34,25 +43,30 @@ public final class AddonPageRegistry {
      * All pages of the given menu, in tab order.
      * <p>
      * The list is per menu and not a constant, because a page can depend on what the block holds - see
-     * {@link #pages(boolean)}. The screen compares this list with the pages it currently shows on every
-     * container tick, so taking the last inventory proxy addon out removes the tab right away and putting
-     * one in adds it right away, without reopening the GUI.
+     * {@link #pages(boolean, boolean)}. The screen compares this list with the pages it currently shows on
+     * every container tick, so taking the last inventory proxy or transfer addon out removes its tab right
+     * away and putting one in adds it right away, without reopening the GUI.
      */
     public static List<AddonPage> pages(ExtensionAddonMenu menu) {
-        return pages(menu.hasInventoryProxy());
+        return pages(menu.hasInventoryProxy(), menu.hasTransferAddon());
     }
 
     /**
-     * The pages of a block that does or does not hold an Oritech inventory proxy addon.
+     * The pages of a block that does or does not hold an inventory proxy addon and a transfer addon.
      * <p>
-     * The proxy page is offered by both variants - wired addon and wireless dock - and only while an
-     * inventory proxy addon is stored inside: it is that addon that gives the block the ability to proxy a
-     * machine inventory. Keeping the decision in this pure function is what lets the screen (and a test)
-     * ask for the page list of a contents change without building a menu.
+     * Both optional pages are offered by both variants - wired addon and wireless dock - and only while the
+     * addon they belong to is stored inside: the inventory proxy addon gives the block the ability to proxy
+     * one machine slot per face, the transfer addon the ability to feed and empty the machine through its
+     * faces. Keeping the decision in this pure function is what lets the screen ask for the page list of a
+     * contents change without building a menu.
      */
-    public static List<AddonPage> pages(boolean hasInventoryProxy) {
-        if (!hasInventoryProxy) return List.of(PLUGINS, WIRELESS);
-        return List.of(PLUGINS, WIRELESS, PROXY);
+    public static List<AddonPage> pages(boolean hasInventoryProxy, boolean hasTransferAddon) {
+        var pages = new ArrayList<AddonPage>(4);
+        pages.add(PLUGINS);
+        pages.add(WIRELESS);
+        if (hasInventoryProxy) pages.add(PROXY);
+        if (hasTransferAddon) pages.add(TRANSFER);
+        return List.copyOf(pages);
     }
 
     /**
@@ -71,6 +85,11 @@ public final class AddonPageRegistry {
     /** The Item Proxy page instance. */
     public static AddonPage proxyPage() {
         return PROXY;
+    }
+
+    /** The Extension Transfer page instance. */
+    public static AddonPage transferPage() {
+        return TRANSFER;
     }
 
     /** True while the given page is the Item Proxy page. */
