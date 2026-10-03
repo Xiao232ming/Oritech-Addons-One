@@ -13,6 +13,8 @@ import net.minecraft.world.level.block.state.properties.Property;
 
 import org.jetbrains.annotations.Nullable;
 
+import rearth.oritech.init.BlockContent;
+
 import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.block.WirelessExtensionAddonBlock;
 
@@ -22,7 +24,8 @@ import io.github.xiao232ming.oritechaddonsone.block.WirelessExtensionAddonBlock;
  * <p>
  * The Item Proxy page draws the block as an unfolded cube net from the block's <b>own</b> per-face
  * textures, so this is the one place that knows the face to texture mapping. It is derived from the block
- * models and blockstates of this mod:
+ * models and blockstates of this mod - and of Oritech's machine extender, the one foreign block a page of
+ * this mod draws (a placed transfer plugin, see {@code TransferAddonBlockEntity}):
  * <ul>
  *     <li>the standing (vertical) addon of every type is the same machine extender slab: the interface
  *     texture is on the big face the player looks at, and the side texture on the other big face - the half
@@ -36,7 +39,11 @@ import io.github.xiao232ming.oritechaddonsone.block.WirelessExtensionAddonBlock;
  *     flipped vertically,</li>
  *     <li>the wireless dock is a full cube whose model is rotated to {@code facing}: its interface faces
  *     that direction and the side texture covers the other five,</li>
- *     <li>type III uses its own recoloured interface texture ({@code extension_addon_3_port}).</li>
+ *     <li>type III uses its own recoloured interface texture ({@code extension_addon_3_port}),</li>
+ *     <li>Oritech's machine extender - the host a placed transfer plugin hangs on, and therefore the block a
+ *     placed plugin's transfer page really draws - is a {@code minecraft:block/cube_all} over the very
+ *     texture {@link #EXTENDER_PORT} names, so all six of its faces carry that one texture and there is no
+ *     interface face to tell apart.</li>
  * </ul>
  * Everything is read from the live block state, so a placed block shows exactly the textures the world
  * shows it with, whatever direction it was placed in. {@link #front()} is the big face the player looks at:
@@ -51,6 +58,10 @@ public record FaceTextures(Map<Direction, Face> faces, Direction front) {
 
     // ------------------------------------------------------------------ textures
 
+    /**
+     * Texture of Oritech's machine extender: the whole texture of its {@code minecraft:block/cube_all} model
+     * and, borrowed, the interface ("port") face of this mod's addons - which is why one constant serves both.
+     */
     private static final Identifier EXTENDER_PORT =
             Identifier.fromNamespaceAndPath("oritech", "textures/block/machine_extender.png");
     private static final Identifier ADDON_1_SIDE =
@@ -67,11 +78,22 @@ public record FaceTextures(Map<Direction, Face> faces, Direction front) {
     /**
      * The six faces of the given block state.
      *
-     * @param block the addon block ({@code extension_addon_N} or {@code wireless_extension_addon_N})
+     * @param block the block to unfold: this mod's addon ({@code extension_addon_N} or
+     *              {@code wireless_extension_addon_N}), or the Oritech machine extender a placed transfer
+     *              plugin hangs on
      * @param state the block state, or {@code null} while it is unknown (the block's default state is used)
      */
     public static FaceTextures of(Block block, @Nullable BlockState state) {
         var resolved = state == null || state.getBlock() != block ? block.defaultBlockState() : state;
+
+        // A placed transfer plugin reports the extender it hangs on as the block of its page, not itself (see
+        // TransferAddonBlockEntity#transferPageBlockState), so Oritech's machine extender ends up here even
+        // though it is no addon of this mod: its model is a minecraft:block/cube_all over EXTENDER_PORT, one
+        // texture on all six faces and no port or side face to distinguish. Which face is the "interface" one
+        // is therefore arbitrary; NORTH only keeps the frame the net is built around deterministic.
+        if (block == BlockContent.MACHINE_EXTENDER.get()) {
+            return new FaceTextures(defaultFaces(EXTENDER_PORT, EXTENDER_PORT), Direction.NORTH);
+        }
 
         var wired = block instanceof ExtensionAddonBlock;
         var wireless = block instanceof WirelessExtensionAddonBlock;
@@ -120,7 +142,12 @@ public record FaceTextures(Map<Direction, Face> faces, Direction front) {
         return faces;
     }
 
-    /** Every face uses the same texture (unknown block: better a readable net than none). */
+    /**
+     * Six faces of a block with no orientation to respect: the port texture in the middle, the side texture
+     * on the other five. A {@code cube_all} block such as Oritech's machine extender calls this with the same
+     * texture twice, because its six faces really are one texture; an unknown block calls it with the
+     * extender port and an addon side, where a readable net is better than none either way.
+     */
     private static Map<Direction, Face> defaultFaces(Identifier port, Identifier side) {
         var faces = new EnumMap<Direction, Face>(Direction.class);
         for (var face : Direction.values()) {
