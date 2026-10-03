@@ -60,11 +60,18 @@ public class MachinePreviewPipRenderer extends PictureInPictureRenderer<MachineP
     /** Distance the hover outline floats off the face, so it never trades depth with the block face behind it. */
     private static final float HIGHLIGHT_LIFT = 0.002F;
 
-    /** How thick the hover outline is, as a factor of the face's half extent. */
-    private static final float HIGHLIGHT_OUTLINE_THICKNESS = 0.14F;
+    /**
+     * The half extent of one cell's face, in model units: a block model is one unit wide and the drawing translates
+     * the pose to the cell's centre, so its face is the square {@code +-0.5} around that origin. Every marking is
+     * expressed in these units (see {@link #drawQuad}).
+     */
+    private static final float FACE_HALF_EXTENT = 0.5F;
 
-    /** How far a marking's edges stay inside the face, so it reads as a marking on the block, not as a lid. */
-    private static final float HIGHLIGHT_INSET = 0.06F;
+    /** How thick the hover outline is, in model units. */
+    private static final float HIGHLIGHT_OUTLINE_THICKNESS = 0.07F;
+
+    /** How far a wash's edges stay inside the face, in model units, so it reads as a marking and not as a lid. */
+    private static final float WASH_INSET = 0.03F;
 
     /**
      * Distance a face's markings float off that face, and the step between two markings on the same face, so the wash
@@ -73,8 +80,8 @@ public class MachinePreviewPipRenderer extends PictureInPictureRenderer<MachineP
     private static final float MARKING_LIFT = 0.001F;
     private static final float MARKING_STEP = 0.001F;
 
-    /** Thickness of the gold outline of an occupied face, as a factor of the face's half extent. */
-    private static final float OUTLINE_THICKNESS = 0.1F;
+    /** Thickness of the gold outline of an occupied face, in model units. */
+    private static final float OUTLINE_THICKNESS = 0.05F;
 
     /**
      * One axis of the coordinate frame the markings and the hover outline are built in, per face: {@code [0]} is the
@@ -191,29 +198,28 @@ public class MachinePreviewPipRenderer extends PictureInPictureRenderer<MachineP
     private void drawWash(PoseStack poseStack, Direction face, TransferMode mode) {
         if (mode == TransferMode.NONE) return;
 
-        float inset = HIGHLIGHT_INSET;
+        float near = -FACE_HALF_EXTENT + WASH_INSET;
+        float far = FACE_HALF_EXTENT - WASH_INSET;
         if (mode != TransferMode.BOTH) {
-            drawQuad(poseStack, face, -1.0F + inset, 1.0F - inset, -1.0F + inset, 1.0F - inset, MARKING_LIFT,
+            drawQuad(poseStack, face, near, far, near, far, MARKING_LIFT,
                     mode == TransferMode.INPUT ? TransferFaceStyle.INPUT_FILL : TransferFaceStyle.OUTPUT_FILL);
             return;
         }
 
         // half blue, half orange: the input half on the left of the face's horizontal axis and the output half on the
         // right, which is the split the net's cell uses (TransferFaceStyle#wash)
-        float near = -1.0F + inset;
-        float far = 1.0F - inset;
         float middle = 0.0F;
         drawQuad(poseStack, face, near, middle, near, far, MARKING_LIFT, TransferFaceStyle.INPUT_FILL);
         drawQuad(poseStack, face, middle, far, near, far, MARKING_LIFT, TransferFaceStyle.OUTPUT_FILL);
     }
 
     /**
-     * The outline of one face: a frame of {@link #OUTLINE_THICKNESS} inside the face's own edge, built from the four
-     * strips between the outer and the inner rectangle.
+     * The outline of one face: a frame {@link #OUTLINE_THICKNESS} wide inside the face's own edge, built from the four
+     * strips between the outer and the inner rectangle, all in model units of the cell the pose is translated to.
      */
     private void drawOutline(PoseStack poseStack, Direction face, float lift, float thickness, int color) {
-        float outer = 1.0F;
-        float inner = 1.0F - thickness;
+        float outer = FACE_HALF_EXTENT;
+        float inner = FACE_HALF_EXTENT - thickness;
 
         // the two strips across the face and the two down its sides; the corners are covered by both
         drawQuad(poseStack, face, -outer, outer, inner, outer, lift, color);
@@ -223,9 +229,19 @@ public class MachinePreviewPipRenderer extends PictureInPictureRenderer<MachineP
     }
 
     /**
-     * One quad on one face of the part the pose is currently translated to: the rectangle of the face's own
-     * coordinates between {@code uMin}..{@code uMax} and {@code vMin}..{@code vMax}, each in units of the face's half
-     * extent, lifted off the face by {@code lift} along its outward normal.
+     * One quad on one face of the part the pose is currently translated to.
+     * <p>
+     * <b>The units are the block's own.</b> The part is drawn by translating the pose to its cell and then submitting
+     * a block model, which is one model unit wide and centred on that cell - so the cell's face is the square
+     * {@code +-0.5} around the translated origin. This quad is built in exactly that space: {@code uMin}..{@code uMax}
+     * and {@code vMin}..{@code vMax} are in <em>model units</em> (never more than 0.5, the face's half extent), the
+     * axes of {@link #FACE_AXES} are unit vectors, and their product is the vertex, so a marking is the same size and
+     * in the same place as the face it marks. Using those unit axes as if they were half extents is what made the
+     * markings twice the size of a block.
+     * <p>
+     * The quad is lifted off the face by {@code lift} along its outward normal so it never trades depth with the
+     * block face, and its corners are wound counter clockwise seen from outside; the render type takes plain vertex
+     * colours, so a vertex needs nothing but a position and a colour.
      */
     private void drawQuad(PoseStack poseStack, Direction face, float uMin, float uMax, float vMin, float vMax,
             float lift, int color) {

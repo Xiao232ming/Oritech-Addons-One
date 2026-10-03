@@ -313,14 +313,18 @@ public final class FacePreviewWidget extends BlockPreviewWidget {
      * through: for an axis aligned box that axis <em>is</em> the entry face, and reading it off the entry point
      * instead would make a click on the middle of a face a three way tie of its edges.
      * <p>
-     * Only the parts that are really drawn are tested (see {@link #visibleBlocks()}), so a hidden core can neither be
-     * clicked nor answer for a face of the machine behind it.
+     * <b>The candidates are {@link #blocks()}, cores included</b>, and not the shorter list the drawing uses. A core
+     * is not drawn, but it is a block of the machine all the same, so the face it turns to the outside is a face of
+     * the machine's surface - a face the player sees (nothing is drawn over it) and therefore has to be able to select
+     * and configure like any other. Leaving cores out here is what used to make the top of a machine whose outermost
+     * cell is a core unclickable. The answer is a world {@link Direction} either way, so the page, its modes and its
+     * automation do not care which cell of the machine the click landed on.
      */
     @Nullable
     private Hit faceAt(double mouseX, double mouseY) {
         if (!isOverModel(mouseX, mouseY)) return null;
 
-        var blocks = visibleBlocks();
+        var blocks = blocks();
         if (blocks.isEmpty() || renderedScale <= 0.0F) return null;
 
         var ray = transform().pickingRay((float) mouseX, (float) mouseY);
@@ -496,26 +500,34 @@ public final class FacePreviewWidget extends BlockPreviewWidget {
     }
 
     /**
-     * The parts this widget <b>draws and picks</b>: everything in {@link #blocks()} that is not a core. The measuring,
-     * the drawing, the picking and the overlays all read this one list, so the model, the clicks and the markings
-     * cannot disagree about which cells the machine has.
+     * The parts this widget <b>draws and measures</b>: everything in {@link #blocks()} that is not a core. The
+     * measuring, the drawing and the model's centre all read this one list, so a hidden core takes no space on the
+     * panel and is never submitted as geometry.
+     * <p>
+     * <b>The picking does not read it</b> (see {@link #faceAt(double, double)}): a core is invisible, but it is still
+     * a block of the machine, so the face it turns to the outside is a surface the player can see and therefore has to
+     * be selectable. The markings follow the same rule ({@link #surfaceCell(Direction)}).
      */
     private List<BlockEntry> visibleBlocks() {
         return blocks().stream().filter(entry -> !isCore(entry)).toList();
     }
 
     /**
-     * The cell whose face on the given side is on the machine's outer surface: the cell of {@link #visibleBlocks()}
-     * that lies furthest along that direction. That is where the face the page colours and marks lives, because the
-     * machine is a solid block of cells and the furthest cell along a direction is the one whose face on that side
-     * nothing else covers.
+     * The cell whose face on the given side is on the machine's outer surface: the cell of {@link #blocks()} - cores
+     * included - that lies furthest along that direction. That is where the face the page colours and marks lives,
+     * because the machine is a solid block of cells and the furthest cell along a direction is the one whose face on
+     * that side nothing else covers.
+     * <p>
+     * A hidden core may be that cell: Oritech's cores sit inside an assembled machine but they are ordinary blocks of
+     * it, so the outermost cell on some side can well be one - and then the marking belongs on its face, which is a
+     * face the player sees and can configure even though the block itself is not drawn.
      * <p>
      * Ties - several cells equally far along the direction - are broken towards the middle of the structure, so a
      * marking sits in the middle of that side rather than in a corner it picked for no reason.
      */
     @Nullable
     private Vec3i surfaceCell(Direction face) {
-        var parts = visibleBlocks();
+        var parts = blocks();
         if (parts.isEmpty()) return null;
 
         int axis = face.getAxis() == Direction.Axis.X ? 0 : face.getAxis() == Direction.Axis.Y ? 1 : 2;
