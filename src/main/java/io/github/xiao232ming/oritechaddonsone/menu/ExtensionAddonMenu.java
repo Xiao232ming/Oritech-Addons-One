@@ -515,6 +515,20 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
     }
 
     /**
+     * True while the 传输插件 page has anything to show, i.e. while a transfer preview plugin is stored in this
+     * block's plugin slots.
+     * <p>
+     * Read from the container exactly like {@link #transferAddonCount()}, so both screens get their page list from
+     * the same contents: the addon's own screen offers the preview tab as soon as one is put in, and the preview
+     * plugin's <b>placed</b> screen never takes this path at all (it is narrowed to that one page, see
+     * {@link #previewOnly()}).
+     */
+    public boolean hasTransferPreviewAddon() {
+        var blockEntity = blockEntity();
+        return blockEntity != null && blockEntity.hasTransferPreviewAddon();
+    }
+
+    /**
      * True while this menu belongs to a transfer addon that is <b>placed</b> on an Oritech machine extender.
      * <p>
      * Such a plugin is not a container of plugins and has no machine of its own: the only thing it has to
@@ -604,6 +618,30 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
     private Level containerLevel() {
         if (container instanceof ExtensionAddonBlockEntity blockEntity) return blockEntity.getLevel();
         return null;
+    }
+
+    // ------------------------------------------------------------------ the machine of the preview page
+
+    /**
+     * The machine the transfer preview page renders, or {@code null} while it cannot be resolved on this side.
+     * <p>
+     * Which block entity answers depends on which screen shows the page, and that is exactly what the menu addresses:
+     * <ul>
+     *     <li>on 传输插件's <b>own</b> screen the menu belongs to the placed plugin, so the plugin answers with the
+     *     machine it serves - the machine it hangs on directly, or the one behind the extender it hangs on,</li>
+     *     <li>on an <b>Extension Addon's</b> screen the menu belongs to the addon, so the addon answers with the
+     *     machine it works on - the same machine the stored plugin would work on, and the same one the addon's other
+     *     face pages configure.</li>
+     * </ul>
+     * Both answers are {@link ExtensionAddonBlockEntity#servedMachinePos()} - the machine the block entity's
+     * controller position names - which is the one accessor that exists on the client as well as on the server (see
+     * there why). The page therefore needs no separate case per screen: it asks the menu, and the menu asks the block
+     * entity the screen was opened for.
+     */
+    @Nullable
+    public BlockPos transferPreviewMachinePos() {
+        var blockEntity = blockEntity();
+        return blockEntity == null ? null : blockEntity.servedMachinePos();
     }
 
     @Override

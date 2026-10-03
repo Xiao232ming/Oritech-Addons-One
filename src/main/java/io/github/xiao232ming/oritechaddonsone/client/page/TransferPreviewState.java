@@ -30,7 +30,8 @@ import rearth.oritech.util.ScreenProvider;
  * from there is the model - a block state and a block entity for the renderer - so it is built here from the client's
  * own level, which has the machine as soon as its chunk is loaded.
  * <p>
- * The state is kept per plugin position and rebuilt when the machine it serves changes, because a GUI can be open
+ * The state is kept per menu position - i.e. per panel that was opened, whether that panel belongs to a placed plugin
+ * or to an Extension Addon that stores one - and rebuilt when the machine it serves changes, because a GUI can be open
  * while the machine behind the plugin is replaced or the plugin is picked up and put down again. It is dropped when
  * the screen closes ({@link #clear(BlockPos)}, called by {@code ExtensionAddonScreen#removed()}), so a built model
  * never outlives the GUI it was built for.
@@ -48,23 +49,27 @@ public final class TransferPreviewState {
      * {@code machinePos} yet, or {@code null} while that machine cannot be resolved on this client - its chunk is not
      * loaded, or the plugin serves nothing.
      *
-     * @param pluginPos  position of the plugin whose page is being drawn
-     * @param machinePos the machine the plugin serves, as the plugin's own controller position reports it
+     * @param previewKey position the built model is kept under, i.e. the position of the block the open menu belongs
+     *                   to, so a preview never outlives the panel it was built for
+     * @param machinePos the machine the plugin serves, as the menu of the open screen reports it
+     * @param pluginPos  position of the <b>placed</b> plugin whose block belongs into the model, or {@code null}
+     *                   while the page is shown inside an Extension Addon that merely stores one (see
+     *                   {@code TransferPreviewAddonPage#pluginBlockPos})
      * @param x          left edge of the preview panel, in absolute screen space
      * @param y          top edge of the preview panel, in absolute screen space
      * @param width      width of the preview panel
      * @param height     height of the preview panel
      */
     @Nullable
-    public static Preview preview(BlockPos pluginPos, @Nullable BlockPos machinePos, int x, int y, int width,
-            int height) {
+    public static Preview preview(BlockPos previewKey, @Nullable BlockPos machinePos, @Nullable BlockPos pluginPos, int x,
+            int y, int width, int height) {
         if (machinePos == null) return null;
 
         var level = Minecraft.getInstance().level;
         if (level == null || !level.isLoaded(machinePos)) return null;
 
-        var existing = PREVIEWS.get(pluginPos);
-        if (existing != null && existing.machinePos().equals(machinePos)) {
+        var existing = PREVIEWS.get(previewKey);
+        if (existing != null && existing.machinePos().equals(machinePos) && existing.pluginPos().equals(pluginPos)) {
             // the panel can move (window resize) without the model changing
             existing.widget().setPosition(x, y);
             existing.widget().setSize(width, height);
@@ -73,27 +78,27 @@ public final class TransferPreviewState {
 
         var built = build(level, machinePos, pluginPos, x, y, width, height);
         if (built == null) {
-            PREVIEWS.remove(pluginPos);
+            PREVIEWS.remove(previewKey);
             return null;
         }
 
-        PREVIEWS.put(pluginPos, built);
+        PREVIEWS.put(previewKey, built);
         return built;
     }
 
     /**
-     * Builds the model of one machine: the machine itself at the model's origin, its connected addons around it and an
-     * indicator in every open addon slot - the same picture Oritech's own addon overlay draws (see
-     * {@code OritechMachineScreenMixin}) - plus the plugin block itself, so the player sees which face of the machine
-     * the plugin they are configuring occupies.
+     * Builds the model of one machine: the machine itself at the model's origin, its connected addons around it and
+     * an indicator in every open addon slot - the same picture Oritech's own addon overlay draws (see
+     * {@code OritechMachineScreenMixin}) - plus, while the page belongs to a placed plugin, the plugin block itself,
+     * so the player sees which face of the machine that plugin occupies.
      * <p>
      * The offsets are the machine's own relative positions, rotated into the machine's facing exactly like Oritech
      * does it (on this branch {@code worldToRelativePos} is a plain subtraction, but going through it keeps both
      * branches reading the same way), so a machine that faces a wall shows its addons where they really are.
      */
     @Nullable
-    private static Preview build(Level level, BlockPos machinePos, BlockPos pluginPos, int x, int y, int width,
-            int height) {
+    private static Preview build(Level level, BlockPos machinePos, @Nullable BlockPos pluginPos, int x, int y,
+            int width, int height) {
         var machineState = level.getBlockState(machinePos);
         if (machineState.isAir()) return null;
 
@@ -105,12 +110,12 @@ public final class TransferPreviewState {
 
         addAddons(level, widget, machinePos, machineState, machineEntity);
 
-        if (level.isLoaded(pluginPos)) {
+        if (pluginPos != null && level.isLoaded(pluginPos)) {
             widget.addBlock(level.getBlockState(pluginPos), level.getBlockEntity(pluginPos),
                     relativePos(machinePos, machineState, machineEntity, pluginPos));
         }
 
-        return new Preview(machinePos, widget);
+        return new Preview(machinePos, pluginPos, widget);
     }
 
     /** Adds every connected addon of the machine and an indicator for every open addon slot. */
@@ -163,7 +168,8 @@ public final class TransferPreviewState {
     }
 
     /**
-     * One built preview: the machine it shows, the widget and the interaction state the page owns.
+     * One built preview: the machine it shows, the plugin block that was drawn into it and the widget and
+     * interaction state the page owns.
      * <p>
      * The class is mutable on purpose - the page rotates the model and selects faces while the player drags and
      * clicks, and both are state of one open GUI, not of one frame.
@@ -174,14 +180,22 @@ public final class TransferPreviewState {
         private static final float DRAG_SPEED = 1.2F;
 
         private final BlockPos machinePos;
+        /**
+         * The placed plugin that belongs into the model, or {@code null} while the page is shown for a plugin that is
+         * merely <b>stored</b> in an Extension Addon. It takes part in the identity of the preview, because the same
+         * machine is drawn differently with and without that block.
+         */
+        @Nullable
+        private final BlockPos pluginPos;
         private final FacePreviewWidget widget;
         private float pitch;
         private float yaw;
         @Nullable
         private Direction selected;
 
-        private Preview(BlockPos machinePos, FacePreviewWidget widget) {
+        private Preview(BlockPos machinePos, @Nullable BlockPos pluginPos, FacePreviewWidget widget) {
             this.machinePos = machinePos;
+            this.pluginPos = pluginPos;
             this.widget = widget;
             this.pitch = widget.pitch();
             this.yaw = widget.yaw();
@@ -190,6 +204,12 @@ public final class TransferPreviewState {
         /** The machine this model shows. */
         public BlockPos machinePos() {
             return machinePos;
+        }
+
+        /** The placed plugin drawn into the model, or {@code null} while the page belongs to a stored one. */
+        @Nullable
+        public BlockPos pluginPos() {
+            return pluginPos;
         }
 
         /** The widget that draws the model; the page ticks and renders it and picks faces on it. */

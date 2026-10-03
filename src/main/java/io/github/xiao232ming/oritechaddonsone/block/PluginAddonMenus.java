@@ -8,6 +8,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEntity;
+import io.github.xiao232ming.oritechaddonsone.block.entity.TransferPreviewAddonBlockEntity;
 
 /**
  * Opening the screen of a block that is shown by {@code ExtensionAddonMenu} - the plugin grid, the wireless
@@ -44,9 +45,26 @@ public final class PluginAddonMenus {
      * It exists because 1.21.1 splits the two hooks: {@code useWithoutItem} answers with an
      * {@link InteractionResult} and {@code useItemOn} with an {@link ItemInteractionResult}, and both open
      * the same menu. Having the two hooks ask this one method keeps them from drifting apart.
+     * <p>
+     * <b>The client answers for the transfer preview plugin itself.</b> Only the server opens menus, but the client is
+     * the side that decides whether a click was consumed at all, and 1.21.1 lets the click fall through to the item in
+     * the hand when it was not: for 传输插件 - whose item is its own block item - that fall-through means "try to place
+     * a block", i.e. nothing happens at all for an empty hand and for an item in the hand alike. The client therefore
+     * consumes the click here, exactly like the wired addon's own hook does
+     * ({@link ExtensionAddonBlock#useWithoutItem} answers with {@link InteractionResult#SUCCESS} on both sides). The
+     * question it cannot answer - whether the plugin really serves a machine - is not asked here: the block's hooks
+     * gate on the synced {@code addon_used} flag for that (see
+     * {@link TransferPreviewAddonBlock#useWithoutItem}), and the server stays the side that opens the menu and that
+     * refuses everything for a plugin which serves nothing.
      */
     public static ItemInteractionResult openItemMenu(Level level, BlockPos pos, Player player) {
-        if (level.isClientSide() || !(player instanceof ServerPlayer serverPlayer)) {
+        if (level.isClientSide()) {
+            var blockEntity = level.getBlockEntity(pos);
+            if (blockEntity instanceof TransferPreviewAddonBlockEntity) return ItemInteractionResult.SUCCESS;
+
+            return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        }
+        if (!(player instanceof ServerPlayer serverPlayer)) {
             return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         }
         if (!(level.getBlockEntity(pos) instanceof ExtensionAddonBlockEntity blockEntity)) {
