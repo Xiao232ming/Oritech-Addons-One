@@ -144,9 +144,29 @@ public class TransferAddonBlockEntity extends ExtensionAddonBlockEntity {
         }
 
         var controller = getControllerPos();
-        if (controller == null || !controller.equals(hostPos)) return null;
+        // Not claimed by any machine (controller position is the plugin's own position).
+        if (controller == null || controller.equals(worldPosition)) return null;
 
-        return level.getBlockEntity(hostPos) instanceof MachineAddonController ? hostPos : null;
+        // Placed directly on the controller block.
+        if (controller.equals(hostPos)) {
+            return level.getBlockEntity(hostPos) instanceof MachineAddonController ? hostPos : null;
+        }
+
+        // Placed on a core block of a multiblock machine: the plugin's controller position
+        // is the machine's controller, but the block it stands on is one of the core blocks.
+        // Resolve the controller entity and check if hostPos is one of its rotated core positions.
+        var controllerEntity = level.isLoaded(controller) ? level.getBlockEntity(controller) : null;
+        if (controllerEntity instanceof MultiblockMachineController multiblock) {
+            var facing = multiblock.getFacingForMultiblock();
+            for (var relative : multiblock.getCorePositions()) {
+                var corePos = controller.offset(Geometry.rotatePosition(relative, facing));
+                if (corePos.equals(hostPos)) {
+                    return controller;
+                }
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -182,9 +202,6 @@ public class TransferAddonBlockEntity extends ExtensionAddonBlockEntity {
 
         var hostPos = attachedHostPos();
         if (level.getBlockState(hostPos).is(BlockContent.MACHINE_EXTENDER.get())) return false;
-
-        var controller = getControllerPos();
-        if (controller == null || !controller.equals(hostPos)) return false;
 
         return hostMachinePos() != null;
     }

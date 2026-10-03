@@ -84,7 +84,7 @@ public class ExtensionTransferAddonBlockEntity extends ExtensionAddonBlockEntity
     private final ResourceHandler<ItemResource> emptyStorage = new DelegatingInventoryStorage(() -> null, () -> false);
 
     public ExtensionTransferAddonBlockEntity(BlockPos pos, BlockState state) {
-        super(OritechAddonsOne.TRANSFER_ADDON_ENTITY.get(), pos, state);
+        super(OritechAddonsOne.EXTENSION_TRANSFER_ADDON_ENTITY.get(), pos, state);
     }
 
     // ------------------------------------------------------------------ the host extender
