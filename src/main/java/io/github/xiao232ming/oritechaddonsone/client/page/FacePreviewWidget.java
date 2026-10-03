@@ -38,6 +38,11 @@ import io.github.xiao232ming.oritechaddonsone.block.entity.TransferMode;
  * world, and its surface is the surface of all of them - so the picking tests one cell per part and the face it
  * reports is the world direction of the part it entered (see {@link #partOffsets()}). The page's per-face modes are
  * keyed on exactly that direction, which is why the answer is a direction and not a part index.
+ * <p>
+ * <b>The user's zoom is folded into the measured scale</b> ({@link #setZoom}), so it reaches the drawing, the picking,
+ * the hover highlight and the mode and gold markings through the one {@link PreviewTransform} they all read. The model
+ * grows and shrinks about the centre of the structure it is measured at, so a zoomed model is still the same cells in
+ * the same places - just bigger - and a click keeps landing on the face the player sees.
  * <b>The picking is not a second copy of the drawing any more.</b> It used to be Oritech's own
  * {@code findBlockAt}, which knows the pitch, the yaw and the panel scale but neither the picture-in-picture
  * pipeline's vertical flip nor its viewport factor - so its model-space ray was mirrored against the model the
@@ -65,6 +70,12 @@ public final class FacePreviewWidget extends BlockPreviewWidget {
      */
     private float pitch;
     private float yaw;
+
+    /**
+     * The user's zoom, a factor on the fit-to-panel scale this widget measures the model with. 1 is the fitted model;
+     * the page sets it from the interaction state once per frame (see {@link #setZoom(float)}).
+     */
+    private float zoom = 1.0F;
 
     /** The machine this widget draws, or {@code null} while it has none to draw. */
     @Nullable
@@ -152,6 +163,21 @@ public final class FacePreviewWidget extends BlockPreviewWidget {
     /** Yaw of this model, as the page last set it. */
     public float yaw() {
         return yaw;
+    }
+
+    /**
+     * Sets the user's zoom: a factor on the fit-to-panel scale the model is measured with, so 1 is "the whole machine,
+     * exactly as this panel sized it". The page hands it over once per frame from the interaction state it keeps
+     * (see {@link TransferPreviewState.Preview#zoom()}), the way it hands over the rotation.
+     * <p>
+     * It is applied <b>inside</b> {@link #scale(float, float)}, i.e. in the one number every user of this frame's
+     * geometry reads: {@link #transform()} builds the shared {@link PreviewTransform} from {@code renderedScale} for
+     * the picking, and {@link #renderContent} submits that same value to the renderer for the drawing and the
+     * markings. A zoomed model is therefore drawn and picked with one and the same scaled transform, and what the
+     * player sees is exactly what a click hits.
+     */
+    public void setZoom(float zoom) {
+        this.zoom = zoom;
     }
 
     /** Sets the one machine this widget draws; the model is measured again from it. */
@@ -614,7 +640,9 @@ public final class FacePreviewWidget extends BlockPreviewWidget {
 
         float widthScale = contentWidth() * 0.5F / horizontalRadius;
         float heightScale = contentHeight() * 0.5F / verticalRadius;
-        renderedScale = Math.min(widthScale, heightScale) * 0.98F;
+        // the fit-to-panel scale, then the user's own zoom on top of it - the one number the drawing, the picking and
+        // the markings all read (see #setZoom)
+        renderedScale = Math.min(widthScale, heightScale) * 0.98F * zoom;
     }
 
     /** Component of a vector on one axis; the array form the slab test uses. */

@@ -105,6 +105,27 @@ public interface AddonPage {
     }
 
     /**
+     * Called when the mouse wheel moves while the pointer is over the panel, with the mouse coordinates relative to
+     * the panel's top left corner. Returns {@code true} to consume the scroll.
+     * <p>
+     * It is the wheel's counterpart of {@link #mouseClicked} and {@link #mouseDragged}, and the same rule applies: a
+     * page that does not use the wheel keeps the default and the scroll reaches vanilla unchanged. A page that does
+     * use it has to hit test its own control itself, because the scroll is forwarded for the whole panel - a page that
+     * zoomed on every scroll anywhere would steal the wheel from the slots a player scrolls over.
+     * <p>
+     * The 3D preview page is the one page that uses this today: it zooms its model while the pointer is over the
+     * model's own panel. The screen's page host is an {@code AbstractContainerScreen}, whose widgets know nothing
+     * about our pages, so a page cannot be given a widget's own scroll handling - this hook stands in for it.
+     *
+     * @param scrollX horizontal scroll of this event
+     * @param scrollY vertical scroll of this event, positive when the player scrolls up
+     */
+    default boolean mouseScrolled(AddonPageContext context, double mouseX, double mouseY, double scrollX,
+            double scrollY) {
+        return false;
+    }
+
+    /**
      * Tooltip lines for this page's own controls at the given position (panel relative), or an empty list
      * while nothing of this page is hovered. The screen hands them to the frame it extracts after the
      * item tooltip, so a page can explain a control of its own - for example a slot that is still empty

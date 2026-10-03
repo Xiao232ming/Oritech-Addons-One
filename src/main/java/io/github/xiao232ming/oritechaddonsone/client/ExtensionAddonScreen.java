@@ -51,6 +51,13 @@ public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddon
      */
     private boolean pageDrags;
 
+    /**
+     * True while the visible page is the one that uses the mouse wheel - the 3D preview of 传输插件, whose model is
+     * zoomed by scrolling over it. It is the wheel's counterpart of {@link #pageDrags} and is set the same way
+     * ({@link #syncVisiblePage}), so no other page can receive a scroll it does not expect.
+     */
+    private boolean pageScrolls;
+
     public ExtensionAddonScreen(ExtensionAddonMenu menu, Inventory inventory, Component title) {
         // the panel plus the tab strip on its right edge: the whole GUI is centred, a click on a tab counts
         // as a click inside the GUI, and no tab can leave the window
@@ -90,6 +97,8 @@ public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddon
         // the preview plugin's whole GUI is its 3D page: the player inventory stays out of it the way it stays out
         // of the modal step below, so nothing is drawn over the panel and no click can reach a slot behind it
         this.pageDrags = page == AddonPageRegistry.transferPreviewPage();
+        // and the same page is the one that zooms on the wheel, so the scroll is only forwarded to it
+        this.pageScrolls = page == AddonPageRegistry.transferPreviewPage();
         // leaving one of the picking pages closes whatever picker was open on it, so coming back starts
         // fresh
         if (page != AddonPageRegistry.proxyPage()) {
@@ -110,7 +119,13 @@ public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddon
         var modalOpen = ProxyPickerState.isOpen(this.menu.position())
                 || TransferPickerState.isOpen(this.menu.position())
                 || TransferPreviewPickerState.isOpen(this.menu.position());
-        this.menu.setPlayerSlotsActive(!modalOpen && !this.menu.previewOnly());
+        // The 传输插件 page is a whole page of its own besides that: it is the only page of the placed plugin and one
+        // tab of an Extension Addon that stores one, and while it is visible the panel is the transfer configuration -
+        // the model, the counter and the hint - with no inventory under it, exactly like the placed plugin's screen.
+        // This runs on every frame of the open GUI (see extractBackground) as well as on init and on every tab change,
+        // so leaving the page or closing the GUI puts the slots back without anything else having to remember it.
+        var previewPage = page == AddonPageRegistry.transferPreviewPage();
+        this.menu.setPlayerSlotsActive(!modalOpen && !this.menu.previewOnly() && !previewPage);
     }
 
     /**
@@ -258,6 +273,33 @@ public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddon
         }
 
         return super.mouseReleased(event);
+    }
+
+    /**
+     * Forwards the mouse wheel to the visible page while the page is the one that uses it - the 3D preview of
+     * 传输插件, which zooms its model. It is the wheel's counterpart of {@link #mouseDragged}.
+     * <p>
+     * The page decides whether the scroll belongs to it, by hit testing its own control itself: it is asked with the
+     * same panel relative coordinates as {@link #mouseClicked}, and only a scroll over the model's own panel is
+     * consumed. Everywhere else - and for every other page - this returns whatever vanilla answers, so the wheel goes
+     * on doing what it did in the GUI.
+     * <p>
+     * {@code AbstractContainerScreen} does not override {@code mouseScrolled} (the inherited default only asks the
+     * screen's child widgets, and this screen's page host has none that scroll), so {@code super} here is the same
+     * answer vanilla would have given without this override.
+     */
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        if (!this.pageScrolls || this.context == null) {
+            return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+        }
+
+        if (this.tabs.selectedPage().mouseScrolled(this.context, mouseX - this.leftPos, mouseY - this.topPos,
+                scrollX, scrollY)) {
+            return true;
+        }
+
+        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
     }
 
     /**

@@ -47,7 +47,8 @@ import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonMenu;
  * {@link AddonPageContext#screenY(int)}) and never mixed with the panel relative coordinates the page uses for
  * its own controls. The same rule applies to the model's interaction: Oritech's widget has no drag handling of
  * its own and this screen host is an {@code AbstractContainerScreen}, so the page implements the drag between
- * {@link #mouseDragged} and {@link AddonPage#mouseClicked}.
+ * {@link #mouseDragged} and {@link AddonPage#mouseClicked}, and the wheel in {@link #mouseScrolled}, which zooms the
+ * model over the model's own panel (see {@link TransferPreviewState.Preview#zoomBy}).
  * <p>
  * <b>The page is the same one in both screens.</b> It is the only page of 传输插件 while the plugin is placed in
  * the world, and it is one of the pages of an Extension Addon while the plugin is stored in its slots. Which
@@ -161,6 +162,7 @@ public final class TransferPreviewAddonPage implements AddonPage {
         // been sent - so a mode the player sets shows on the model in the same frame
         var widget = preview.widget();
         widget.withRotation(preview.pitch(), preview.yaw());
+        widget.setZoom(preview.zoom());
         widget.setFaceOverlays(faceModes(menu), menu.attachedTransferFaces());
         widget.tick();
         widget.render(graphics, screenX(context, mouseX), screenY(context, mouseY), partialTick);
@@ -297,6 +299,32 @@ public final class TransferPreviewAddonPage implements AddonPage {
     @Override
     public void mouseReleased(AddonPageContext context, double mouseX, double mouseY, int button) {
         // no state of this page ends on a release
+    }
+
+    /**
+     * Zooms the model while the wheel turns over the model's own panel, and only there.
+     * <p>
+     * The test is the panel's rectangle, not the model's silhouette: the panel is what reads as the model's field, so
+     * a wheel event anywhere in it zooms - including on the empty corner a zoomed-out model leaves. Outside it the
+     * page keeps the default and the scroll is vanilla's again, which is what leaves the wheel to the rest of the GUI.
+     * <p>
+     * The zoom itself is the interaction state's ({@link TransferPreviewState.Preview#zoomBy}), so it carries the same
+     * clamp, and the page hands the result to the widget every frame from {@link #render} together with the rotation -
+     * which is what puts it into the one shared {@link PreviewTransform} the drawing, the picking and the markings
+     * read.
+     */
+    @Override
+    public boolean mouseScrolled(AddonPageContext context, double mouseX, double mouseY, double scrollX,
+            double scrollY) {
+        if (openFace(context.menu()) != null) return false;
+        if (mouseX < previewX(context) || mouseX >= previewX(context) + PREVIEW_WIDTH) return false;
+        if (mouseY < PREVIEW_Y || mouseY >= PREVIEW_Y + PREVIEW_HEIGHT) return false;
+
+        var preview = currentPreview(context);
+        if (preview == null) return false;
+
+        preview.zoomBy(scrollY);
+        return true;
     }
 
     // ------------------------------------------------------------------ tooltips

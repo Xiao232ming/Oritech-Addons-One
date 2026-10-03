@@ -129,10 +129,27 @@ public final class TransferPreviewState {
         /** Degrees the model turns per pixel of drag: a quarter turn over a moderately sized panel. */
         private static final float DRAG_SPEED = 1.2F;
 
+        /**
+         * Factor the user's zoom is multiplied by per scroll notch, and the range it is kept in.
+         * <p>
+         * The zoom is a factor on the model's own fit-to-panel scale, so 1 is "the whole machine, exactly as the page
+         * sized it". A tenth of a notch per event would need twenty events to double the model, which is slow for a
+         * mouse wheel that reports one notch at a time, so each notch multiplies by 1.15; the ends of the range are
+         * where the model stops being readable: below half the fit the whole machine is a thumbnail in the middle of
+         * the panel, and above twice it the outer cells leave the panel and the player can no longer see the face
+         * they are about to click. The ends are inclusive and the value is clamped after every notch, so scrolling on
+         * past an end changes nothing.
+         */
+        private static final float ZOOM_STEP = 1.15F;
+        private static final float MIN_ZOOM = 0.5F;
+        private static final float MAX_ZOOM = 2.0F;
+
         private final BlockPos machinePos;
         private final FacePreviewWidget widget;
         private float pitch;
         private float yaw;
+        /** The user's zoom, a factor on the fit-to-panel scale. */
+        private float zoom = 1.0F;
         @Nullable
         private Direction selected;
 
@@ -161,6 +178,29 @@ public final class TransferPreviewState {
         /** Yaw the model is rotated to. */
         public float yaw() {
             return yaw;
+        }
+
+        /** The user's zoom, a factor on the model's fit-to-panel scale (see {@link #zoomBy}). */
+        public float zoom() {
+            return zoom;
+        }
+
+        /**
+         * Zooms the model by one scroll event, clamped to the range the model stays readable in (see
+         * {@link #ZOOM_STEP}).
+         * <p>
+         * The zoom is a plain factor the page hands to the widget together with the rotation, so it reaches the one
+         * {@link PreviewTransform} the drawing, the picking, the hover highlight and the mode and gold markings all
+         * share - a zoomed model is drawn and picked with the same scaled transform, and what the player sees is what
+         * a click hits.
+         *
+         * @param scrollY the event's vertical scroll, positive when the player scrolls up (zooming in)
+         */
+        public void zoomBy(double scrollY) {
+            if (scrollY == 0.0) return;
+
+            float factor = scrollY > 0.0 ? ZOOM_STEP : 1.0F / ZOOM_STEP;
+            zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom * factor));
         }
 
         /** The face the player selected, or {@code null} while none is. */
