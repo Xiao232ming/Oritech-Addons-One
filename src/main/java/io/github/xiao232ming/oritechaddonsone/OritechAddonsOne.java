@@ -23,6 +23,8 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.common.extensions.IMenuTypeExtension;
 import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.neoforge.registries.DeferredHolder;
@@ -34,6 +36,7 @@ import rearth.oritech.api.energy.EnergyApi;
 import rearth.oritech.api.item.ItemApi;
 import rearth.oritech.block.blocks.addons.MachineAddonBlock;
 import rearth.oritech.block.entity.addons.AddonBlockEntity;
+import rearth.oritech.init.BlockEntitiesContent;
 
 import io.github.xiao232ming.oritechaddonsone.addon.AddonStorageBonus;
 import io.github.xiao232ming.oritechaddonsone.block.ChunkAnchorAddonBlock;
@@ -43,6 +46,7 @@ import io.github.xiao232ming.oritechaddonsone.block.PluginAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.block.TransferAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.block.WirelessExtensionAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ChunkAnchorAddonBlockEntity;
+import io.github.xiao232ming.oritechaddonsone.block.entity.ExtenderFaceStorage;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.WirelessExtensionAddonBlockEntity;
@@ -404,6 +408,8 @@ public class OritechAddonsOne {
         TABS.register(modEventBus);
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
         modEventBus.addListener(this::onCommonSetup);
+        // the item capability of Oritech's machine extender, which a placed transfer plugin configures
+        modEventBus.addListener(this::registerExtenderItemCapabilities);
         // the four packets of the Item Proxy page (see ProxyNetworking) and the transfer page's mode packet
         modEventBus.addListener(ProxyNetworking::register);
         modEventBus.addListener(TransferNetworking::register);
@@ -482,5 +488,31 @@ public class OritechAddonsOne {
                         layout.imageWidth(), layout.imageHeight(), layout.columnMajor());
             }
         });
+    }
+
+    /**
+     * Registers the item capability of Oritech's machine extender: a face of the extender a placed transfer
+     * plugin hangs on has to be a real connection of its own.
+     * <p>
+     * On this branch Oritech exposes item inventories through its own {@code ItemApi} bridge, whose
+     * {@code NeoforgeItemApiImpl} turns any {@link net.neoforged.neoforge.items.IItemHandler} registered for
+     * {@code Capabilities.ItemHandler.BLOCK} into an {@code ItemApi.InventoryStorage}, which is also what
+     * {@code ItemApi.BLOCK.find} answers with. The call below therefore registers the NeoForge capability
+     * itself instead of going through {@code ItemApi.BLOCK.registerBlockEntity} like this mod's own blocks
+     * do: Oritech's bridge builds its provider from
+     * {@code ((ItemApi.BlockProvider) entity).getInventoryStorage(side)}, and the extender's block entity is
+     * Oritech's plain {@code AddonBlockEntity}, which is no {@code ItemApi.BlockProvider} - that lambda would
+     * throw for every addon of the shared type. Registering the capability ourselves keeps the answer in our
+     * hands ({@link ExtenderFaceStorage#handlerFor}) and hands Oritech's own pipe lookup the very same
+     * {@code IItemHandler} shape the bridge produces for a face of this mod's blocks.
+     * <p>
+     * Oritech registers no item capability for that block entity type on this branch either (its
+     * {@code ADDON_ENTITY} field carries no {@code @AssignSidedInventory}), so there is nothing to fight
+     * over. The provider still answers only for a machine extender with a placed transfer plugin on the
+     * asked face; every other addon of the shared type answers {@code null}, exactly as it did before.
+     */
+    private void registerExtenderItemCapabilities(RegisterCapabilitiesEvent event) {
+        event.registerBlockEntity(Capabilities.ItemHandler.BLOCK, BlockEntitiesContent.ADDON_ENTITY,
+                ExtenderFaceStorage::handlerFor);
     }
 }

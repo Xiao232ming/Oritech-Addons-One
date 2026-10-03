@@ -201,6 +201,10 @@ public class TransferAddonBlockEntity extends ExtensionAddonBlockEntity {
      * <p>
      * Cheap while nothing is configured, and does nothing at all while the plugin does not hang on an
      * extender, so a plugin that stands on a machine keeps Oritech's plain addon behaviour.
+     * <p>
+     * This deliberately does <b>not</b> call the base class's own movement: that one trades with the
+     * containers around the <em>plugin</em>, while the faces this plugin configures are the extender's (see
+     * {@link #invalidateHostCapabilities()} for the one thing the extender needs to be told on top).
      */
     @Override
     public void serverTickTransfer() {
@@ -235,6 +239,22 @@ public class TransferAddonBlockEntity extends ExtensionAddonBlockEntity {
         }
     }
 
+    /**
+     * Sets what one face of the extender does and tells the capability caches that the answer for that face
+     * may have changed: a face that was configured and now is not (or the other way round) turns the
+     * extender from "no inventory here" into an item connection, or back.
+     * <p>
+     * Called from the transfer page's packet, on the server, on this very block entity - which is what makes
+     * the plugin the right place to do it: it knows the extender it hangs on.
+     */
+    @Override
+    public boolean setTransferConfig(Direction face, TransferMode mode, boolean automation) {
+        if (!super.setTransferConfig(face, mode, automation)) return false;
+
+        invalidateHostCapabilities();
+        return true;
+    }
+
     // ------------------------------------------------------------------ the plugin's own faces
 
     /**
@@ -247,6 +267,52 @@ public class TransferAddonBlockEntity extends ExtensionAddonBlockEntity {
     @Override
     public ItemApi.InventoryStorage getInventoryStorage(Direction direction) {
         return emptyStorage;
+    }
+
+    // ------------------------------------------------------------------ the extender's capability cache
+
+    /**
+     * Tells NeoForge's capability caches that the extender this plugin hangs on may answer differently from
+     * now on.
+     * <p>
+     * The handler a configured face answers with stays the same object and reads the plugin, the mode and
+     * the machine on every call, so it needs no invalidation of its own; what does need one is the jump
+     * between "this face offers nothing" and "this face offers the machine's inventory". That jump is the
+     * only thing a pipe cannot notice by itself - the {@code BlockCapabilityCache} of Oritech's own item
+     * pipes, for one, keeps a {@code null} answer until the level invalidates the position - so the plugin
+     * invalidates the extender's position whenever it appears, disappears or is configured.
+     * <p>
+     * Cheap and harmless while the plugin hangs on something else: the host is checked by block identity
+     * first, so no other block is ever invalidated, and the extender's own position is a position
+     * NeoForge's capability system knows.
+     */
+    protected void invalidateHostCapabilities() {
+        if (level == null || level.isClientSide()) return;
+
+        var hostPos = hostPos();
+        if (!level.getBlockState(hostPos).is(BlockContent.MACHINE_EXTENDER)) return;
+
+        level.invalidateCapabilities(hostPos);
+    }
+
+    /**
+     * The plugin appeared in the world: the extender it hangs on now answers for this face, so the cached
+     * answer it gave a pipe before - usually "no inventory" - has to be dropped.
+     */
+    @Override
+    public void clearRemoved() {
+        super.clearRemoved();
+        invalidateHostCapabilities();
+    }
+
+    /**
+     * The plugin is gone: the extender's face stops offering the machine. The handler would already answer
+     * empty, but a pipe that cached "no capability" earlier would never ask again without this.
+     */
+    @Override
+    public void setRemoved() {
+        invalidateHostCapabilities();
+        super.setRemoved();
     }
 
     // ------------------------------------------------------------------ GUI and ticking

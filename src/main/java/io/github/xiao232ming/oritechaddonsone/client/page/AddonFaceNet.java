@@ -134,14 +134,21 @@ public final class AddonFaceNet {
         int y = context.screenY(localY(cells, face));
 
         var texture = textures.face(face);
+        // The flat addon's model samples its side textures from the lower half of the 16x16 texture while the
+        // net draws the full sprite, so those faces are drawn mirrored.
+        // <p>
+        // That mirror is asked for with the texture coordinates and never with the pose, on this branch as
+        // well as on 26.1.2. GuiGraphics#blit's (x, y, width, height, uOffset, vOffset, uWidth, vHeight,
+        // textureWidth, textureHeight) overload normalizes the vertical range as (vOffset + 0) /
+        // textureHeight to (vOffset + vHeight) / textureHeight, so the sprite is sampled upside down by
+        // passing a negative vHeight: vOffset 0 with vHeight -16 asks for the v range 1 -> 0, which is
+        // exactly the mirror the pose used to produce. The quad keeps its size, its place and - this is the
+        // point - its winding. Mirroring the pose instead (pushPose, translate(x, y + FACE, 0),
+        // scale(1f, -1f, 1f)) mirrors the vertex positions and with them the winding of the quad, and the GUI
+        // render types do not turn culling off, so that quad is culled and the face comes out blank - which
+        // is what a flat placed addon used to show.
         if (texture.flipVertically()) {
-            // the flat addon models sample the side textures from the lower half of their texture; the net
-            // draws the full 16x16 sprite, so the flip is a vertical mirror around the face's own centre
-            graphics.pose().pushPose();
-            graphics.pose().translate(x, y + FACE, 0f);
-            graphics.pose().scale(1f, -1f, 1f);
-            graphics.blit(texture.texture(), 0, 0, FACE, FACE, 0f, 0f, 16, 16, 16, 16);
-            graphics.pose().popPose();
+            graphics.blit(texture.texture(), x, y, FACE, FACE, 0f, 0f, 16, -16, 16, 16);
         } else {
             graphics.blit(texture.texture(), x, y, FACE, FACE, 0f, 0f, 16, 16, 16, 16);
         }
