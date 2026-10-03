@@ -34,7 +34,9 @@ import io.github.xiao232ming.oritechaddonsone.network.TransferNetworking;
  * automation flag per face, the same occupied-face refusal, the same packet to the server, the same container data
  * back - and the two pages even agree on the look of a configured face (see {@link TransferFaceStyle}). What differs
  * is how a face is chosen: instead of the host unfolded into a cube net, this page renders the machine the plugin
- * works on with {@link FacePreviewWidget} and picks the face the player clicks on the model.
+ * works on as a 3D model and picks the face the player clicks on it. This branch has no picture in picture GUI
+ * rendering, so the model is drawn straight into the page's own pose stack by {@link FacePreviewWidget}, which is also
+ * what lets the face under the mouse be marked with a translucent white quad in the model's own pose there.
  * <p>
  * <b>The model lives in absolute screen space.</b> This page draws in panel space while the widget is rendered at the
  * pixel position it was given, which is what its own drawing and its picking assume; every coordinate the page hands
@@ -54,8 +56,9 @@ import io.github.xiao232ming.oritechaddonsone.network.TransferNetworking;
  * world, and it is one of the pages of an Extension Addon while the plugin is stored in its slots. Which block entity
  * it configures never depends on that: everything it reads (the modes, the automation flags, the occupied faces) and
  * everything it writes comes from the menu it was handed (see {@link ExtensionAddonMenu#transferPreviewMachinePos()}),
- * and that menu is the block the screen was opened for - the placed plugin, or the addon. The stored case simply has
- * no plugin block to draw into the model, because that plugin is not in the world.
+ * and that menu is the block the screen was opened for - the placed plugin, or the addon. That difference no longer
+ * reaches the model: it is the machine and nothing else in both cases, because the plugin block and the machine's
+ * addons would cover the faces the player is meant to click on (see {@code TransferPreviewState#build}).
  */
 public final class TransferPreviewAddonPage implements AddonPage {
 
@@ -452,19 +455,7 @@ public final class TransferPreviewAddonPage implements AddonPage {
     @Nullable
     private static TransferPreviewState.Preview currentPreview(AddonPageContext context) {
         return TransferPreviewState.preview(context.menu().position(), machinePos(context.menu()),
-                pluginBlockPos(context.menu()), context.screenX(previewX(context)), context.screenY(PREVIEW_Y),
-                PREVIEW_WIDTH, PREVIEW_HEIGHT);
-    }
-
-    /**
-     * Position of the preview plugin whose block belongs into the model, i.e. the menu's own position while the menu
-     * belongs to a <b>placed</b> plugin, or {@code null} while it belongs to an Extension Addon that merely stores
-     * one. Only the placed plugin stands on a face of the machine, so only it says anything about which face of the
-     * machine is taken - a stored plugin is not in the world and its slot is not a face of the machine.
-     */
-    @Nullable
-    private static BlockPos pluginBlockPos(ExtensionAddonMenu menu) {
-        return menu.blockEntity() instanceof TransferPreviewAddonBlockEntity ? menu.position() : null;
+                context.screenX(previewX(context)), context.screenY(PREVIEW_Y), PREVIEW_WIDTH, PREVIEW_HEIGHT);
     }
 
     /** X of a panel relative coordinate, converted to the absolute space the model lives in. */
