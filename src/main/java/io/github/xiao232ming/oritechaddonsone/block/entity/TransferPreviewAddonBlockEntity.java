@@ -113,24 +113,57 @@ public class TransferPreviewAddonBlockEntity extends ExtensionAddonBlockEntity {
     }
 
     /**
-     * True while this plugin hangs on an Oritech machine extender <b>and</b> that extender was claimed by a
-     * machine, i.e. while the extender placement really applies.
+     * The machine the <b>host</b> this plugin hangs on reports, or {@code null} while that host is not an addon of
+     * a machine at all: the machine behind the extender, or the machine the plugin itself was claimed by.
+     * <p>
+     * This is the one place the two placements are told apart, and it deliberately asks the <em>host</em> instead
+     * of the plugin: Oritech's addon scan walks through an extender and claims the plugin standing on it like any
+     * other addon, so it writes the position of the <b>machine behind the extender</b> into the plugin's own
+     * controller position - never the extender's. A plugin that compared its own controller position with the
+     * block it hangs on therefore answers "no" for the extender placement, which is what used to make right
+     * clicking such a plugin do nothing at all (see {@link #hangsOnExtender()}).
+     * <p>
+     * Server only, like every user of it: a controller offset is plain block entity save data that never reaches
+     * a client - the client's copy stays zero, so {@code getControllerPos()} answers the block's own position
+     * there - and the extender's controller position is not synced either. The client learns the machine the page
+     * draws through the menu instead (see {@code ExtensionAddonMenu#transferPreviewMachinePos()}).
+     */
+    @Nullable
+    private BlockPos hostMachinePos() {
+        if (level == null || level.isClientSide()) return null;
+
+        var hostPos = attachedHostPos();
+        if (!level.isLoaded(hostPos)) return null;
+
+        if (level.getBlockState(hostPos).is(BlockContent.MACHINE_EXTENDER.get())) {
+            if (!(level.getBlockEntity(hostPos) instanceof AddonBlockEntity extender)) return null;
+
+            var machinePos = extender.getControllerPos();
+            return machinePos == null || machinePos.equals(extender.getBlockPos()) ? null : machinePos;
+        }
+
+        var controller = getControllerPos();
+        if (controller == null || !controller.equals(hostPos)) return null;
+
+        return level.getBlockEntity(hostPos) instanceof MachineAddonController ? hostPos : null;
+    }
+
+    /**
+     * True while this plugin hangs on an Oritech machine extender that a machine claimed, i.e. while the extender
+     * placement really applies.
      * <p>
      * The host is checked by block identity, so an addon or a machine that merely happens to be an Oritech addon
-     * block does not count, and the controller position is checked as well: Oritech writes the position of the
-     * machine that claimed a block into it, so a plugin that Oritech's addon scan never reached (the extender was
-     * placed first and nothing triggered a rescan yet) must not claim the extender's faces. Both halves are read
-     * from synced state - the block state and the controller offset, which the extender's own save data and
-     * {@code setChanged} keep in step - so the client can answer this question too, which its page needs in order
-     * to know what to draw.
+     * block does not count, and the extender's own controller position has to point at a machine as well: an
+     * extender no machine ever claimed has no machine behind it, so a plugin hanging on it serves nothing.
      */
     public boolean hangsOnExtender() {
-        var hostPos = attachedHostPos();
         if (level == null || level.isClientSide()) return false;
+
+        var hostPos = attachedHostPos();
         if (!level.isLoaded(hostPos)) return false;
         if (!level.getBlockState(hostPos).is(BlockContent.MACHINE_EXTENDER.get())) return false;
 
-        return hostPos.equals(getControllerPos());
+        return hostMachinePos() != null;
     }
 
     /**
@@ -140,16 +173,19 @@ public class TransferPreviewAddonBlockEntity extends ExtensionAddonBlockEntity {
      * The machine is the neighbour the plugin was placed against <b>and</b> the block Oritech wrote into the
      * plugin's controller position: a plugin standing on a wall next to something it was never claimed by serves
      * nothing, and a plugin whose extender was broken does not silently start serving whatever block is behind it
-     * either.
+     * either. An extender never counts here even when it was claimed by a machine - that placement is
+     * {@link #hangsOnExtender()}.
      */
     public boolean hangsOnMachine() {
-        var machinePos = attachedHostPos();
-        var controller = getControllerPos();
         if (level == null || level.isClientSide()) return false;
-        if (controller == null || !controller.equals(machinePos)) return false;
-        if (!level.isLoaded(machinePos)) return false;
 
-        return level.getBlockEntity(machinePos) instanceof MachineAddonController;
+        var hostPos = attachedHostPos();
+        if (level.getBlockState(hostPos).is(BlockContent.MACHINE_EXTENDER.get())) return false;
+
+        var controller = getControllerPos();
+        if (controller == null || !controller.equals(hostPos)) return false;
+
+        return hostMachinePos() != null;
     }
 
     /**
@@ -157,24 +193,21 @@ public class TransferPreviewAddonBlockEntity extends ExtensionAddonBlockEntity {
      * claimed by, or the machine the plugin itself is attached to.
      * <p>
      * Extends the base class's answer - that one is the plugin's own controller position - by the extender case: while
-     * the plugin hangs on an extender, the machine is the one <b>behind</b> that extender, which is the machine whose
-     * items the extender's faces move. Resolving it that way is the server's answer, because the extender's own
-     * controller position is save data that never reaches a client; the page asks this method too, and on a client it
-     * gets the base class's answer, i.e. the machine Oritech's addon scan wrote into the plugin for either placement
-     * (see {@link ExtensionAddonBlockEntity#servedMachinePos()}).
+     * the plugin hangs on an extender, Oritech's addon scan writes the position of the machine <b>behind</b> that
+     * extender into the plugin, so the base class's answer is the machine that really claimed the plugin; the
+     * extender is only asked because it is the block whose faces the plugin works through (see
+     * {@link #hostMachinePos()}).
+     * <p>
+     * <b>This is the server's answer.</b> It is built from controller offsets, which are plain block entity save data
+     * and never reach a client, so a client gets {@code null} here for a plugin that really serves a machine. The
+     * capability provider and the automation read it on the server, where it is authoritative, and the machine the
+     * page draws is sent to the client with the menu instead
+     * ({@code ExtensionAddonMenu#transferPreviewMachinePos()}).
      */
     @Override
     @Nullable
     public BlockPos servedMachinePos() {
-        if (hangsOnExtender()) {
-            var extender = attachedHostPos();
-            if (!(level.getBlockEntity(extender) instanceof AddonBlockEntity addon)) return null;
-
-            var machinePos = addon.getControllerPos();
-            return machinePos == null || machinePos.equals(addon.getBlockPos()) ? null : machinePos;
-        }
-
-        return hangsOnMachine() ? getControllerPos() : null;
+        return hostMachinePos();
     }
 
     /**

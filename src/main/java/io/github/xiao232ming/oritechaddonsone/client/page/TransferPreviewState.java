@@ -26,9 +26,11 @@ import rearth.oritech.util.ScreenProvider;
  * rotation the player dragged it into, and the face the player selected.
  * <p>
  * Everything here is presentation, exactly like {@link TransferPickerState}: what a face really does is stored on
- * the block entity, and every value the page shows comes from the menu's container data. The one thing that cannot
- * come from there is the model - a block state and a block entity for the renderer - so it is built here from the
- * client's own level, which has the machine as soon as its chunk is loaded.
+ * the block entity, and every value the page shows comes from the menu's container data. Two things cannot come from
+ * there, and both are read on this side: the model - a block state and a block entity for the renderer, taken from
+ * the client's own level, which has the machine as soon as its chunk is loaded - and <b>which</b> machine that is,
+ * which the server resolved and sent with the menu ({@code ExtensionAddonMenu#transferPreviewMachinePos()}), because
+ * the offsets it is resolved from never reach a client.
  * <p>
  * The state is kept per menu position - i.e. per panel that was opened, whether that panel belongs to a placed plugin
  * or to an Extension Addon that stores one - and rebuilt when the machine it serves changes, because a GUI can be open
@@ -51,7 +53,9 @@ public final class TransferPreviewState {
      *
      * @param previewKey position the built model is kept under, i.e. the position of the block the open menu belongs
      *                   to, so a preview never outlives the panel it was built for
-     * @param machinePos the machine the plugin serves, as the menu of the open screen reports it
+     * @param machinePos the machine the plugin serves, as the menu of the open screen reports it - the position the
+     *                   server resolved and sent along, because a client cannot resolve it itself (see the class
+     *                   comment)
      * @param pluginPos  position of the <b>placed</b> plugin whose block belongs into the model, or {@code null}
      *                   while the page is shown inside an Extension Addon that merely stores one (see
      *                   {@code TransferPreviewAddonPage#pluginBlockPos})
