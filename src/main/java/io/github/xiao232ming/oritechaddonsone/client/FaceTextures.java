@@ -13,6 +13,7 @@ import net.minecraft.world.level.block.state.properties.Property;
 
 import org.jetbrains.annotations.Nullable;
 
+import rearth.oritech.block.blocks.addons.MachineAddonBlock;
 import rearth.oritech.init.BlockContent;
 
 import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonBlock;
@@ -40,6 +41,14 @@ import io.github.xiao232ming.oritechaddonsone.block.WirelessExtensionAddonBlock;
  *     <li>the wireless dock is a full cube whose model is rotated to {@code facing}: its interface faces
  *     that direction and the side texture covers the other five,</li>
  *     <li>type III uses its own recoloured interface texture ({@code extension_addon_3_port}),</li>
+ *     <li>every block whose state carries {@code addon_used} - Oritech's machine extender and this mod's wired
+ *     addons, which inherit the property from {@link MachineAddonBlock} - has an <b>off</b> set of models as
+ *     well as an on one: while the block is not claimed by a machine the blockstate applies the
+ *     {@code *_off} model, which swaps the interface texture for {@code machine_extender_off} (or
+ *     {@code extension_addon_3_port_off} on type III) and, on type II, the side texture for
+ *     {@code extension_addon_2_side_off}; the other two types reuse their on side texture, because they have
+ *     no separate off one. The net mirrors that by picking the whole texture set from the same property, so
+ *     it looks like the block does in the world either way,</li>
  *     <li>Oritech's machine extender - the host a placed transfer plugin hangs on, and therefore the block a
  *     placed plugin's transfer page really draws - is a {@code minecraft:block/cube_all} over the very
  *     texture {@link #EXTENDER_PORT} names, so all six of its faces carry that one texture and there is no
@@ -64,12 +73,21 @@ public record FaceTextures(Map<Direction, Face> faces, Direction front) {
      */
     private static final ResourceLocation EXTENDER_PORT =
             ResourceLocation.fromNamespaceAndPath("oritech", "textures/block/machine_extender.png");
+    /** Same, for the extender's {@code addon_used=false} model ({@code machine_extender_off}). */
+    private static final ResourceLocation EXTENDER_PORT_OFF =
+            ResourceLocation.fromNamespaceAndPath("oritech", "textures/block/machine_extender_off.png");
     private static final ResourceLocation ADDON_1_SIDE =
             ResourceLocation.fromNamespaceAndPath("oritechaddonsone", "textures/block/extension_addon_1_side.png");
     private static final ResourceLocation ADDON_2_SIDE =
             ResourceLocation.fromNamespaceAndPath("oritechaddonsone", "textures/block/extension_addon_2_side.png");
+    /** Side texture of type II while unused: the only type whose side texture changes with the state. */
+    private static final ResourceLocation ADDON_2_SIDE_OFF =
+            ResourceLocation.fromNamespaceAndPath("oritechaddonsone", "textures/block/extension_addon_2_side_off.png");
     private static final ResourceLocation ADDON_3_PORT =
             ResourceLocation.fromNamespaceAndPath("oritechaddonsone", "textures/block/extension_addon_3_port.png");
+    /** Interface texture of type III while unused; its side texture is the same either way. */
+    private static final ResourceLocation ADDON_3_PORT_OFF =
+            ResourceLocation.fromNamespaceAndPath("oritechaddonsone", "textures/block/extension_addon_3_port_off.png");
     private static final ResourceLocation ADDON_3_SIDE =
             ResourceLocation.fromNamespaceAndPath("oritechaddonsone", "textures/block/extension_addon_3_side.png");
 
@@ -91,8 +109,11 @@ public record FaceTextures(Map<Direction, Face> faces, Direction front) {
         // though it is no addon of this mod: its model is a minecraft:block/cube_all over EXTENDER_PORT, one
         // texture on all six faces and no port or side face to distinguish. Which face is the "interface" one
         // is therefore arbitrary; NORTH only keeps the frame the net is built around deterministic.
+        // Its blockstate still swaps the whole model on addon_used - machine_extender_off while no machine
+        // has claimed the extender - so the one texture follows that property.
         if (block == BlockContent.MACHINE_EXTENDER) {
-            return new FaceTextures(defaultFaces(EXTENDER_PORT, EXTENDER_PORT), Direction.NORTH);
+            var extender = isAddonUsed(resolved) ? EXTENDER_PORT : EXTENDER_PORT_OFF;
+            return new FaceTextures(defaultFaces(extender, extender), Direction.NORTH);
         }
 
         var wired = block instanceof ExtensionAddonBlock;
@@ -103,8 +124,19 @@ public record FaceTextures(Map<Direction, Face> faces, Direction front) {
 
         var name = BuiltInRegistries.BLOCK.getKey(block).getPath();
         var isType3 = name.contains("_3");
-        var port = isType3 ? ADDON_3_PORT : EXTENDER_PORT;
-        var side = isType3 ? ADDON_3_SIDE : name.contains("_2") ? ADDON_2_SIDE : ADDON_1_SIDE;
+        // The wired addons inherit Oritech's addon_used property, and the extender carries it too, so the
+        // whole texture set - not just a face - follows it: an unused block is drawn from the *_off model.
+        // A state without the property (the wireless docks, which switch on their own `linked` flag) keeps
+        // the on set. Which set applies is a property of the state and not of the block, because the same
+        // block is drawn on and off at different times.
+        var used = isAddonUsed(resolved);
+        var port = isType3
+                ? used ? ADDON_3_PORT : ADDON_3_PORT_OFF
+                : used ? EXTENDER_PORT : EXTENDER_PORT_OFF;
+        var side = isType3
+                ? ADDON_3_SIDE
+                : used ? name.contains("_2") ? ADDON_2_SIDE : ADDON_1_SIDE
+                        : name.contains("_2") ? ADDON_2_SIDE_OFF : ADDON_1_SIDE;
 
         if (wireless) {
             // a full cube whose model is rotated to `facing`: the interface faces that direction
@@ -166,5 +198,14 @@ public record FaceTextures(Map<Direction, Face> faces, Direction front) {
     @Nullable
     private static <T extends Comparable<T>> T value(BlockState state, Property<T> property) {
         return state.hasProperty(property) ? state.getValue(property) : null;
+    }
+
+    /**
+     * Oritech's {@code addon_used} flag of the given state: true while a machine has claimed the addon (or
+     * while the state does not carry the property at all, such as the wireless docks), false only while the
+     * block is really unused. Reading it through one accessor keeps every caller on that convention.
+     */
+    private static boolean isAddonUsed(BlockState state) {
+        return !Boolean.FALSE.equals(value(state, MachineAddonBlock.ADDON_USED));
     }
 }
