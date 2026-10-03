@@ -2,7 +2,6 @@ package io.github.xiao232ming.oritechaddonsone.client.page;
 
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 import net.minecraft.client.Minecraft;
@@ -88,21 +87,33 @@ public final class TransferPreviewAddonPage implements AddonPage {
 
     // ------------------------------------------------------------------ geometry
 
-    /**
-     * The page's rows, in panel space, top to bottom. The panel's own title label is drawn by the screen in the
-     * top band (Y 6, see {@code ExtensionAddonScreen#extractLabels}) and the counter shares that band on the right
-     * ({@link ExtensionAddonLayout#counterY()}), so the page's first own row starts below both of them: the
-     * instruction line, then the model. The plates and the switch are no part of the page any more - they belong
-     * to the modal page - so the model is the page's last row and the shortest a layout can make the panel is
-     * tall enough for the modal that opens over it (see {@link #drawnHeight}).
-     */
-    private static final int HINT_Y = 18;
-
     /** Width and height of the 3D model's own panel, centred in the page body. */
     private static final int PREVIEW_WIDTH = 140;
     private static final int PREVIEW_HEIGHT = 96;
-    /** Top edge of that panel, in panel space: below the panel's title and the instruction line. */
-    private static final int PREVIEW_Y = HINT_Y + 10;
+
+    /**
+     * Top edge of that panel, in panel space: the page's first row, because the panel's own title label and the
+     * counter are drawn by the screen in the band above it (Y 6, see {@code ExtensionAddonScreen#renderLabels} and
+     * {@link ExtensionAddonLayout#counterY()}).
+     * <p>
+     * It is the same value the hint used to sit at: the hint moved <b>below</b> the model (see {@link #HINT_Y}), so the
+     * model took the row the hint had rather than the page growing a row.
+     */
+    private static final int PREVIEW_Y = 18;
+
+    /**
+     * The instruction line's baseline, in panel space: <b>under</b> the model's panel, which is where a caption
+     * belongs - it explains the panel above it, and the panel is no longer pushed down by a line of text the player
+     * only reads once.
+     * <p>
+     * Six pixels below the panel's bottom edge, so the text is separated from the panel's dark bevel by a visible gap
+     * and not merely by its own line height. It is also the last row the page owns: {@link #drawnHeight} reserves
+     * {@link #HINT_TEXT_HEIGHT} more for it.
+     */
+    private static final int HINT_Y = PREVIEW_Y + PREVIEW_HEIGHT + 6;
+
+    /** Height of one line of the mod's font, i.e. what the instruction line occupies below the panel. */
+    private static final int HINT_TEXT_HEIGHT = 9;
 
     @Override
     public String id() {
@@ -125,22 +136,25 @@ public final class TransferPreviewAddonPage implements AddonPage {
     }
 
     /**
-     * The panel ends below the model, which is the page's own content.
+     * The panel ends below the instruction line, which is the page's last row.
      * <p>
-     * The modal configuration page is the reason this is not simply {@code PREVIEW_Y + PREVIEW_HEIGHT}: the modal
+     * The modal configuration page is the reason this is not simply {@code HINT_Y + HINT_TEXT_HEIGHT}: the modal
      * is Oritech's 176x100 panel with its 28 pixel title icon floating above it ({@link AddonPickerPanel}), and it
      * has to fit inside the drawn panel for <b>every</b> layout - including the shortest one, a single plugin row.
-     * So the page asks for enough height to hold the model <em>and</em> the modal, and lets
+     * So the page asks for enough height to hold the model, the instruction line <em>and</em> the modal, and lets
      * {@link ExtensionAddonLayout#pageHeight(int)} keep the player inventory band as the floor. Without this the
      * one-row panel would be shorter than the modal and the lower third of the plates would be cut off.
+     * <p>
+     * The modal is drawn over the page, so it covers the instruction line while a face is being configured - which is
+     * why the line can sit below the model without competing with the plates.
      */
     @Override
     public int drawnHeight(ExtensionAddonLayout layout) {
-        int modelBottom = PREVIEW_Y + PREVIEW_HEIGHT;
+        int contentBottom = HINT_Y + HINT_TEXT_HEIGHT;
         // the two pixels AddonPickerPanel keeps above its placement floor, and a small margin so the modal's
         // frame is never flush with the panel's dark bottom bevel
         int modalBottom = AddonPickerPanel.ICON_SIZE + AddonPickerPanel.HEIGHT + 10;
-        return layout.pageHeight(Math.max(modelBottom, modalBottom));
+        return layout.pageHeight(Math.max(contentBottom, modalBottom));
     }
 
     // ------------------------------------------------------------------ drawing
@@ -192,8 +206,14 @@ public final class TransferPreviewAddonPage implements AddonPage {
     }
 
     /**
-     * The instruction line, centred in the panel one row below the panel's own title band: it names what the model
-     * is for and what a click on it does - the plates themselves are only shown by the modal that click opens.
+     * The instruction line, centred in the panel <b>under</b> the model's own panel ({@link #HINT_Y}): it names what
+     * the model is for and what a click on it does - the plates themselves are only shown by the modal that click
+     * opens.
+     * <p>
+     * A caption belongs under the thing it captions: above the model it pushed the model down and read as a heading
+     * for the page rather than as an explanation of the panel below it. It is drawn dim ({@link AddonPanelStyle}) so it
+     * stays secondary to the model, and it is drawn in both states - with and without a machine - because it explains
+     * the panel either way.
      */
     private void drawHint(AddonPageContext context, GuiGraphicsExtractor graphics) {
         var font = Minecraft.getInstance().font;
@@ -366,6 +386,19 @@ public final class TransferPreviewAddonPage implements AddonPage {
 
     // ------------------------------------------------------------------ tooltips
 
+    /**
+     * What the floating text next to the pointer says about the cell-face under it: its mode, and nothing else.
+     * <p>
+     * <b>The direction word is deliberately not in it.</b> The pointer is already on the face the text describes, so
+     * naming that face's side (北/东/…) answered a question nobody asked and made the text longer than the answer it
+     * carries - the reader had to skip past it to reach the mode. What the text is for is the one thing the model does
+     * not already show: whether that face is configured, and how. The direction names are still where they belong -
+     * {@link TransferFaceStyle.MODES} and the cube net page name a side when a side is the thing being chosen, and the
+     * {@code gui.oritechaddonsone.transfer.side.*} keys stay in the language files for that.
+     * <p>
+     * An occupied face keeps its own sentence, because "why can I not configure this" is the answer the player needs
+     * there - and that sentence is about the plugin, not about a side.
+     */
     @Override
     public List<Component> tooltipAt(AddonPageContext context, double mouseX, double mouseY) {
         var menu = context.menu();
@@ -382,8 +415,7 @@ public final class TransferPreviewAddonPage implements AddonPage {
         // the occupied cell-face explains why it cannot be configured instead of naming a mode it can never have
         if (isOccupied(menu, hoveredCell, hovered)) return List.of(Component.translatable(OCCUPIED_KEY));
 
-        return List.of(Component.translatable(sideKey(hovered)),
-                Component.translatable(TransferFaceStyle.modeKey(mode(context, hoveredCell, hovered))));
+        return List.of(Component.translatable(TransferFaceStyle.modeKey(mode(context, hoveredCell, hovered))));
     }
 
     // ------------------------------------------------------------------ helpers
@@ -524,10 +556,5 @@ public final class TransferPreviewAddonPage implements AddonPage {
         if (!cell.equals(Vec3i.ZERO)) return false;
 
         return (menu.attachedTransferFaces() & 1 << face.ordinal()) != 0;
-    }
-
-    /** Language key of a face name, e.g. {@code gui.oritechaddonsone.transfer.side.north}. */
-    private static String sideKey(Direction face) {
-        return "gui.oritechaddonsone.transfer.side." + face.name().toLowerCase(Locale.ROOT);
     }
 }

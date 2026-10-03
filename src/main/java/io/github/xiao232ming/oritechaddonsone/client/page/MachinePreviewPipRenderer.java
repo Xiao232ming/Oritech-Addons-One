@@ -54,11 +54,27 @@ public class MachinePreviewPipRenderer extends PictureInPictureRenderer<MachineP
     /** Light the preview is drawn with: the packed value Oritech's own preview uses, i.e. full light. */
     private static final int LIGHT = 15728880;
 
-    /** Translucent white of the hover outline: white, at the alpha Oritech uses for the block its overlay points at. */
-    private static final int HIGHLIGHT_COLOR = 0x55FFFFFF;
+    /**
+     * Translucent white of the hover marking: the whole face under the mouse, at an alpha low enough to lighten what
+     * the face already carries rather than to cover it.
+     * <p>
+     * <b>The alpha is the compromise between "the marking is unmistakable" and "the mode colour survives".</b> The
+     * mode washes are themselves translucent at {@code 0x55}, so the hover is composited over them: at {@code 0x38}
+     * white, an input face's blue {@code 0x553B82F6} composites to {@code 0x55669DF8} and an output face's orange
+     * {@code 0x55F59E0B} to {@code 0x55F7B341} - both still unmistakably their own hue, both clearly lighter than the
+     * unmarked face, and the layer's own {@code 0x55} alpha still lets the machine's texture show through. A heavier
+     * veil drains the colour (at {@code 0x55} the same blue comes out {@code 0x557CACF9}, visibly greyer and closer
+     * to the orange's own brightness, so the two modes start to look alike); a lighter one stops reading over a bright
+     * block texture.
+     */
+    private static final int HIGHLIGHT_COLOR = 0x38FFFFFF;
 
-    /** Distance the hover outline floats off the face, so it never trades depth with the block face behind it. */
-    private static final float HIGHLIGHT_LIFT = 0.002F;
+    /**
+     * Distance the hover fill floats off the face, so it never trades depth with the block face behind it. It is
+     * above {@link #MARKING_LIFT} + {@link #MARKING_STEP}, i.e. above a mode wash and above the gold outline of an
+     * occupied face, so the hover is the topmost marking of the three.
+     */
+    private static final float HIGHLIGHT_LIFT = 0.004F;
 
     /**
      * The half extent of one cell's face, in model units: a block model is one unit wide and the drawing translates
@@ -66,9 +82,6 @@ public class MachinePreviewPipRenderer extends PictureInPictureRenderer<MachineP
      * expressed in these units (see {@link #drawQuad}).
      */
     private static final float FACE_HALF_EXTENT = 0.5F;
-
-    /** How thick the hover outline is, in model units. */
-    private static final float HIGHLIGHT_OUTLINE_THICKNESS = 0.07F;
 
     /** How far a wash's edges stay inside the face, in model units, so it reads as a marking and not as a lid. */
     private static final float WASH_INSET = 0.03F;
@@ -277,17 +290,28 @@ public class MachinePreviewPipRenderer extends PictureInPictureRenderer<MachineP
     }
 
     /**
-     * Draws the outline of the hovered face, in the pose that is still active from the model above: the outline is
-     * built in model space on the face's own edge of the part the mouse is over, so it lands on that face whatever the
-     * model is rotated to.
+     * Draws the hover marking of the face the mouse is over, in the pose that is still active from the model above: a
+     * translucent white fill of the <b>whole face</b> of the part the picking answered with, so it lands on that
+     * face whatever the model is rotated to.
      * <p>
      * The part is the one the picking answered with ({@link MachinePreviewRenderState#offset()}): a multiblock machine
-     * is several cells of model space, and the outline of a face on one of them belongs on that cell - drawn at the
+     * is several cells of model space, and the marking of a face on one of them belongs on that cell - drawn at the
      * model origin it would mark the controller's cell instead, on the far side of the machine.
      * <p>
-     * It is an <b>outline and not a wash</b>, and it is drawn last: the face under the mouse may be coloured by its
-     * mode or ringed in gold, and a translucent white fill over either of those would only muddy the meaning it
-     * carries. The white edge sits on top of both and leaves the colour in the middle readable.
+     * <b>It is a fill of the entire face and not an outline</b>, which is what the feature is for: an outline only
+     * answers "is the cursor on this face" for the cursor positions inside the ring, so a player pointing at the middle
+     * of a face saw nothing and read it as the marking not following the mouse. The fill covers the face the picking
+     * answers with exactly, so the highlighted area <em>is</em> the area that face owns - cursor on the marking and
+     * cursor on the face are the same statement.
+     * <p>
+     * <b>It blends, it does not overwrite.</b> {@link #HIGHLIGHT_COLOR} is white at a low alpha, so what the face
+     * already carried stays readable underneath: a mode wash keeps its hue - the blue of an input face composites to
+     * {@code 0x55669DF8} and the orange of an output face to {@code 0x55F7B341}, both lighter than the unmarked face
+     * and both still their own colour - and a face with no mode reads as lit rather than as painted.
+     * <p>
+     * The gold outline of an occupied face is drawn over the fill (see {@link #drawOverlays} running before this), so
+     * the "a plugin stands here" reading survives being hovered, and the lift is raised above that outline's so the
+     * white is never hidden by it.
      * <p>
      * Nothing is drawn while no face is hovered, i.e. while the mouse is not on the model - the page's picking keeps
      * working unchanged, because this only ever adds geometry to the frame and never touches the mouse.
@@ -299,7 +323,8 @@ public class MachinePreviewPipRenderer extends PictureInPictureRenderer<MachineP
 
         poseStack.pushPose();
         poseStack.translate(offset.getX(), offset.getY(), offset.getZ());
-        drawOutline(poseStack, face, HIGHLIGHT_LIFT, HIGHLIGHT_OUTLINE_THICKNESS, HIGHLIGHT_COLOR);
+        drawQuad(poseStack, face, -FACE_HALF_EXTENT, FACE_HALF_EXTENT, -FACE_HALF_EXTENT, FACE_HALF_EXTENT,
+                HIGHLIGHT_LIFT, HIGHLIGHT_COLOR);
         poseStack.popPose();
     }
 

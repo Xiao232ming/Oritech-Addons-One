@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
@@ -19,6 +20,7 @@ import rearth.oritech.block.blocks.processing.MachineCoreBlock;
 import rearth.oritech.util.Geometry;
 import rearth.oritech.util.MultiblockMachineController;
 
+import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferMode;
 
 /**
@@ -448,11 +450,77 @@ public final class FacePreviewWidget extends BlockPreviewWidget {
         Hit closest = null;
         for (var entry : blocks) {
             var hit = entryHit(ray.origin(), ray.direction(), entry.offset());
-            if (hit != null && (closest == null || hit.distance() < closest.distance())) {
+            if (hit == null) continue;
+            if (closest == null || wins(hit, closest, ray.direction())) {
                 closest = hit;
             }
         }
         return closest;
+    }
+
+    /**
+     * How much nearer one entry has to be before it beats the one already chosen, in model units.
+     * <p>
+     * Two cells that share an edge or a corner of the structure are entered at distances that differ only by where
+     * exactly the ray crossed the boundary, and at a grazing angle that difference is of the same order as the float
+     * error of the slab test - so <em>which</em> of them is nearer is decided by rounding, and it changes as the
+     * cursor moves by a pixel. Treating everything within this distance as "equally near" is what lets the tie-break
+     * below, which is about the ray and not about rounding, decide instead.
+     * <p>
+     * A tenth of a block: small enough that a cell really in front of another (a whole block of model space, i.e.
+     * 1.0) always wins on distance alone, large enough to absorb the arithmetic at any zoom the page allows.
+     */
+    private static final float TIE_EPSILON = 0.1F;
+
+    /**
+     * True while {@code candidate} should replace {@code best}: it is clearly nearer, or it is equally near and wins
+     * the tie-break.
+     * <p>
+     * <b>The tie-break is about the ray, not about the iteration order.</b> Among entries the ray enters at
+     * effectively the same distance, the winner is the cell-face the ray meets most <em>head on</em> - the one whose
+     * outward normal is most opposed to the ray direction - because that is the face the player is looking at: at a
+     * grazing boundary the ray runs almost parallel to one of the two faces and almost perpendicular to the other, and
+     * the perpendicular one is unambiguously the one under the cursor. Distance alone cannot tell them apart, and
+     * preferring either by chance is what made the picked cell flip between two neighbours.
+     * <p>
+     * That first term is a continuous function of the ray, so it resolves the boundary smoothly. The two terms after it
+     * cannot normally be reached (two different cells cannot have the same normal <em>and</em> the same entry
+     * distance), but they make the answer total: a fixed cell order and then the face's own ordinal, so the result is
+     * a pure function of the ray and not of the order {@link #blocks()} happens to be in.
+     */
+    private static boolean wins(Hit candidate, Hit best, Vector3f direction) {
+        float candidateDistance = candidate.distance();
+        float bestDistance = best.distance();
+
+        if (candidateDistance < bestDistance - TIE_EPSILON) return true;
+        if (candidateDistance > bestDistance + TIE_EPSILON) return false;
+
+        // equally near: the more head-on face wins
+        float candidateFacing = facing(candidate.face(), direction);
+        float bestFacing = facing(best.face(), direction);
+        if (candidateFacing != bestFacing) return candidateFacing > bestFacing;
+
+        // and then a total, ray-only order, so the answer never depends on the order the parts were iterated
+        var candidateCell = candidate.offset();
+        var bestCell = best.offset();
+        int byX = Integer.compare(candidateCell.getX(), bestCell.getX());
+        if (byX != 0) return byX < 0;
+        int byY = Integer.compare(candidateCell.getY(), bestCell.getY());
+        if (byY != 0) return byY < 0;
+        int byZ = Integer.compare(candidateCell.getZ(), bestCell.getZ());
+        if (byZ != 0) return byZ < 0;
+
+        return candidate.face().ordinal() < best.face().ordinal();
+    }
+
+    /**
+     * How head on a face is to the ray: the negated cosine between the face's outward normal and the ray direction,
+     * so {@code 1} is a face the ray hits straight on and {@code -1} is one it can only leave through.
+     */
+    private static float facing(Direction face, Vector3f direction) {
+        var normal = face.getUnitVec3i();
+        return -(normal.getX() * direction.x + normal.getY() * direction.y + normal.getZ() * direction.z)
+                / direction.length();
     }
 
     /**
@@ -502,8 +570,7 @@ public final class FacePreviewWidget extends BlockPreviewWidget {
             case 1 -> sign > 0.0F ? Direction.DOWN : Direction.UP;
             default -> sign > 0.0F ? Direction.NORTH : Direction.SOUTH;
         };
-        return new Hit(offset, face, near);
-    }
+        return new Hit(offset, face, near);    }
 
     /**
      * The transform of the frame this widget is about to draw - the same numbers
