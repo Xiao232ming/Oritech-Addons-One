@@ -129,7 +129,8 @@ public final class WirelessAddonPage implements AddonPage {
      * real anchor inserted later simply covers the hint.
      */
     @Override
-    public void render(AddonPageContext context, GuiGraphicsExtractor graphics, float partialTick) {
+    public void render(AddonPageContext context, GuiGraphicsExtractor graphics, float partialTick,
+            double mouseX, double mouseY) {
         var font = Minecraft.getInstance().font;
         var menu = context.menu();
         var lines = infoLines(menu);

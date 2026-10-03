@@ -233,9 +233,11 @@ public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddon
         graphics.fill(right - 2, yo, right, yo + panelHeight, AddonPanelStyle.PANEL_DARK);
 
         // the content of the selected page only (the plugin page draws the plugin slots and the type III
-        // hints, the wireless page its info text and the Item Proxy page the net, counter and picker)
+        // hints, the wireless page its info text and the Item Proxy page the net, counter and picker).
+        // The page draws in panel space while the mouse arrives in screen space, so the origin is
+        // subtracted exactly once, here - every hit test of a page then measures what it drew.
         if (this.context != null) {
-            page.render(this.context, graphics, partialTick);
+            page.render(this.context, graphics, partialTick, mouseX - xo, mouseY - yo);
         }
 
         // player inventory (3 rows of 9) and the hotbar - these frames came from the background

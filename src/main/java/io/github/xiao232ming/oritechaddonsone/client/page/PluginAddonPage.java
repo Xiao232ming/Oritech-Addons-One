@@ -69,7 +69,8 @@ public final class PluginAddonPage implements AddonPage {
      * hints of type III end up behind any plugin that is actually inserted.
      */
     @Override
-    public void render(AddonPageContext context, GuiGraphicsExtractor graphics, float partialTick) {
+    public void render(AddonPageContext context, GuiGraphicsExtractor graphics, float partialTick,
+            double mouseX, double mouseY) {
         var layout = context.layout();
 
         // one dedicated slot per stat plugin for type III, so every slot may have its own icon
