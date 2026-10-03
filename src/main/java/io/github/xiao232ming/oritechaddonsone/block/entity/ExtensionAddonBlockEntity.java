@@ -212,15 +212,16 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
     }
 
     /**
-     * The machine this addon works on as a <b>page</b> would show it, or {@code null} while it works on none.
+     * The machine this addon works on, or {@code null} while it works on none.
      * <p>
-     * It is {@link #connectedMachinePos()} with the one difference a client forces: Oritech writes the position of the
-     * machine that claimed this block into the block's own controller <em>offset</em>, and that offset is save data of
-     * a plain block entity which never reaches a client - so on the client {@code getControllerPos()} answers the
-     * addon's own position and the client cannot tell "no machine" apart from "cannot see the machine". This method
-     * answers "the machine, or nothing" on both sides, which is all a page needs to decide whether it has something to
-     * draw. Nothing that has to be right is decided here: the server keeps the real answer, and a page that shows no
-     * machine cannot configure one either.
+     * It is {@link #connectedMachinePos()}, i.e. the position Oritech wrote into this block when the machine claimed
+     * it - the addon's own controller offset, which is save data of a plain block entity.
+     * <p>
+     * <b>That makes it a server side answer.</b> The offset never leaves the server, so on a client
+     * {@code getControllerPos()} answers the addon's own position and this method answers {@code null} for an addon
+     * that really is in use. Anything <em>authoritative</em> therefore reads it on the server only - the capability
+     * providers and the automation do - and a value a client has to draw is sent to it with the menu instead
+     * ({@code ExtensionAddonMenu#transferPreviewMachinePos()}, filled from this very method on the server).
      */
     @Nullable
     public BlockPos servedMachinePos() {

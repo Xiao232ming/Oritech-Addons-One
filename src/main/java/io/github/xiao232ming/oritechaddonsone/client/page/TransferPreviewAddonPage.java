@@ -80,11 +80,20 @@ public final class TransferPreviewAddonPage implements AddonPage {
 
     // ------------------------------------------------------------------ geometry
 
+    /**
+     * The page's rows, in panel space, top to bottom. The panel's own title label is drawn by the screen in the top
+     * band (Y 6, see {@code ExtensionAddonScreen#extractLabels}) and the counter shares that band on the right
+     * ({@link ExtensionAddonLayout#counterY()}), so the page's first own row starts below both of them: the
+     * instruction line, then the model, then the mode plates, the automation switch and the face list. Only one row
+     * exists per line of content - the three strings used to share the title's band, which drew them over each other.
+     */
+    private static final int HINT_Y = 18;
+
     /** Width and height of the 3D model's own panel, centred in the page body. */
     private static final int PREVIEW_WIDTH = 140;
     private static final int PREVIEW_HEIGHT = 96;
     /** Top edge of that panel, in panel space: below the panel's title and the instruction line. */
-    private static final int PREVIEW_Y = 22;
+    private static final int PREVIEW_Y = HINT_Y + 10;
 
     /** The three mode plates and the automation row below the model. */
     private static final int BUTTON_WIDTH = 40;
@@ -99,6 +108,8 @@ public final class TransferPreviewAddonPage implements AddonPage {
     private static final int LEGEND_CELL_WIDTH = 62;
     private static final int LEGEND_CELL_HEIGHT = 20;
     private static final int LEGEND_COLUMNS = 3;
+    /** Gap between the automation row and the face list below it. */
+    private static final int LEGEND_GAP = 4;
 
     /** The modes the plates offer, in the shared order - the same three the cube net page offers. */
     private static final List<TransferMode> MODES = TransferFaceStyle.MODES;
@@ -126,6 +137,11 @@ public final class TransferPreviewAddonPage implements AddonPage {
     /**
      * The panel ends below the face list, which is the page's own content: the player inventory sits below it either
      * way, and this page hides those slots while it is shown (see {@code ExtensionAddonScreen#syncVisiblePage}).
+     * <p>
+     * The page's own content ends at {@code legendY() + 2 * LEGEND_CELL_HEIGHT} and the panel grows to it only while
+     * that is taller than the player inventory band the menu reserves: the rows above are laid out to stay inside
+     * {@link ExtensionAddonLayout#imageHeight()} for every layout, so the panel this page draws can never reach past
+     * the drawer the screen paints (see {@link #render}).
      */
     @Override
     public int drawnHeight(ExtensionAddonLayout layout) {
@@ -134,6 +150,12 @@ public final class TransferPreviewAddonPage implements AddonPage {
 
     // ------------------------------------------------------------------ drawing
 
+    /**
+     * One row per line of content, always inside the panel: the title label and the counter own the top band (the
+     * screen draws the title, {@link #drawCounter} the counter), and everything this page draws itself starts one row
+     * below them with {@link #drawHint}. The model panel, the plates, the automation switch and the face list follow
+     * in that order (see the geometry constants).
+     */
     @Override
     public void render(AddonPageContext context, GuiGraphics graphics, float partialTick,
             double mouseX, double mouseY) {
@@ -143,6 +165,7 @@ public final class TransferPreviewAddonPage implements AddonPage {
         drawHint(context, graphics);
 
         var preview = currentPreview(context);
+        drawPreviewPanel(context, graphics);
         if (preview == null) {
             drawNoMachine(context, graphics);
             return;
@@ -247,15 +270,42 @@ public final class TransferPreviewAddonPage implements AddonPage {
                 open ? AddonPanelStyle.PANEL_TEXT : AddonPanelStyle.PANEL_TEXT_DIM, false);
     }
 
-    /** Instruction line above the model, i.e. what the player is supposed to do with it. */
+    /**
+     * The instruction line, centred in the panel one row below the panel's own title band: it names what the model
+     * and the plates below it are for.
+     * <p>
+     * It is deliberately not drawn in that band: the band already carries the block's title on the left (drawn by
+     * the screen) and the counter on the right ({@link #drawCounter}), and three strings in one eight pixel row is
+     * what used to draw them on top of each other.
+     */
     private void drawHint(AddonPageContext context, GuiGraphics graphics) {
         var font = Minecraft.getInstance().font;
         var text = Component.translatable(HINT_KEY).getString();
         graphics.drawString(font, text, context.screenX((context.panelWidth() - font.width(text)) / 2),
-                context.screenY(8), AddonPanelStyle.PANEL_TEXT_DIM, false);
+                context.screenY(HINT_Y), AddonPanelStyle.PANEL_TEXT_DIM, false);
     }
 
-    /** Placeholder while the machine's chunk is not loaded on this client, so the panel is not simply empty. */
+    /**
+     * The sunken panel the model lives in, drawn behind it: the same dark inset Oritech uses for a field that is
+     * not a button, so the model reads as the page's content rather than as something floating on the panel.
+     * <p>
+     * It is drawn for the "no machine" state as well, which is the whole point: the message then reads as this
+     * page's own empty content instead of as a line of text in an otherwise empty panel.
+     */
+    private void drawPreviewPanel(AddonPageContext context, GuiGraphics graphics) {
+        OritechSurface.PANEL_INSET.render(graphics, context.screenX(previewX(context)), context.screenY(PREVIEW_Y),
+                PREVIEW_WIDTH, PREVIEW_HEIGHT);
+    }
+
+    /**
+     * What the model's panel shows while there is no model to draw: the machine a plugin is meant to serve is not
+     * visible to this client.
+     * <p>
+     * It is reached in three cases, and they are deliberately not told apart, because the player's next step is the
+     * same in all of them: the plugin serves no machine at all (it stands on an extender no machine ever claimed),
+     * the machine it serves is in a chunk this client has not loaded, or the plugin has just been picked up. The line
+     * is centred in the model's panel, so the panel - which is drawn either way - reads as this page's empty content.
+     */
     private void drawNoMachine(AddonPageContext context, GuiGraphics graphics) {
         var font = Minecraft.getInstance().font;
         var text = Component.translatable(NO_MACHINE_KEY).getString();
@@ -382,10 +432,16 @@ public final class TransferPreviewAddonPage implements AddonPage {
     // ------------------------------------------------------------------ helpers
 
     /**
-     * The machine the page renders, as the menu it belongs to resolves it: the machine a placed plugin serves, or -
+     * The machine the page renders, as the menu it belongs to reports it: the machine a placed plugin serves, or -
      * while the page is shown inside an Extension Addon that stores a preview plugin - the machine that addon works
      * on. The page therefore never has to know which of the two screens it is drawn in; it configures whatever the
      * menu addresses.
+     * <p>
+     * The menu answers with the machine the server resolved when the screen was opened and sent along with it
+     * ({@link ExtensionAddonMenu#transferPreviewMachinePos()}). It has to come from there: the machine of a placed
+     * plugin is the one behind its host extender while the plugin's own controller position names the machine that
+     * claimed it, neither of which is synced to this side, so a lookup here would answer "no machine" even for a
+     * plugin and a machine that are both loaded.
      */
     @Nullable
     private static BlockPos machinePos(ExtensionAddonMenu menu) {
@@ -426,9 +482,9 @@ public final class TransferPreviewAddonPage implements AddonPage {
         return (context.panelWidth() - PREVIEW_WIDTH) / 2;
     }
 
-    /** Top edge of the face list, in panel space. */
+    /** Top edge of the face list, in panel space: below the automation row. */
     private static int legendY() {
-        return AUTOMATION_Y + AUTOMATION_BOX + 10;
+        return AUTOMATION_Y + AUTOMATION_BOX + LEGEND_GAP;
     }
 
     /** Left edge of the mode plate with the given index, in panel space; all three centred in the body. */

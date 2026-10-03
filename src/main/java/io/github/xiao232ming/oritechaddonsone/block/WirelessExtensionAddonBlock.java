@@ -8,7 +8,6 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.ItemInteractionResult;
@@ -163,29 +162,15 @@ public class WirelessExtensionAddonBlock extends Block implements EntityBlock, A
     }
 
     /**
-     * Opens this dock's own screen: the plugin grid, the wireless page and - while a transfer addon is
-     * stored inside - the Extension Transfer page.
+     * Opens this dock's own screen: the plugin grid, the wireless page and - while a transfer addon or
+     * 传输插件 is stored inside - that plugin's own page.
+     * <p>
+     * The buffer layout is not written here: it is shared with every other opener of this menu and lives in
+     * {@link PluginAddonMenus}, so a field a page needs can never be added to some of the openers only. The dock
+     * contributes its link and nothing else (see {@link PluginAddonMenus#openDockMenu}).
      */
     private static InteractionResult openPluginMenu(Level level, BlockPos pos, Player player) {
-        if (!level.isClientSide() && player instanceof ServerPlayer serverPlayer
-                && level.getBlockEntity(pos) instanceof WirelessExtensionAddonBlockEntity dock) {
-            var slots = dock.getContainerSize();
-            serverPlayer.openMenu(dock, buffer -> {
-                buffer.writeBlockPos(pos);
-                buffer.writeVarInt(slots);
-                // the GUI shows which machine this dock is linked to, so the link goes along with the menu
-                var machine = dock.linkedMachine();
-                buffer.writeBoolean(machine != null);
-                if (machine != null) {
-                    buffer.writeBlockPos(machine);
-                }
-                // and its name, resolved here on the server: a client that has the machine's chunk
-                // unloaded cannot look the block up itself (see connectedMachineNameKey)
-                var nameKey = dock.connectedMachineNameKey();
-                buffer.writeUtf(nameKey == null ? "" : nameKey);
-            });
-        }
-        return InteractionResult.SUCCESS;
+        return PluginAddonMenus.openDockMenu(level, pos, player);
     }
 
 

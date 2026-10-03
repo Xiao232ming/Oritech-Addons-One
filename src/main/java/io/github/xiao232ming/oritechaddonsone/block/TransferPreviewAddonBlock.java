@@ -18,6 +18,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 
 import rearth.oritech.block.blocks.addons.MachineAddonBlock;
+import rearth.oritech.init.BlockContent;
 
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferPreviewAddonBlockEntity;
 
@@ -122,16 +123,17 @@ public class TransferPreviewAddonBlock extends PluginAddonBlock {
      * {@code ServerPlayerGameMode#useItemOn}, which check for exactly that constant).
      * <p>
      * Giving the click back is therefore what opens the plugin for an empty hand, and it has to happen whenever this
-     * plugin is not serving a machine: {@code PASS_TO_DEFAULT_BLOCK_INTERACTION} is not a success, so the click is
-     * neither consumed nor answered here, and {@link #useWithoutItem} makes the real decision. Answering
-     * {@code SUCCESS} instead - which is what {@link PluginAddonMenus#openItemMenu} does for a plugin that is attached
-     * - would consume the click for every placement, including a plugin that merely stands on a wall.
+     * plugin is not one of the two placements that have a screen: {@code PASS_TO_DEFAULT_BLOCK_INTERACTION} is not a
+     * success, so the click is neither consumed nor answered here, and {@link #useWithoutItem} makes the real
+     * decision. Answering {@code SUCCESS} instead - which is what {@link PluginAddonMenus#openItemMenu} does for a
+     * plugin that is attached - would consume the click for every placement, including a plugin that merely stands on
+     * a wall.
      */
     @Override
     protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
             Player player, InteractionHand hand, BlockHitResult hit) {
         // nothing to do with this plugin as an addon: the click belongs to the empty hand hook and to Oritech
-        if (!isClaimedByAHost(state)) return super.useItemOn(stack, state, level, pos, player, hand, hit);
+        if (!canOpenScreen(state, level, pos)) return super.useItemOn(stack, state, level, pos, player, hand, hit);
 
         return PluginAddonMenus.openItemMenu(level, pos, player);
     }
@@ -150,51 +152,75 @@ public class TransferPreviewAddonBlock extends PluginAddonBlock {
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player,
             BlockHitResult hit) {
         // on the client this consumes the click; the server is still the side that opens the menu (see openPluginMenu)
-        if (!isClaimedByAHost(state)) return super.useWithoutItem(state, level, pos, player, hit);
+        if (!canOpenScreen(state, level, pos)) return super.useWithoutItem(state, level, pos, player, hit);
 
         return openPluginMenu(level, pos, player);
     }
 
     /**
-     * Opens the plugin's own screen while it serves a machine, and hands the click to Oritech - the branch's
-     * {@link InteractionResult#PASS} - for every other placement.
+     * True while the player's click should open the plugin's own screen instead of reaching Oritech: the plugin
+     * hangs on one of the two hosts it can serve.
      * <p>
-     * The two sides answer the "do I serve a machine?" question differently, because they <b>can</b>: the server
-     * resolves the machine from the world, the client cannot. Oritech keeps the position of the machine that claimed
-     * an addon in the addon's own block entity as a controller <em>offset</em>, and that offset is save data of a
-     * plain (not networked) block entity - it is written on the server and never reaches a client. On the client
-     * {@code getControllerPos()} therefore answers the plugin's own position, every host lookup built on it fails and
-     * the client would answer "I serve nothing" for a plugin that is really in use; {@code opensOnMachine} is exactly
-     * that lookup, which is why it is no longer what the hooks ask.
+     * <b>The two sides have to agree, and neither of them may need a value the other cannot see.</b> Oritech keeps
+     * the position of the machine that claimed an addon in that addon's own block entity as a controller
+     * <em>offset</em>, and that offset is save data of a plain (not networked) block entity: it is written on the
+     * server and never reaches a client, where {@code getControllerPos()} therefore answers the plugin's own
+     * position. The plugin's own answer to "do I serve a machine?" (see
+     * {@link TransferPreviewAddonBlockEntity#servedMachinePos()}) is built on exactly that value and on the
+     * extender's own controller position, so on the client it is always {@code null} - for a plugin that really is
+     * in use as much as for one that serves nothing.
+     * <p>
+     * The client therefore asks the neighbouring block instead, which is synced: the block state of a machine
+     * extender, or the {@code addon_used} flag Oritech's addon scan writes into this plugin once a machine claimed
+     * it. Both are true for a plugin a machine really claimed, in both placements, and both are false for a plugin
+     * on a wall. The server ends up with the same answer, because it reads the same two synced values first.
+     */
+    private static boolean canOpenScreen(BlockState state, Level level, BlockPos pos) {
+        // a plugin standing on an extender: the extender itself has no screen, so this plugin is the only way to
+        // configure it - also while no machine claimed that extender yet, which is the case the page reports as
+        // "no machine" instead of leaving the click unanswered
+        if (isAttachedToExtender(state, level, pos)) return true;
+
+        return state.hasProperty(MachineAddonBlock.ADDON_USED) && state.getValue(MachineAddonBlock.ADDON_USED);
+    }
+
+    /**
+     * True while the block this plugin was placed against is an Oritech machine extender. The neighbour is the one
+     * the plugin hangs on (see {@link #attachedTowards(BlockState)}), which is where the machine extender sits when
+     * the plugin is placed on one - on either side.
+     */
+    private static boolean isAttachedToExtender(BlockState state, Level level, BlockPos pos) {
+        var hostPos = pos.relative(attachedTowards(state));
+        if (!level.isLoaded(hostPos)) return false;
+
+        return level.getBlockState(hostPos).is(BlockContent.MACHINE_EXTENDER);
+    }
+
+    /**
+     * Opens the plugin's own screen for one of the two placements that have one, and reports {@code PASS} - i.e.
+     * "leave this click to Oritech" - for every other placement.
      * <p>
      * Because the block interaction runs on both sides and only the server can open a menu, the client must not make
-     * its answer depend on that lookup: it is what made a placed plugin impossible to open. The client uses the one
-     * piece of the answer that <b>is</b> synced - the {@code addon_used} flag of the block state, which Oritech's addon
-     * scan writes into the plugin for both hosts (a machine that claimed the plugin, or an extender a machine
-     * claimed) - and then treats an attached plugin as openable. The server stays authoritative: it opens the menu
-     * only while {@link TransferPreviewAddonBlockEntity#servedMachinePos()} really resolves, so a plugin that hangs on
-     * neither a machine nor an extender keeps Oritech's ordinary addon click, its faces answer nothing and nothing
-     * is moved, whatever the client believed.
+     * its answer depend on the machine lookup: it is what made a placed plugin impossible to open (see
+     * {@link #canOpenScreen}). The client uses the synced placement instead and treats an attached plugin as
+     * openable, and on the client {@link PluginAddonMenus#openItemMenu} consumes the click for this plugin without
+     * opening anything (the server owns menus and tells the client about the one it opened), so all the client's call
+     * decides is that the click is consumed here.
      * <p>
-     * Opening the screen on the client is not a duplicate of the server's own open: on the client
-     * {@link PluginAddonMenus#openPluginMenu} opens nothing at all (the server owns menus and tells the client about
-     * the one it opened), so all the client's call decides is that the click is consumed here.
+     * The <b>server</b> still resolves the machine, and the machine travels to the client with the menu (see
+     * {@link PluginAddonMenus#openItemMenu(Level, BlockPos, Player, BlockPos)}): a plugin standing on an extender no
+     * machine ever claimed opens the screen with no machine in it, which the page reports as "no machine" - the
+     * player sees why nothing is configurable instead of a click that silently does nothing. A plugin that hangs on
+     * an extender whose machine is currently unloaded keeps its screen too; the page shows the same "no machine"
+     * state until the chunk comes back.
      */
     private static InteractionResult openPluginMenu(Level level, BlockPos pos, Player player) {
         if (level.isClientSide()) return InteractionResult.SUCCESS;
         if (!(level.getBlockEntity(pos) instanceof TransferPreviewAddonBlockEntity plugin)) return InteractionResult.PASS;
-        if (plugin.servedMachinePos() == null) return InteractionResult.PASS;
 
-        return PluginAddonMenus.openPluginMenu(level, pos, player);
-    }
-
-    /**
-     * True while Oritech has attached this plugin to a host, i.e. while its {@code addon_used} flag is set. It is the
-     * only half of the "I serve a machine" answer a client can read: Oritech's addon scan sets the flag for a plugin a
-     * machine claimed directly and for a plugin hung on an extender a machine claimed, and it is a block state, so
-     * both sides see the same value.
-     */
-    private static boolean isClaimedByAHost(BlockState state) {
-        return state.hasProperty(MachineAddonBlock.ADDON_USED) && state.getValue(MachineAddonBlock.ADDON_USED);
+        // resolved here, on the server, and sent along with the menu: the client cannot look it up (see
+        // canOpenScreen) and the page needs it to build the model. The item hook's answer is asked and converted
+        // because this hook is the one 1.21.1 expects an InteractionResult from (see PluginAddonMenus#openItemMenu)
+        return PluginAddonMenus.openItemMenu(level, pos, player, plugin.servedMachinePos()).result();
     }
 }

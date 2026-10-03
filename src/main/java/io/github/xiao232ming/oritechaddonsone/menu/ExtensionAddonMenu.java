@@ -62,6 +62,23 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
     @Nullable
     private String linkedMachineNameKey;
 
+    /**
+     * The machine 传输插件's page renders, as the server resolved it when this menu was opened, or {@code null}
+     * while this block serves none.
+     * <p>
+     * It is sent through the menu-open buffer for the same reason {@link #linkedMachine} is: the page draws a 3D
+     * model of that machine, and the machine is server-only knowledge. Both the addon and the placed plugin keep it
+     * in a controller <em>offset</em>, which is plain block entity save data and never reaches a client, so the
+     * client's own {@code servedMachinePos()} answers {@code null} even for a block that really serves a machine -
+     * which is what made the page claim "the machine this plugin serves is not loaded" about a machine that was
+     * loaded all along.
+     * <p>
+     * Unlike the wireless link it is set on the server side too, so both sides read the same field and
+     * {@link #transferPreviewMachinePos()} needs no side check.
+     */
+    @Nullable
+    private BlockPos servedMachine;
+
     /** Client side: true while the screen shows the plugin page, which is what enables the plugin slots. */
     private boolean pluginPageActive = true;
     /** Client side: true while the screen shows the wireless page, which is what enables its own slot. */
@@ -206,6 +223,10 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
         if (blockEntity instanceof WirelessExtensionAddonBlockEntity dock) {
             this.linkedMachine = dock.linkedMachine();
         }
+        // Resolved here, where the world is: 传输插件's page needs the machine behind the plugin's host extender as
+        // well, and neither the extender's controller position nor the plugin's own reaches a client. The field is
+        // what the client receives, so it is set on both sides and not only in the buffer (see #servedMachine).
+        this.servedMachine = blockEntity.servedMachinePos();
         // resolved on the server, where the target's chunk is loaded whenever the target really exists
         this.linkedMachineNameKey = blockEntity.connectedMachineNameKey();
     }
@@ -402,6 +423,11 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
         // the link of a wireless addon is sent along with the menu, so the GUI can show it right away
         if (buffer.readBoolean()) {
             this.linkedMachine = buffer.readBlockPos();
+        }
+        // the machine 传输插件's page renders, resolved by the server and sent along for the same reason: it is
+        // buildable from server-only controller offsets (see #servedMachine)
+        if (buffer.readBoolean()) {
+            this.servedMachine = buffer.readBlockPos();
         }
         // the connected machine's name, resolved on the server (empty while it is unknown)
         var nameKey = buffer.readUtf();
@@ -623,25 +649,30 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
     // ------------------------------------------------------------------ the machine of the preview page
 
     /**
-     * The machine the transfer preview page renders, or {@code null} while it cannot be resolved on this side.
+     * The machine the transfer preview page renders, or {@code null} while this menu's block serves none.
      * <p>
-     * Which block entity answers depends on which screen shows the page, and that is exactly what the menu addresses:
+     * Which block the answer belongs to depends on which screen shows the page, and that is exactly what the menu
+     * addresses:
      * <ul>
-     *     <li>on 传输插件's <b>own</b> screen the menu belongs to the placed plugin, so the plugin answers with the
-     *     machine it serves - the machine it hangs on directly, or the one behind the extender it hangs on,</li>
-     *     <li>on an <b>Extension Addon's</b> screen the menu belongs to the addon, so the addon answers with the
-     *     machine it works on - the same machine the stored plugin would work on, and the same one the addon's other
-     *     face pages configure.</li>
+     *     <li>on 传输插件's <b>own</b> screen the menu belongs to the placed plugin, so the answer is the machine it
+     *     serves - the machine it hangs on directly, or the one behind the extender it hangs on,</li>
+     *     <li>on an <b>Extension Addon's</b> screen the menu belongs to the addon, so the answer is the machine that
+     *     addon works on - the same machine the stored plugin would work on, and the same one the addon's other face
+     *     pages configure.</li>
      * </ul>
-     * Both answers are {@link ExtensionAddonBlockEntity#servedMachinePos()} - the machine the block entity's
-     * controller position names - which is the one accessor that exists on the client as well as on the server (see
-     * there why). The page therefore needs no separate case per screen: it asks the menu, and the menu asks the block
-     * entity the screen was opened for.
+     * Both are {@link ExtensionAddonBlockEntity#servedMachinePos()}, resolved by the server when the menu was opened
+     * and sent along with it ({@link #servedMachine}). The page therefore needs no case per screen: it asks the menu,
+     * and the menu answers with what the server resolved for the block the screen was opened for.
+     * <p>
+     * It deliberately does <b>not</b> fall back to the block entity: {@code servedMachinePos()} is built from the
+     * controller offset Oritech writes into the block it claimed, and on a client that offset is zero, so the block
+     * entity answers {@code null} for a block that really serves a machine. The page would report "no machine" for
+     * every placement, which is the defect this field exists to fix. The block entity's own answer stays what it
+     * always was - the server's, authoritative for the capability and automation paths.
      */
     @Nullable
     public BlockPos transferPreviewMachinePos() {
-        var blockEntity = blockEntity();
-        return blockEntity == null ? null : blockEntity.servedMachinePos();
+        return servedMachine;
     }
 
     @Override
