@@ -7,6 +7,7 @@ import net.minecraft.world.entity.player.Inventory;
 
 import io.github.xiao232ming.oritechaddonsone.client.page.AddonPage;
 import io.github.xiao232ming.oritechaddonsone.client.page.AddonPageContext;
+import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 import io.github.xiao232ming.oritechaddonsone.client.page.AddonPageRegistry;
 import io.github.xiao232ming.oritechaddonsone.client.page.AddonTabStrip;
 import io.github.xiao232ming.oritechaddonsone.client.page.ProxyPickerState;
@@ -179,6 +180,12 @@ public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddon
         } else {
             TransferFaceState.clear(transferPluginPos);
         }
+
+        // INFO while "the config disappears when the UI closes" is being chased: the page draws from
+        // TransferFaceState, which is keyed by the machine now, so this line shows whether the drop below uses
+        // the key the map was stored under
+        OritechAddonsOne.LOGGER.info("[transfer] screen closed: cleared the map of {} (machine {})",
+                transferPluginPos, this.menu.transferMachinePos());
     }
 
     /**
