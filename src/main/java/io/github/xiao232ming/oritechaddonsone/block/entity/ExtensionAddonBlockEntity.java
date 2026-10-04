@@ -7,6 +7,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.NonNullList;
+import net.minecraft.core.Vec3i;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -37,8 +38,10 @@ import rearth.oritech.block.entity.addons.RedstoneAddonBlockEntity;
 import rearth.oritech.block.entity.addons.RedstoneAddonBlockEntity.RedstoneControllable;
 import rearth.oritech.init.BlockContent;
 import rearth.oritech.init.OritechConfig;
+import rearth.oritech.util.Geometry;
 import rearth.oritech.util.MachineAddonController;
 import rearth.oritech.util.MachineAddonController.BaseAddonData;
+import rearth.oritech.util.MultiblockMachineController;
 import rearth.oritech.util.ScreenProvider;
 
 import io.github.xiao232ming.oritechaddonsone.Config;
@@ -467,6 +470,20 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
     private final TransferFaceModes transferFaces = new TransferFaceModes();
 
     /**
+     * What every <b>individual face of every cell</b> of the machine's structure does - the 传输插件 page's
+     * model (see {@link CellFaceModes}).
+     * <p>
+     * <b>It lives here, on the block that holds or hosts the plugin, and not on the plugin block.</b> A
+     * transfer plugin that was <em>put into</em> an addon's plugin slot is an item: its block - and with it its
+     * block entity - does not exist in the world, so there is nothing else that could carry the settings. The
+     * page therefore addresses the block it was opened on, which is exactly this one: the addon for a stored
+     * plugin, the plugin's own block entity for one that hangs on an extender. Both write into this field, and
+     * both {@link #tickCellFaces() automation loops} read it, which is also what makes several plugins of one
+     * machine agree - each of them is reached through this block.
+     */
+    private final CellFaceModes cellFaces = new CellFaceModes();
+
+    /**
      * Faces of this block a placed transfer addon hangs on, as a bitmask over {@link Direction#values()}.
      * A block that can host one reports it through {@link #scanAttachedTransferFaces()}; the wired addons and
      * the wireless dock have nothing to scan, so this stays {@code 0} on all of them. The page draws a gold
@@ -652,6 +669,150 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
                 MachineFaceStorage.move(neighbour, null, machine, this, MachineFaceStorage.itemsPerTick());
             }
         }
+
+        // and the same for the cell-faces of the 传输插件 page, which this block carries while it holds or
+        // hosts that plugin (see #cellFaces)
+        tickCellFaces();
+    }
+
+    /**
+     * Moves items for every <b>cell-face</b> of the served machine whose automation is switched on - the
+     * automation of the 传输插件 page, which the block that holds or hosts the plugin carries (see
+     * {@link #cellFaces}).
+     * <p>
+     * A configured entry names one face of one cell, so the container it trades with is the one outside that
+     * face of that cell of the machine's structure: INPUT pulls from it into the machine, OUTPUT pushes the
+     * machine's items into it, BOTH does the two - each up to {@link MachineFaceStorage#itemsPerTick()} per
+     * entry, and only while the machine has room (INPUT) or something to give (OUTPUT), because
+     * {@link MachineFaceStorage#move} keeps going until one of the two runs out.
+     * <p>
+     * The cell-face of the machine's controller cell that the host block of this plugin stands in is skipped:
+     * a block of this mod is no container, so there is nothing to trade with there. It stays configured and
+     * saved like every other cell-face (see {@link #setCellFaceConfig}).
+     * <p>
+     * Cheap while nothing is configured, and a no-op while this block serves no machine.
+     */
+    private void tickCellFaces() {
+        if (level == null || level.isClientSide()) return;
+        if (cellFaces.isEmpty()) return;
+
+        var machinePos = servedMachinePos();
+        if (machinePos == null) return;
+
+        var machine = MachineFaceStorage.machineStorageAt(level, machinePos);
+        if (machine == null) return;
+
+        // The machine's own block entity, so that its slot roles can be respected - an INPUT face fills the
+        // input slots only and an OUTPUT face empties the output slots only (see MachineSlotRoles). A handler
+        // alone does not carry that knowledge.
+        var machineEntity = level.isLoaded(machinePos) ? level.getBlockEntity(machinePos) : null;
+        var hostFace = hostFaceOfMachine();
+
+        for (var entry : cellFaces.packedEntries()) {
+            var mode = entry.mode();
+            if (mode == TransferMode.NONE || !entry.automation()) continue;
+
+            if (entry.cell().equals(Vec3i.ZERO) && entry.face() == hostFace) continue;
+
+            var neighbour = MachineFaceStorage.storageAt(level, machinePos.offset(entry.cell()), entry.face());
+            if (neighbour == null) continue;
+
+            if (mode.allowsExtract()) {
+                MachineFaceStorage.move(machine, machineEntity, neighbour, null, MachineFaceStorage.itemsPerTick());
+            }
+            if (mode.allowsInsert()) {
+                MachineFaceStorage.move(neighbour, null, machine, machineEntity, MachineFaceStorage.itemsPerTick());
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------ the cell-faces of the 传输插件 page
+
+    /**
+     * Sets what one <b>face of one cell</b> of the machine does, i.e. which container outside that face of
+     * that cell this block trades with on its own (see {@link #tickCellFaces()}).
+     * <p>
+     * <b>The server validates the offset, not the client.</b> The cell has to name a cell of the machine this
+     * block serves ({@link #machineCellOffsets()}: the controller's own cell plus the multiblock's core
+     * positions, rotated by the machine's facing) and it has to be inside the range one entry can express
+     * ({@link CellFaceModes#isCellOffsetInRange}), so a modified client can neither configure a cell that is
+     * not part of the structure nor make this block trade with something arbitrarily far away. The offset
+     * arrives exactly as the client measured it, i.e. relative to the machine the page draws.
+     * <p>
+     * The setting is refused while this block serves no machine and while it holds no transfer plugin: both are
+     * what the page exists for, and a stored setting that nothing would ever move items by is worse than a
+     * refused click.
+     *
+     * @param cell the offset of the cell from the served machine's controller block, as the page measured it
+     * @return true while the setting was accepted and written
+     */
+    public boolean setCellFaceConfig(Vec3i cell, Direction face, TransferMode mode, boolean automation) {
+        if (level == null || level.isClientSide() || cell == null || face == null || mode == null) return false;
+        if (mode != TransferMode.NONE && !canTransferItems()) return false;
+        if (mode != TransferMode.NONE && servedMachinePos() == null) return false;
+        if (!CellFaceModes.isCellOffsetInRange(cell)) return false;
+        if (mode != TransferMode.NONE && !machineCellOffsets().contains(cell)) return false;
+
+        if (!cellFaces.set(cell, face, mode, automation)) return true;
+
+        setChanged();
+        return true;
+    }
+
+    /** The cell-face settings of this block; never {@code null}, empty while nothing is configured. */
+    public CellFaceModes cellFaceModes() {
+        return cellFaces;
+    }
+
+    /**
+     * The cells of the served machine's structure, as offsets from its controller block: the controller's own
+     * cell plus every cell Oritech's part list names ({@code MultiblockMachineController#getCorePositions()}),
+     * each rotated by the machine's facing the way the assembled machine itself rotates them.
+     * <p>
+     * It is the list the server validates a client's offset against, and it is deliberately the same list the
+     * page builds its model from: a one-block machine - or a machine whose block entity is not a multiblock
+     * controller at all - is the one cell at the origin.
+     * <p>
+     * Empty while this block serves no machine or the machine's chunk is not loaded, which is what makes every
+     * configuration request fail then.
+     */
+    public List<Vec3i> machineCellOffsets() {
+        var machinePos = servedMachinePos();
+        if (machinePos == null || level == null || !level.isLoaded(machinePos)) return List.of();
+
+        var cells = new ArrayList<Vec3i>();
+        cells.add(Vec3i.ZERO);
+
+        var machineEntity = level.getBlockEntity(machinePos);
+        if (machineEntity instanceof MultiblockMachineController multiblock) {
+            var facing = multiblock.getFacingForMultiblock();
+            for (var relative : multiblock.getCorePositions()) {
+                var cell = Geometry.rotatePosition(relative, facing);
+                if (!cells.contains(cell)) cells.add(cell);
+            }
+        }
+        return List.copyOf(cells);
+    }
+
+    /**
+     * The face of the machine the block this plugin hangs on stands in, or {@code null} while that block is
+     * not next to the machine's core block at all - and {@code null} is also the answer this class gives.
+     * <p>
+     * It answers a question about the <b>neighbour</b> rather than about the face: hung directly on the machine
+     * this is the face the plugin block is the neighbour of, and hung on an extender it is the face the
+     * extender sits in. In both cases a block of this mod stands there instead of a possible container, which
+     * is why the automation has nothing to trade with in that direction (see {@link #tickCellFaces()}).
+     * <p>
+     * <b>The base class does not know where its host stands.</b> Which cell of the machine an addon occupies
+     * depends on the placement rules of the block, which only the block knows - and the block state cannot be
+     * asked from here either, because vanilla's {@code getConnectedDirection} is protected in the class the
+     * Oritech addon blocks extend. The subclasses that do know override this (see
+     * {@code TransferAddonBlockEntity}); {@code null} means "skip nothing", so every cell-face is served and
+     * the one the host may stand in simply finds no container.
+     */
+    @Nullable
+    protected Direction hostFaceOfMachine() {
+        return null;
     }
 
     /**
@@ -1171,10 +1332,11 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         ContainerHelper.saveAllItems(nbt, singles, registries);
         nbt.putIntArray("counts", counts);
 
-        // the per-face inventory proxy bindings of the Item Proxy page and the transfer modes of the
-        // Extension Transfer page
+        // the per-face inventory proxy bindings of the Item Proxy page, the transfer modes of the
+        // Extension Transfer page and the cell-faces of the 传输插件 page
         proxyFaces.save(nbt);
         transferFaces.save(nbt);
+        cellFaces.save(nbt);
     }
 
     @Override
@@ -1186,6 +1348,7 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         // a stale binding or mode is harmless: it only resolves to an inventory while the machine is there
         proxyFaces.load(nbt);
         transferFaces.load(nbt);
+        cellFaces.load(nbt);
 
         var counts = nbt.getIntArray("counts");
         if (counts.length == 0) return;
