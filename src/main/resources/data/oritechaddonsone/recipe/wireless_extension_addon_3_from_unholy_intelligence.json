@@ -9,7 +9,7 @@
       "item": "oritech:machine_extender"
     },
     "C": {
-      "item": "oritech:processing_unit"
+      "item": "oritech:unholy_intelligence"
     },
     "D": {
       "item": "minecraft:ender_pearl"
@@ -22,6 +22,6 @@
   ],
   "result": {
     "count": 1,
-    "id": "oritechaddonsone:wireless_extension_addon_1"
+    "id": "oritechaddonsone:wireless_extension_addon_3"
   }
 }

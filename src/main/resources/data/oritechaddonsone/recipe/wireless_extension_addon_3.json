@@ -2,15 +2,23 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "key": {
-    "I": { "item": "minecraft:iron_ingot" },
-    "D": { "item": "oritech:target_designator" },
-    "R": { "item": "minecraft:ender_pearl" },
-    "A": { "item": "oritechaddonsone:extension_addon_3" }
+    "A": {
+      "item": "oritech:steel_ingot"
+    },
+    "B": {
+      "item": "oritech:machine_extender"
+    },
+    "C": {
+      "item": "oritech:super_ai_chip"
+    },
+    "D": {
+      "item": "minecraft:ender_pearl"
+    }
   },
   "pattern": [
-    "IDI",
-    "RAR",
-    "IDI"
+    "ABA",
+    "ACA",
+    "ADA"
   ],
   "result": {
     "count": 1,

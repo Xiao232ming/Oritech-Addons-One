@@ -1,11 +1,11 @@
 {
   "parent": "minecraft:recipes/root",
   "criteria": {
-    "has_super_ai_chip": {
+    "has_unholy_intelligence": {
       "conditions": {
         "items": [
           {
-            "items": "oritech:super_ai_chip"
+            "items": "oritech:unholy_intelligence"
           }
         ]
       },
@@ -13,7 +13,7 @@
     },
     "has_the_recipe": {
       "conditions": {
-        "recipe": "oritechaddonsone:extension_addon_3"
+        "recipe": "oritechaddonsone:extension_addon_3_from_unholy_intelligence"
       },
       "trigger": "minecraft:recipe_unlocked"
     }
@@ -21,12 +21,12 @@
   "requirements": [
     [
       "has_the_recipe",
-      "has_super_ai_chip"
+      "has_unholy_intelligence"
     ]
   ],
   "rewards": {
     "recipes": [
-      "oritechaddonsone:extension_addon_3"
+      "oritechaddonsone:extension_addon_3_from_unholy_intelligence"
     ]
   }
 }

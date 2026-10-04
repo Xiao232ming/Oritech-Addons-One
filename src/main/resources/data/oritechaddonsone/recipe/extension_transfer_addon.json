@@ -3,25 +3,25 @@
   "category": "misc",
   "key": {
     "A": {
-      "item": "oritech:steel_ingot"
+      "item": "minecraft:piston"
     },
     "B": {
-      "item": "oritech:machine_extender"
+      "item": "oritech:plastic_sheet"
     },
     "C": {
       "item": "oritech:processing_unit"
     },
     "D": {
-      "item": "minecraft:ender_pearl"
+      "item": "oritech:machine_extender"
     }
   },
   "pattern": [
-    "ABA",
-    "ACA",
-    "ADA"
+    " A ",
+    "BCB",
+    "BDB"
   ],
   "result": {
     "count": 1,
-    "id": "oritechaddonsone:wireless_extension_addon_1"
+    "id": "oritechaddonsone:extension_transfer_addon"
   }
 }

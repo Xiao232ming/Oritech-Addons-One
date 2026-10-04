@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "A": {
+      "item": "oritech:plastic_sheet"
+    },
+    "B": {
+      "item": "oritech:small_tank_block"
+    },
+    "C": {
+      "item": "oritech:silicon"
+    },
+    "D": {
+      "tag": "oritech:plating"
+    }
+  },
+  "pattern": [
+    "AAA",
+    "ABA",
+    "CDC"
+  ],
+  "result": {
+    "count": 1,
+    "id": "oritechaddonsone:tank_addon"
+  }
+}

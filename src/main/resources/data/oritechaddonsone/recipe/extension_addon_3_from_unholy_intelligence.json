@@ -9,19 +9,15 @@
       "item": "oritech:machine_extender"
     },
     "C": {
-      "item": "oritech:processing_unit"
-    },
-    "D": {
-      "item": "minecraft:ender_pearl"
+      "item": "oritech:unholy_intelligence"
     }
   },
   "pattern": [
     "ABA",
-    "ACA",
-    "ADA"
+    "ACA"
   ],
   "result": {
     "count": 1,
-    "id": "oritechaddonsone:wireless_extension_addon_1"
+    "id": "oritechaddonsone:extension_addon_3"
   }
 }
