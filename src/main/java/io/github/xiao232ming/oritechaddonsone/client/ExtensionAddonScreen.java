@@ -168,8 +168,16 @@ public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddon
         // only this GUI's own model: another addon screen can be open at the same time
         TransferAddonState.clear(this.menu.position());
         // and the cell-face map the server sent for this block, for the same reason - the next time this GUI is
-        // opened the server sends it again with the menu
-        TransferFaceState.clear(this.menu.position());
+        // opened the server sends it again with the menu. It is dropped under the position it is held under, which
+        // is the plugin's and not this menu's: an addon's screen shows a transfer plugin standing in its slots
+        // (see ExtensionAddonMenu#transferPluginPos), and one that was taken out meanwhile has no position of its
+        // own to drop - its map then simply stays until the client's next GUI is closed, which clears every map.
+        var transferPluginPos = this.menu.transferPluginPos();
+        if (transferPluginPos.equals(this.menu.position())) {
+            TransferFaceState.clear();
+        } else {
+            TransferFaceState.clear(transferPluginPos);
+        }
     }
 
     /**
