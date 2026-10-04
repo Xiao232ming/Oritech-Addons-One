@@ -257,6 +257,11 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
      */
     private static int moveDose(ResourceHandler<ItemResource> from, @Nullable BlockEntity fromOwner,
             ResourceHandler<ItemResource> to, @Nullable BlockEntity toOwner, int amount, boolean useRoles) {
+        // A side that could not be resolved is nothing to move between, and both handlers are looked up per
+        // tick: a machine that is broken, replaced or unloaded in between leaves a null here, which used to
+        // reach the target and crash the server on the tick (see insertInto).
+        if (from == null || to == null) return 0;
+
         var moved = 0;
 
         for (var slot = 0; slot < from.size(); slot++) {
@@ -308,6 +313,8 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
      */
     private static int insertInto(ResourceHandler<ItemResource> to, @Nullable BlockEntity toOwner,
             ItemResource resource, int amount, TransactionContext transaction, boolean useRoles) {
+        if (to == null) return 0;
+
         var roles = !useRoles || toOwner == null ? null : MachineSlotRoles.of(toOwner);
         if (roles == null) return to.insert(resource, amount, transaction);
 
