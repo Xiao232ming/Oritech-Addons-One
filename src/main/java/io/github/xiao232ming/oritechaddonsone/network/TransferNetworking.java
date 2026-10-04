@@ -126,14 +126,19 @@ public final class TransferNetworking {
         public static void handle(SetCellFaceMode packet, IPayloadContext context) {
             if (!(context.player() instanceof ServerPlayer player)) return;
 
+            // The block this setting belongs to is the one the page was opened on: the transfer plugin itself
+            // while it hangs on an extender, or - the common case - the Extension Addon that holds it in a
+            // plugin slot. A stored plugin is an <b>item</b>, so its own block entity does not exist in the
+            // world and the addon is the only block that can carry the setting
+            // (see ExtensionAddonBlockEntity#cellFaces).
             if (!(player.level().getBlockEntity(packet.pos())
-                    instanceof TransferAddonBlockEntity plugin)) {
+                    instanceof ExtensionAddonBlockEntity owner)) {
                 // INFO on purpose: this is the one branch that makes a configuration look like it was never
                 // stored, and it is invisible in the default log otherwise - the position the client addressed
-                // did not hold a transfer plugin (gone, other block, or the wrong position altogether)
+                // did not hold a block of this mod at all
                 var found = player.level().getBlockEntity(packet.pos());
                 OritechAddonsOne.LOGGER.info(
-                        "[transfer] dropped a cell-face setting for {}: no transfer plugin there (block {}, entity {})",
+                        "[transfer] dropped a cell-face setting for {}: no transfer-capable block there (block {}, entity {})",
                         packet.pos(), player.level().getBlockState(packet.pos()).getBlock(),
                         found == null ? "none" : found.getClass().getSimpleName());
                 return;
@@ -148,22 +153,22 @@ public final class TransferNetworking {
                 return;
             }
 
-            if (!plugin.setCellFaceConfig(entry.cell(), entry.face(), entry.mode(), entry.automation())) {
+            if (!owner.setCellFaceConfig(entry.cell(), entry.face(), entry.mode(), entry.automation())) {
                 OritechAddonsOne.LOGGER.info(
                         "[transfer] refused {} for {} cell {} face {} (machine {} - cell in range {} / part of it {})",
-                        entry.mode(), packet.pos(), entry.cell(), entry.face(), plugin.servedMachinePos(),
+                        entry.mode(), packet.pos(), entry.cell(), entry.face(), owner.servedMachinePos(),
                         CellFaceModes.isCellOffsetInRange(entry.cell()),
-                        plugin.machineCellOffsets().contains(entry.cell()));
+                        owner.machineCellOffsets().contains(entry.cell()));
                 return;
             }
 
-            // the page draws the whole map, so every player whose page is open on this plugin gets the authoritative
-            // copy back - including the entry a clear just removed
+            // the page draws the whole map, so every player whose page is open on this block gets the
+            // authoritative copy back - including the entry a clear just removed
             sendFaceModes(player.level(), packet.pos());
 
             OritechAddonsOne.LOGGER.info("[transfer] stored {} on {} cell {} face {} (automation {}, {} face(s) now)",
                     entry.mode(), packet.pos(), entry.cell(), entry.face(), entry.automation(),
-                    plugin.cellFaceModes().configuredFaces());
+                    owner.cellFaceModes().configuredFaces());
         }
     }
 
@@ -208,10 +213,10 @@ public final class TransferNetworking {
         }
     }
 
-    /** Sends the whole cell-face map of {@code plugin} to one player. */
-    public static void sendFaceModes(ServerPlayer player, BlockPos pos, TransferAddonBlockEntity plugin) {
+    /** Sends the whole cell-face map of {@code owner} to one player. */
+    public static void sendFaceModes(ServerPlayer player, BlockPos pos, ExtensionAddonBlockEntity owner) {
         var packed = new ArrayList<Integer>();
-        for (var entry : plugin.cellFaceModes().packedEntries()) {
+        for (var entry : owner.cellFaceModes().packedEntries()) {
             packed.add(CellFaceModes.pack(entry));
         }
         player.connection.send(new FaceModes(pos, packed));
@@ -221,40 +226,38 @@ public final class TransferNetworking {
      * Sends the whole cell-face map of the block entity at {@code pos} to <b>every player whose page is open on it</b>.
      * <p>
      * Not just the player whose change it was: the map is one setting per cell-face of one machine, so two players
-     * looking at the same plugin have to see the same map - otherwise the second one's counter is wrong and their next
+     * looking at the same page have to see the same map - otherwise the second one's counter is wrong and their next
      * click would overwrite a setting they never saw. "Their page is open on it" is asked through the menu they have
      * open: only this mod's own addon menu ({@code ExtensionAddonMenu}) can be showing this page, and that menu knows
      * the block it belongs to, so a player who is merely standing nearby is not sent anything.
      * <p>
-     * <b>The menu can belong to the plugin itself or to the block that holds it</b>, and both have to be recognised:
-     * a plugin that hangs on an extender is the block whose screen shows the page, so its own menu is opened on
-     * {@code pos}, while a plugin stored in an Extension Addon's slots is drawn by that addon's menu, which is opened
-     * on the addon's position instead. Asking only for the first kind silently skipped the second - which is the very
-     * case of a stored plugin, and the reason its page drew an empty map.
+     * The block is the one that carries the settings - the transfer plugin that hangs on an extender, or the
+     * Extension Addon that holds it in a plugin slot - and the menu that shows its page is opened on exactly that
+     * block, so the menu's own position is the key (see {@code ExtensionAddonMenu#transferPluginPos()}).
      * <p>
-     * Does nothing on the client and nothing while the block entity is not a transfer plugin.
+     * Does nothing on the client and nothing while the block entity is not one of this mod's transfer-capable blocks.
      */
     public static void sendFaceModes(Level level, BlockPos pos) {
         if (level == null || level.isClientSide()) return;
-        if (!(level.getBlockEntity(pos) instanceof TransferAddonBlockEntity plugin)) return;
+        if (!(level.getBlockEntity(pos) instanceof ExtensionAddonBlockEntity owner)) return;
         if (!(level instanceof ServerLevel serverLevel)) return;
 
         for (var player : serverLevel.getServer().getPlayerList().getPlayers()) {
             if (!(player.containerMenu instanceof ExtensionAddonMenu menu)) continue;
-            if (!menu.position().equals(pos) && !menu.holdsTransferPlugin(pos)) continue;
+            if (!menu.position().equals(pos)) continue;
 
-            sendFaceModes(player, pos, plugin);
+            sendFaceModes(player, pos, owner);
             // INFO so that "the page stayed empty" can be told apart from "the map never went out": an empty
             // page after this line means the client had the data and did not draw it
             OritechAddonsOne.LOGGER.info("[transfer] sent {} configured face(s) of {} to {}",
-                    plugin.cellFaceModes().configuredFaces(), pos, player.getName().getString());
+                    owner.cellFaceModes().configuredFaces(), pos, player.getName().getString());
         }
     }
 
     /** Sends the whole cell-face map of the block entity at {@code pos} to one player. */
     public static void sendFaceModes(ServerPlayer player, BlockPos pos) {
-        if (!(player.level().getBlockEntity(pos) instanceof TransferAddonBlockEntity plugin)) return;
-        sendFaceModes(player, pos, plugin);
+        if (!(player.level().getBlockEntity(pos) instanceof ExtensionAddonBlockEntity owner)) return;
+        sendFaceModes(player, pos, owner);
     }
 
     /**
