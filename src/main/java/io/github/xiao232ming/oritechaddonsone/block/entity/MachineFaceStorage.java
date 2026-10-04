@@ -188,12 +188,15 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
      * dose takes the budget as its target and hands it to the target's slots in order, so the first slot that
      * accepts the item is topped up to its maximum and whatever is left over flows into the next one - the face
      * set to INPUT fills until the machine's input slots are full, and the face set to OUTPUT empties the output
-     * slots as soon as something is in them, both bounded by the configured rate per tick
-     * ({@code Config#transferItemsPerTick()}).
+     * slots as soon as something is in them. The same dose walks <b>every</b> source slot, so a machine whose
+     * items sit in several output slots is emptied in one tick instead of one slot per tick; the rate per slot and
+     * per direction is the configured one ({@code Config#transferItemsPerTick()}).
      * <p>
      * Nothing can be lost: Oritech's storage has no transaction, so the target is asked with a simulated insert
      * first and only the amount it really takes is extracted; whatever a target refuses in between is handed
-     * straight back. A dose that moves nothing ends the loop, so a target that refuses everything cannot spin.
+     * straight back. Every source slot is served by one dose, so the rate below is a rate per slot and per
+     * direction, not a rate for the whole face. A dose that moves nothing ends the loop, so a target that refuses
+     * everything cannot spin.
      *
      * @param amount total number of items this call may move, i.e. the cap of one dose
      */
@@ -210,18 +213,31 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
     }
 
     /**
-     * Moves one dose: from the first source slot the roles let go of into the target's accepting slots, up to
-     * {@code amount}.
+     * Moves one dose: every source slot the roles let go of, each up to {@code amount}, into the target's
+     * accepting slots.
      * <p>
-     * The target is asked with a simulated insert of exactly the dose, so the answer is how much of it the
-     * machine's input slots (or its free slots, for a target without roles) would really hold - a partial stack
-     * included, which is what tops it up to its maximum.
+     * <b>Every source slot, not just the first one.</b> A machine can have several output slots, and serving only
+     * one of them per call meant the second slot's items waited for the first slot to be emptied - a machine with
+     * four full output slots needed four passes to push them all out, which is exactly the "one slot lags behind"
+     * the automation is supposed to avoid. The dose therefore walks the source slots in order and moves what each
+     * of them holds, so items in <em>any</em> output slot leave in the same tick.
+     * <p>
+     * The other side of the same coin is {@link #insertInto}, which spreads a dose over the target's accepting
+     * slots in order: a partially filled slot of the same item is topped up to its maximum first and the rest
+     * flows into the following slots, so every input slot of a machine is reachable in one dose as well. The
+     * target is asked with a simulated insert of exactly the dose, which is what makes that answer the real
+     * capacity of those slots.
+     * <p>
+     * Nothing can be lost: the simulated extract means only what the source really gives is taken, and whatever
+     * a target refuses in between is handed straight back.
      *
      * @return number of items moved, or {@code 0} while nothing could be moved
      */
     private static int moveDose(ItemApi.InventoryStorage from, @Nullable BlockEntity fromOwner,
             ItemApi.InventoryStorage to, @Nullable BlockEntity toOwner, int amount) {
         if (!from.supportsExtraction() || !to.supportsInsertion()) return 0;
+
+        var moved = 0;
 
         for (int slot = 0; slot < from.getSlotCount(); slot++) {
             if (!MachineSlotRoles.allowsExtractAt(fromOwner, slot)) continue;
@@ -246,10 +262,10 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
                 from.insert(offered.copyWithCount(extracted - inserted), false);
             }
 
-            return inserted;
+            moved += inserted;
         }
 
-        return 0;
+        return moved;
     }
 
     /**
