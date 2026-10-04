@@ -154,10 +154,9 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
     }
 
     /**
-     * Moves up to {@link #itemsPerTick()} items from {@code from} to {@code to}, as whole stacks, and reports
-     * nothing: it is the four argument form without owners, i.e. for two handlers whose machines are not known
-     * here - a caller that has the machine's block entity passes it so the machine's slot roles can be
-     * respected.
+     * Moves up to {@link #itemsPerTick()} items from {@code from} to {@code to} and reports nothing: it is the
+     * four argument form without owners, i.e. for two handlers whose machines are not known here - a caller that
+     * has the machine's block entity passes it so the machine's slot roles can be respected.
      */
     public static void move(ResourceHandler<ItemResource> from, ResourceHandler<ItemResource> to) {
         move(from, null, to, null);
@@ -179,8 +178,8 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
      * in - never out of a machine's input slot and never into one of its output slots. A {@code null} owner
      * is a container with no roles to respect: a chest, a pipe, another mod's inventory.
      * <p>
-     * It moves whole stacks and stops at the first one that really travels; the loop that keeps going until the
-     * budget is used up is {@link #move(ResourceHandler, BlockEntity, ResourceHandler, BlockEntity, int)}.
+     * It delegates to the form the automation uses, i.e. one dose of up to {@link #itemsPerTick()} items
+     * ({@link #move(ResourceHandler, BlockEntity, ResourceHandler, BlockEntity, int)}).
      */
     public static void move(ResourceHandler<ItemResource> from, @Nullable BlockEntity fromOwner,
             ResourceHandler<ItemResource> to, @Nullable BlockEntity toOwner) {
@@ -188,29 +187,31 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
     }
 
     /**
-     * The form the <b>automation of a face</b> calls: keeps moving items between the two handlers while the
-     * target still takes them and the budget lasts, instead of stopping after one stack.
+     * The form the <b>automation of a face</b> calls: it moves as many items as the two sides and the budget
+     * allow, in <b>one</b> transaction, instead of one stack per step.
      * <p>
-     * <b>That is what makes "fill while there is room, empty while there is something" true.</b> A face set to
-     * INPUT keeps pulling from the container outside it until the machine's input slots are full (or nothing
-     * else fits), and a face set to OUTPUT keeps pushing the machine's products out until its output slots are
-     * empty - the budget is what bounds one tick, not which slot the move happened to look at first. Stopping
-     * after the first stack meant a machine could sit with empty input slots and a full container next to it and
-     * still move nothing, because the first stack the loop met was one whose slot was already full.
+     * <b>Filling a slot up to its maximum is exactly what this makes possible.</b> A slot that already holds
+     * some of the item has room for "its maximum minus what is in there", and a step that may only insert one
+     * stack's worth stops at that difference: the slot creeps towards its maximum instead of being filled. A
+     * dose takes the budget as its target and hands it to the target's slots in order, so the first slot that
+     * accepts the item is topped up to its maximum and whatever is left over flows into the next one - the face
+     * set to INPUT fills until the machine's input slots are full, and the face set to OUTPUT empties the output
+     * slots as soon as something is in them, both bounded by the configured rate per tick
+     * ({@code Config#transferItemsPerTick()}).
      * <p>
-     * Each stack still travels as its own all-or-nothing step (see the four argument form), so the transaction
-     * safety and the slot roles are unchanged; what is new is only that the loop continues with the rest of the
-     * budget. A step that moves nothing ends the loop, so a target that refuses everything cannot spin.
+     * A dose is still all-or-nothing: the target is asked how much it would take (a dry run that is rolled
+     * back), and only while the source can really give exactly that amount is it committed - so nothing is ever
+     * duplicated or dropped, and the machine's slot roles ({@link MachineSlotRoles}) decide which slots count as
+     * a destination. A dose that moves nothing ends the loop, so a target that refuses everything cannot spin.
      *
-     * @param amount total number of items this call may move, and the cap of a single stack as well
+     * @param amount total number of items this call may move, i.e. the cap of one dose
      */
     public static void move(ResourceHandler<ItemResource> from, @Nullable BlockEntity fromOwner,
             ResourceHandler<ItemResource> to, @Nullable BlockEntity toOwner, int amount) {
-        // a machine's slots hold vanilla stacks, so one step never has to look at more than one of them
         var budget = Math.max(1, Math.min(amount, itemsPerTick()));
 
         while (budget > 0) {
-            var moved = moveOneStack(from, fromOwner, to, toOwner, Math.min(budget, 64));
+            var moved = moveDose(from, fromOwner, to, toOwner, budget);
             if (moved <= 0) return;
 
             budget -= moved;
@@ -218,14 +219,19 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
     }
 
     /**
-     * Moves the first stack that fits, as one transaction: what the four argument form has always done. Stops
-     * at the first slot the source may give away whose whole wanted amount really travels.
+     * Moves one dose: from the first source slot the roles let go of into the target's accepting slots, up to
+     * {@code amount}, as one transaction.
+     * <p>
+     * The source slot is emptied up to the dose, and the caller's loop then continues with the next one, which
+     * is what lets a single call move more than one stack when the budget allows it. A slot whose dose cannot
+     * travel - the target does not want that item - is skipped rather than ending the dose, so an output slot
+     * the neighbour refuses does not hold up the slots behind it.
      *
      * @return number of items moved, or {@code 0} while nothing could be moved
      */
-    private static int moveOneStack(ResourceHandler<ItemResource> from, @Nullable BlockEntity fromOwner,
+    private static int moveDose(ResourceHandler<ItemResource> from, @Nullable BlockEntity fromOwner,
             ResourceHandler<ItemResource> to, @Nullable BlockEntity toOwner, int amount) {
-        for (int slot = 0; slot < from.size(); slot++) {
+        for (var slot = 0; slot < from.size(); slot++) {
             if (!MachineSlotRoles.allowsExtractAt(fromOwner, slot)) continue;
 
             var resource = from.getResource(slot);
@@ -234,21 +240,19 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
             var wanted = amountAccepted(to, toOwner, resource, amount);
             if (wanted <= 0) continue;
 
-            // declared outside the transaction so the amount that really travelled can be reported to the
-            // caller's budget loop below
+            // the amount that really travelled; the transaction is not committed unless extract and insert
+            // agree, and a slot whose dose does not travel leaves the loop to try the next one
             var inserted = 0;
 
             try (var transaction = Transaction.openRoot()) {
-                int extracted = from.extract(slot, resource, wanted, transaction);
-                if (extracted <= 0) continue;
-
-                inserted = insertInto(to, toOwner, resource, extracted, transaction);
-                if (inserted != extracted) continue;
-
-                transaction.commit();
+                var extracted = from.extract(slot, resource, wanted, transaction);
+                if (extracted > 0) {
+                    inserted = insertInto(to, toOwner, resource, extracted, transaction);
+                    if (inserted == extracted) transaction.commit();
+                }
             }
 
-            return inserted;
+            if (inserted > 0) return inserted;
         }
 
         return 0;
@@ -267,9 +271,12 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
     }
 
     /**
-     * Inserts into the target, skipping the slots Oritech reserved for its outputs while the target is a
-     * machine whose roles are known. A target that is not a machine - a chest, a pipe, another mod's
-     * inventory - has no roles and is asked exactly as before.
+     * Inserts into the target's accepting slots, in slot order, up to {@code amount} in total: a slot that
+     * already holds part of the item is filled to its maximum first, and the rest goes to the following ones.
+     * <p>
+     * The slots Oritech reserved for a machine's outputs are skipped while the target is a machine whose roles
+     * are known; a target that is not a machine - a chest, a pipe, another mod's inventory - has no roles and is
+     * asked exactly as before.
      */
     private static int insertInto(ResourceHandler<ItemResource> to, @Nullable BlockEntity toOwner,
             ItemResource resource, int amount, TransactionContext transaction) {
@@ -279,7 +286,14 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
         var inserted = 0;
         for (var slot = 0; slot < roles.length && inserted < amount; slot++) {
             if (!MachineSlotRoles.allowsInsertAt(toOwner, slot)) continue;
-            inserted += to.insert(slot, resource, amount - inserted, transaction);
+
+            var remaining = amount - inserted;
+            // the receiving slot's own view of "how much of this item fits here" is what tops a partial stack up
+            // to its maximum instead of stopping at what one stack of it would add
+            var capacity = (int) Math.min(remaining, to.getCapacityAsLong(slot, resource));
+            if (capacity <= 0) continue;
+
+            inserted += to.insert(slot, resource, capacity, transaction);
         }
         return inserted;
     }
