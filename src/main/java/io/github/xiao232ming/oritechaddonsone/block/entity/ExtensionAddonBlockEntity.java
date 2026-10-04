@@ -691,29 +691,36 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         // machine's map is retried here, from the tick, until it can be - exactly once, because the merge clears
         // the block's own copy. Without this the settings on disk stayed in the block and the machine's map was
         // empty for the whole session: every face did nothing, however often it was configured.
-        if (!savedTransferFaces().isEmpty() || !savedCellFaces.isEmpty()) {
+        if (mergePending) {
             var machinePos = servedMachinePos();
-            var mapIsEmpty = machinePos == null
-                    || (MachineFaceConfigs.faceModes(level, machinePos).isEmpty()
-                        && MachineFaceConfigs.cellFaces(level, machinePos).isEmpty());
-            if (mapIsEmpty) {
+            if (machinePos == null) {
+                // the machine cannot be named yet: this is the normal state for a moment while a world loads
+            } else {
                 syncCellFaces();
+                mergePending = false;
                 OritechAddonsOne.LOGGER.info(
-                        "[transfer] retried the merge of {} for machine {}: shared now {} face(s)",
-                        worldPosition, servedMachinePos(),
-                        machinePos == null ? 0 : MachineFaceConfigs.cellFaces(level, machinePos).configuredFaces());
+                        "[transfer] merged the saved settings of {} into machine {}: shared now {} face(s)",
+                        worldPosition, machinePos, MachineFaceConfigs.cellFaces(level, machinePos).configuredFaces());
             }
         }
 
         var faces = transferModes();
         if (faces.isEmpty() || !canTransferItems()) {
-            // INFO on purpose, and only while the block holds a transfer plugin at all: this is the branch that
-            // makes every configured face do nothing, and an empty map here is indistinguishable from "the
-            // automation is broken" without this line.
             if (canTransferItems()) {
-                OritechAddonsOne.LOGGER.info(
-                        "[transfer] {} holds a plugin but has no automated face configured (machine {}, {} face(s): {})",
-                        worldPosition, servedMachinePos(), faces.configuredFaces(), describeFaces(faces));
+                // INFO while the settings of a loaded block are being chased, throttled to once a second:
+                // the two machine positions are printed next to each other on purpose, because the map the
+                // settings are merged into and the map the automation reads have to be the same one - and
+                // they come from two different resolutions (connectedMachinePos, servedMachinePos).
+                if (diagnosticsDue()) {
+                    OritechAddonsOne.LOGGER.info(
+                            "[transfer] {} holds a plugin but has no automated face: connected {}, served {}, "
+                                    + "map here {} face(s) {}, map there {} face(s) {}, own copy {} face(s): {}",
+                            worldPosition, connectedMachinePos(), servedMachinePos(),
+                            faces.configuredFaces(), describeFaces(faces),
+                            servedMachinePos() == null ? -1
+                                    : MachineFaceConfigs.cellFaces(level, servedMachinePos()).configuredFaces(),
+                            savedCellFaces.configuredFaces(), describeFaces(savedTransferFaces()));
+                }
             }
             return;
         }
@@ -904,6 +911,22 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
     /** This block's own copy of the six faces, i.e. what it saves - see {@link #syncCellFaces()}. */
     TransferFaceModes savedTransferFaces() {
         return transferFaces;
+    }
+
+    /**
+     * True while this block has settings of its own that have not been merged into its machine's map yet.
+     * <p>
+     * It is set while the save data is read - at a moment the machine cannot be named yet - and cleared by the
+     * merge, which is what the tick retries until it can run. It is deliberately a flag and not "the block's
+     * maps are not empty": the merge mirrors the machine's map back into the block's own maps, so those stay
+     * non-empty for the rest of the session and an emptiness test would look like a merge that still has to
+     * happen.
+     */
+    private boolean mergePending;
+
+    /** Marks that this block holds settings the machine's map does not have yet; see {@link #mergePending}. */
+    void markMergePending() {
+        mergePending = true;
     }
 
     void syncCellFaces() {
@@ -1537,6 +1560,8 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         // the machine's shared settings this block was saved with; the machine's controller offset is read by
         // the superclass above, so servedMachinePos() is available here
         MachineFaceConfigs.load(this, nbt);
+        // the machine cannot be named at this moment, so the merge happens once it can (see mergePending)
+        markMergePending();
         syncCellFaces();
 
         var counts = nbt.getIntArray("counts");
