@@ -1,5 +1,7 @@
 package io.github.xiao232ming.oritechaddonsone.menu;
 
+import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonType;
+
 /**
  * Geometry of the Extension Addon GUI, derived from the (configurable) slot count.
  * <p>
@@ -24,12 +26,27 @@ package io.github.xiao232ming.oritechaddonsone.menu;
  * part of the GUI, so it is defined here together with the panel and used by the screen.
  */
 public record ExtensionAddonLayout(int slots, int columns, int rows, int firstSlotX, int firstSlotY,
-                                    int playerRowsY, int hotbarY, int imageWidth, int imageHeight) {
+                                    int playerRowsY, int hotbarY, int imageWidth, int imageHeight,
+                                    boolean columnMajor) {
 
     public static final int MIN_SLOTS = 1;
-    /** Internal storage size: 8 rows of 9 slots, also the upper bound of the type I / II slot config. */
-    public static final int MAX_SLOTS = 72;
     public static final int SLOT_SIZE = 18;
+
+    /**
+     * Columns of the type III grid, one per stat category - derived from the enum so a new category gets
+     * its own column without touching the geometry here. Eight columns still fit the vanilla panel width:
+     * the first slot starts at {@code 8 + (9 - 8) * 18 / 2 = 17} and the grid ends at {@code 17 + 8 * 18 =
+     * 161}, inside {@link #WIDTH}.
+     */
+    public static final int TYPE_3_COLUMNS = ExtensionAddonType.StatCategory.values().length;
+    /**
+     * Internal storage size: the type III grid at its widest and tallest, i.e. {@link #TYPE_3_COLUMNS}
+     * columns of {@link #TYPE_3_MAX_ROWS} tier rows each - Oritech's own tier 1 plus the tiers 2 to 9 that
+     * Oritech Things adds. It is also the upper bound of every slot count in the config.
+     */
+    public static final int MAX_SLOTS = 72;
+    /** Highest number of tier rows the type III grid can show. */
+    public static final int TYPE_3_MAX_ROWS = MAX_SLOTS / TYPE_3_COLUMNS;
 
     /**
      * Extra width of the panel body right of the vanilla 176 columns. The plugin grid, the reserved slot
@@ -106,6 +123,7 @@ public record ExtensionAddonLayout(int slots, int columns, int rows, int firstSl
      */
     public static final int COUNTER_MARGIN = 8;
 
+    /** Layout used by types I and II: rows of nine slots. */
     public static ExtensionAddonLayout of(int requestedSlots) {
         var slots = Math.max(MIN_SLOTS, Math.min(MAX_SLOTS, requestedSlots));
         var columns = Math.min(9, slots);
@@ -118,7 +136,33 @@ public record ExtensionAddonLayout(int slots, int columns, int rows, int firstSl
         var hotbarY = hotbarY(playerRowsY);
 
         return new ExtensionAddonLayout(slots, columns, rows, firstSlotX, firstSlotY,
-                playerRowsY, hotbarY, WIDTH, imageHeight(hotbarY));
+                playerRowsY, hotbarY, WIDTH, imageHeight(hotbarY), false);
+    }
+
+    /**
+     * Layout used by type III: {@code columns} columns (one per stat category) with the slots filled
+     * column by column, i.e. slot {@code index} sits at column {@code index / rows} and row
+     * {@code index % rows}.
+     */
+    public static ExtensionAddonLayout ofColumnMajor(int requestedSlots, int columns) {
+        var cols = Math.max(1, Math.min(TYPE_3_COLUMNS, columns));
+        var rows = Math.max(1, Math.min(TYPE_3_MAX_ROWS, (requestedSlots + cols - 1) / cols));
+        var slots = Math.min(Math.max(MIN_SLOTS, requestedSlots), cols * rows);
+
+        var firstSlotX = 8 + (9 - cols) * SLOT_SIZE / 2;
+        var firstSlotY = 18;
+        var playerRowsY = playerRowsY(firstSlotY, rows);
+        var hotbarY = hotbarY(playerRowsY);
+
+        return new ExtensionAddonLayout(slots, cols, rows, firstSlotX, firstSlotY,
+                playerRowsY, hotbarY, WIDTH, imageHeight(hotbarY), true);
+    }
+
+    /** Picks the grid shape that matches the plugin type. */
+    public static ExtensionAddonLayout forType(ExtensionAddonType type, int slots) {
+        return type == ExtensionAddonType.TYPE_3
+                ? ofColumnMajor(slots, TYPE_3_COLUMNS)
+                : of(slots);
     }
 
     /**
@@ -209,12 +253,12 @@ public record ExtensionAddonLayout(int slots, int columns, int rows, int firstSl
 
     /** X of the plugin slot with the given index (in GUI space). */
     public int slotX(int index) {
-        return firstSlotX + (index % columns) * SLOT_SIZE;
+        return firstSlotX + (columnMajor ? index / rows : index % columns) * SLOT_SIZE;
     }
 
     /** Y of the plugin slot with the given index (in GUI space). */
     public int slotY(int index) {
-        return firstSlotY + (index / columns) * SLOT_SIZE;
+        return firstSlotY + (columnMajor ? index % rows : index / columns) * SLOT_SIZE;
     }
 
     // ------------------------------------------------------------------ wireless page

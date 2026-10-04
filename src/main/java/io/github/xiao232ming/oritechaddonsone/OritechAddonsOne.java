@@ -475,20 +475,40 @@ public class OritechAddonsOne {
                     .sorted()
                     .toList();
 
-            LOGGER.debug("Extension Addon type I accepts {} plugins; type II accepts {} plugins: {}",
-                    ExtensionAddonType.type1Plugins().size(), type2.size(), type2);
-
-            var type3Order = ExtensionAddonType.fixedSlotOrder().stream()
+            var type1 = ExtensionAddonType.type1Plugins().stream()
                     .map(block -> BuiltInRegistries.BLOCK.getKey(block).toString())
+                    .sorted()
                     .toList();
-            LOGGER.debug("Extension Addon type III: {} fixed slots, capacity {} each: {}",
-                    type3Order.size(), Config.slotCapacity(ExtensionAddonType.TYPE_3), type3Order);
+
+            LOGGER.debug("Extension Addon type I / III accept every plugin of the stat categories; Oritech's reference plugins ({}): {}", type1.size(), type1);
+            LOGGER.debug("Extension Addon type II accepts {} plugins: {}", type2.size(), type2);
+
+            // Types I and III accept plugins by category, so log the category of every registered addon
+            // block. This makes it easy to check that tiered plugins from other addon mods (e.g. Oritech
+            // Things) are classified as expected.
+            var categorized = new java.util.TreeMap<String, String>();
+            for (var block : BuiltInRegistries.BLOCK) {
+                var category = ExtensionAddonType.categoryOf(block);
+                if (category != null) {
+                    categorized.put(BuiltInRegistries.BLOCK.getKey(block).toString(), category.name());
+                }
+            }
+            LOGGER.debug("Extension Addon stat categories ({} blocks): {}", categorized.size(), categorized);
+
+            var type3Slots = ExtensionAddonType.type3Slots();
+            LOGGER.debug("Extension Addon type III: {} slots = {} categories x {} tiers, capacity {} each: {}",
+                    type3Slots.size(), ExtensionAddonType.StatCategory.values().length,
+                    ExtensionAddonType.Type3Slot.rowCount(), Config.slotCapacity(ExtensionAddonType.TYPE_3),
+                    type3Slots.stream()
+                            .map(slot -> slot.category() + "/tier" + slot.tier() + "="
+                                    + (slot.reference() == null ? "-" : BuiltInRegistries.BLOCK.getKey(slot.reference()).toString()))
+                            .toList());
 
             for (var pluginType : ExtensionAddonType.values()) {
-                var layout = ExtensionAddonLayout.of(Config.slots(pluginType));
-                LOGGER.debug("Extension Addon {}: {} slots ({}x{}, panel {}x{})",
+                var layout = ExtensionAddonLayout.forType(pluginType, Config.slots(pluginType));
+                LOGGER.debug("Extension Addon {}: {} slots ({}x{}, panel {}x{}, columnMajor={})",
                         pluginType.id(), layout.slots(), layout.columns(), layout.rows(),
-                        layout.imageWidth(), layout.imageHeight());
+                        layout.imageWidth(), layout.imageHeight(), layout.columnMajor());
             }
         });
     }

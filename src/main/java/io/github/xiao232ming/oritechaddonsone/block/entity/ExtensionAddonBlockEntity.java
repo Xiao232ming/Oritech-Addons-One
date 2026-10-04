@@ -159,12 +159,20 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         return ((MachineAddonBlock) ((BlockItem) stack.getItem()).getBlock()).getAddonSettings();
     }
 
-    /** True while a machine acceptor plugin is stored, which turns this block into an energy input. */
+    /**
+     * True while a machine acceptor plugin is stored, which turns this block into an energy input.
+     * <p>
+     * The category is what is asked, not the block: a tiered acceptor addon of another mod (Oritech
+     * Things adds one per tier) is an acceptor as well, and the machine's energy input has to work with
+     * it like it does with Oritech's own one.
+     */
     public boolean hasAcceptorPlugin() {
         for (int slot = 0; slot < getContainerSize(); slot++) {
             var stack = items.get(slot);
             if (stack.isEmpty() || !(stack.getItem() instanceof BlockItem blockItem)) continue;
-            if (blockItem.getBlock() == BlockContent.MACHINE_ACCEPTOR_ADDON.get()) return true;
+            if (ExtensionAddonType.categoryOf(blockItem.getBlock()) == ExtensionAddonType.StatCategory.ACCEPTOR) {
+                return true;
+            }
         }
         return false;
     }

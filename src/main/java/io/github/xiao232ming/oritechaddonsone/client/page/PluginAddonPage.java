@@ -6,7 +6,6 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.block.Block;
 
 import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonType;
 import io.github.xiao232ming.oritechaddonsone.client.AddonPanelStyle;
@@ -73,19 +72,21 @@ public final class PluginAddonPage implements AddonPage {
             double mouseX, double mouseY) {
         var layout = context.layout();
 
-        // one dedicated slot per stat plugin for type III, so every slot may have its own icon
-        var fixedSlots = context.menu().pluginType() == ExtensionAddonType.TYPE_3
-                ? ExtensionAddonType.fixedSlotOrder()
-                : List.<Block>of();
+        // one icon per slot for type III: the grid has one column per stat category and one row per tier,
+        // so every slot may have its own icon
+        var hints = context.menu().pluginType() == ExtensionAddonType.TYPE_3
+                ? ExtensionAddonType.type3Slots()
+                : List.<ExtensionAddonType.Type3Slot>of();
 
         for (int slot = 0; slot < layout.slots(); slot++) {
             int slotX = context.slotX(slot);
             int slotY = context.slotY(slot);
             AddonPanelStyle.drawSlot(graphics, slotX - 1, slotY - 1);
 
-            if (slot < fixedSlots.size()) {
+            var hint = slot < hints.size() ? hints.get(slot).reference() : null;
+            if (hint != null) {
                 // drawn in the background layer, so a real plugin inserted later covers the hint
-                graphics.item(new ItemStack(fixedSlots.get(slot)), slotX, slotY);
+                graphics.item(new ItemStack(hint), slotX, slotY);
                 graphics.fill(slotX, slotY, slotX + 16, slotY + 16, AddonPanelStyle.HINT_VEIL);
             }
         }

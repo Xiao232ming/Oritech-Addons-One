@@ -43,9 +43,15 @@ public final class Config {
     private Config() {
     }
 
-    /** Configured amount of slots of the given type, clamped to the supported range. */
+    /**
+     * Configured amount of slots of the given type, clamped to the supported range.
+     * <p>
+     * Type III derives its slot count from the installed plugins: one slot per (category, tier) pair, so
+     * the grid grows a row for every tier another addon mod provides - see
+     * {@link ExtensionAddonType#type3Slots()}. The other two types read their count from the config.
+     */
     public static int slots(ExtensionAddonType type) {
-        if (type == ExtensionAddonType.TYPE_3) return type.defaultSlots();
+        if (type == ExtensionAddonType.TYPE_3) return ExtensionAddonType.type3Slots().size();
 
         var value = type == ExtensionAddonType.TYPE_1 ? TYPE_1_SLOTS : TYPE_2_SLOTS;
         try {

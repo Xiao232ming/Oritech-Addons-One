@@ -335,7 +335,7 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
         this.container = container;
         this.position = position;
         this.type = type;
-        this.layout = ExtensionAddonLayout.of(slots);
+        this.layout = ExtensionAddonLayout.forType(type, slots);
         this.wireless = container instanceof WirelessExtensionAddonBlockEntity;
         this.clientSide = clientSide;
 
