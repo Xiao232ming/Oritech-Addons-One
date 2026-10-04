@@ -56,6 +56,11 @@ public final class TransferFaceState {
         MODES.clear();
     }
 
+    /** Every position the client currently holds a map under, for the diagnostics of a missing one. */
+    public static java.util.Set<BlockPos> keys() {
+        return java.util.Set.copyOf(MODES.keySet());
+    }
+
     /** The map of one plugin, or {@code null} while the server has not sent one yet. */
     @Nullable
     public static CellFaceModes modes(BlockPos pluginPos) {

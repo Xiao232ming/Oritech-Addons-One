@@ -500,7 +500,15 @@ public final class TransferAddonPage implements AddonPage {
         }
         // the map is keyed by the machine, not by the block the page was opened on: one machine can be served
         // by several transfer plugins, and all of them draw the same settings
-        return TransferFaceState.modeOf(context.menu().transferMachinePos(), cell, face);
+        var key = context.menu().transferMachinePos();
+        var known = TransferFaceState.modes(key);
+        if (known == null) {
+            // INFO while "the config disappears when the UI closes" is being chased: it names the key the page
+            // looks under and every key the client actually holds, which is what tells a wrong key from a lost map
+            OritechAddonsOne.LOGGER.info("[transfer] page looks up machine {} (client holds {}) - menu {}",
+                    key, TransferFaceState.keys(), context.menu().position());
+        }
+        return TransferFaceState.modeOf(key, cell, face);
     }
 
     /** True while a cell-face moves its items by itself, with the open modal's pending value first. */
