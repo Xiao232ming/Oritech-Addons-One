@@ -128,17 +128,29 @@ public final class TransferNetworking {
 
             if (!(player.level().getBlockEntity(packet.pos())
                     instanceof TransferAddonBlockEntity plugin)) {
+                // INFO on purpose: this is the one branch that makes a configuration look like it was never
+                // stored, and it is invisible in the default log otherwise - the position the client addressed
+                // did not hold a transfer plugin (gone, other block, or the wrong position altogether)
+                OritechAddonsOne.LOGGER.info("[transfer] dropped a cell-face setting for {}: no transfer plugin there",
+                        packet.pos());
                 return;
             }
 
             // never trust the client: the entry names the cell, the face and the mode, and every one of the three is
             // re-checked here - the ranges by unpack, the cell against this machine's own cells by the block entity
             var entry = CellFaceModes.unpack(packet.entry());
-            if (entry == null) return;
+            if (entry == null) {
+                OritechAddonsOne.LOGGER.info("[transfer] dropped a cell-face setting for {}: unreadable entry {}",
+                        packet.pos(), packet.entry());
+                return;
+            }
 
             if (!plugin.setCellFaceConfig(entry.cell(), entry.face(), entry.mode(), entry.automation())) {
-                OritechAddonsOne.LOGGER.debug("[transfer] refused {} for {} cell {} face {}",
-                        packet.entry(), packet.pos(), entry.cell(), entry.face());
+                OritechAddonsOne.LOGGER.info(
+                        "[transfer] refused {} for {} cell {} face {} (machine {} - cell in range {} / part of it {})",
+                        entry.mode(), packet.pos(), entry.cell(), entry.face(), plugin.servedMachinePos(),
+                        CellFaceModes.isCellOffsetInRange(entry.cell()),
+                        plugin.machineCellOffsets().contains(entry.cell()));
                 return;
             }
 
@@ -146,8 +158,8 @@ public final class TransferNetworking {
             // copy back - including the entry a clear just removed
             sendFaceModes(player.level(), packet.pos());
 
-            OritechAddonsOne.LOGGER.debug("[transfer] {} cell {} face {} -> {} (automation {}, {} face(s))",
-                    packet.pos(), entry.cell(), entry.face(), entry.mode(), entry.automation(),
+            OritechAddonsOne.LOGGER.info("[transfer] stored {} on {} cell {} face {} (automation {}, {} face(s) now)",
+                    entry.mode(), packet.pos(), entry.cell(), entry.face(), entry.automation(),
                     plugin.cellFaceModes().configuredFaces());
         }
     }
@@ -229,6 +241,10 @@ public final class TransferNetworking {
             if (!menu.position().equals(pos) && !menu.holdsTransferPlugin(pos)) continue;
 
             sendFaceModes(player, pos, plugin);
+            // INFO so that "the page stayed empty" can be told apart from "the map never went out": an empty
+            // page after this line means the client had the data and did not draw it
+            OritechAddonsOne.LOGGER.info("[transfer] sent {} configured face(s) of {} to {}",
+                    plugin.cellFaceModes().configuredFaces(), pos, player.getName().getString());
         }
     }
 

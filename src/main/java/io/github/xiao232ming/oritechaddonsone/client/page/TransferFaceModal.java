@@ -18,6 +18,7 @@ import rearth.oritech.api.screen.Insets;
 import rearth.oritech.api.screen.OritechSurface;
 import rearth.oritech.api.screen.widgets.SurfaceWidget;
 
+import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferFaceModes;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferMode;
 import io.github.xiao232ming.oritechaddonsone.client.AddonPanelStyle;
@@ -127,15 +128,23 @@ public final class TransferFaceModal {
                 var mode = MODES.get(index);
                 // the plate of the mode this face already has is disabled: clicking it again does nothing, so
                 // the page neither closes nor repeats a mode the server already has
-                if (mode == current.mode()) return true;
+                if (mode == current.mode()) {
+                    OritechAddonsOne.LOGGER.info("[transfer] plate {} ignored: that is what face {} already has",
+                            mode, face);
+                    return true;
+                }
 
                 // picking a direction keeps the automation switch of the face as it is
                 var automation = current.automation();
+                OritechAddonsOne.LOGGER.info("[transfer] plate {} hit for face {} (automation {}) - sending",
+                        mode, face, automation);
                 sink.send(face, mode, automation);
                 return true;
             }
 
             if (isOverAutomation(placed, mouseX, mouseY)) {
+                OritechAddonsOne.LOGGER.info("[transfer] automation row hit for face {} (mode {}, at {}/{})",
+                        face, current.mode(), (int) mouseX, (int) mouseY);
                 if (current.mode() == TransferMode.NONE) return true;
 
                 sink.send(face, current.mode(), !current.automation());
