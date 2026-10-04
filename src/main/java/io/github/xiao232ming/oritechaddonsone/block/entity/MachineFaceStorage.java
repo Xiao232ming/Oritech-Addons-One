@@ -146,10 +146,9 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
     }
 
     /**
-     * Moves up to {@link #itemsPerTick()} items from {@code from} to {@code to}, as whole stacks, and reports
-     * nothing: it is the four argument form without owners, i.e. for two storages whose machines are not known
-     * here - a caller that has the machine's block entity passes it so the machine's slot roles can be
-     * respected.
+     * Moves up to {@link #itemsPerTick()} items from {@code from} to {@code to} and reports nothing: it is the
+     * four argument form without owners, i.e. for two storages whose machines are not known here - a caller that
+     * has the machine's block entity passes it so the machine's slot roles can be respected.
      */
     public static void move(ItemApi.InventoryStorage from, ItemApi.InventoryStorage to) {
         move(from, null, to, null);
@@ -171,9 +170,8 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
      * in - never out of a machine's input slot and never into one of its output slots. A {@code null} owner
      * is a container with no roles to respect: a chest, a pipe, another mod's inventory.
      * <p>
-     * It moves whole stacks and stops at the first one that really travels; the loop that keeps going until the
-     * budget is used up is {@link #move(ItemApi.InventoryStorage, BlockEntity, ItemApi.InventoryStorage,
-     * BlockEntity, int)}.
+     * It delegates to the form the automation uses, i.e. one dose of up to {@link #itemsPerTick()} items
+     * ({@link #move(ItemApi.InventoryStorage, BlockEntity, ItemApi.InventoryStorage, BlockEntity, int)}).
      */
     public static void move(ItemApi.InventoryStorage from, @Nullable BlockEntity fromOwner,
             ItemApi.InventoryStorage to, @Nullable BlockEntity toOwner) {
@@ -181,29 +179,30 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
     }
 
     /**
-     * The form the <b>automation of a face</b> calls: keeps moving items between the two storages while the
-     * target still takes them and the budget lasts, instead of stopping after one stack.
+     * The form the <b>automation of a face</b> calls: it moves as many items as the two sides and the budget
+     * allow, in one step, instead of one stack per step.
      * <p>
-     * <b>That is what makes "fill while there is room, empty while there is something" true.</b> A face set to
-     * INPUT keeps pulling from the container outside it until the machine's input slots are full (or nothing
-     * else fits), and a face set to OUTPUT keeps pushing the machine's products out until its output slots are
-     * empty - the budget is what bounds one tick, not which slot the move happened to look at first. Stopping
-     * after the first stack meant a machine could sit with empty input slots and a full container next to it and
-     * still move nothing, because the first stack the loop met was one whose slot was already full.
+     * <b>Filling a slot up to its maximum is exactly what this makes possible.</b> A slot that already holds
+     * some of the item has room for "its maximum minus what is in there", and a step that may only insert one
+     * stack's worth stops at that difference: the slot creeps towards its maximum instead of being filled. A
+     * dose takes the budget as its target and hands it to the target's slots in order, so the first slot that
+     * accepts the item is topped up to its maximum and whatever is left over flows into the next one - the face
+     * set to INPUT fills until the machine's input slots are full, and the face set to OUTPUT empties the output
+     * slots as soon as something is in them, both bounded by the configured rate per tick
+     * ({@code Config#transferItemsPerTick()}).
      * <p>
-     * Each stack still travels as its own step with the simulated insert and the handed-back remainder (see the
-     * four argument form), so nothing can be lost here either; a step that moves nothing ends the loop, so a
-     * target that refuses everything cannot spin.
+     * Nothing can be lost: Oritech's storage has no transaction, so the target is asked with a simulated insert
+     * first and only the amount it really takes is extracted; whatever a target refuses in between is handed
+     * straight back. A dose that moves nothing ends the loop, so a target that refuses everything cannot spin.
      *
-     * @param amount total number of items this call may move, and the cap of a single stack as well
+     * @param amount total number of items this call may move, i.e. the cap of one dose
      */
     public static void move(ItemApi.InventoryStorage from, @Nullable BlockEntity fromOwner,
             ItemApi.InventoryStorage to, @Nullable BlockEntity toOwner, int amount) {
-        // a machine's slots hold vanilla stacks, so one step never has to look at more than one of them
         var budget = Math.max(1, Math.min(amount, itemsPerTick()));
 
         while (budget > 0) {
-            var moved = moveOneStack(from, fromOwner, to, toOwner, Math.min(budget, 64));
+            var moved = moveDose(from, fromOwner, to, toOwner, budget);
             if (moved <= 0) return;
 
             budget -= moved;
@@ -211,12 +210,16 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
     }
 
     /**
-     * Moves the first stack that fits, the way this helper has always done it: ask the target, ask the source,
-     * then take exactly that amount out and put it in, handing back whatever the target refuses in between.
+     * Moves one dose: from the first source slot the roles let go of into the target's accepting slots, up to
+     * {@code amount}.
+     * <p>
+     * The target is asked with a simulated insert of exactly the dose, so the answer is how much of it the
+     * machine's input slots (or its free slots, for a target without roles) would really hold - a partial stack
+     * included, which is what tops it up to its maximum.
      *
      * @return number of items moved, or {@code 0} while nothing could be moved
      */
-    private static int moveOneStack(ItemApi.InventoryStorage from, @Nullable BlockEntity fromOwner,
+    private static int moveDose(ItemApi.InventoryStorage from, @Nullable BlockEntity fromOwner,
             ItemApi.InventoryStorage to, @Nullable BlockEntity toOwner, int amount) {
         if (!from.supportsExtraction() || !to.supportsInsertion()) return 0;
 
@@ -226,7 +229,7 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
             var stack = from.getStackInSlot(slot);
             if (stack.isEmpty()) continue;
 
-            // dry run: how much would the target take of this stack, and how much can the source give?
+            // dry run: how much of the dose would the target take, and how much can this slot give?
             var offered = stack.copyWithCount(Math.min(stack.getCount(), amount));
             var wanted = acceptedBy(to, toOwner, offered);
             if (wanted <= 0) continue;
@@ -260,9 +263,12 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
     }
 
     /**
-     * Inserts into the target, skipping the slots Oritech reserved for its outputs while the target is a
-     * machine whose roles are known. The candidate slots are tried one at a time because a role is a
-     * property of a slot while Oritech's storage only offers the whole-inventory insert as an alternative.
+     * Inserts into the target's accepting slots, in slot order, up to the offered amount in total: a slot that
+     * already holds part of the item is filled to its maximum first, and the rest goes to the following ones.
+     * <p>
+     * The slots Oritech reserved for a machine's outputs are skipped while the target is a machine whose roles
+     * are known; the candidate slots are tried one at a time because a role is a property of a slot while
+     * Oritech's storage only offers the whole-inventory insert as an alternative.
      */
     private static int insertInto(ItemApi.InventoryStorage to, @Nullable BlockEntity toOwner, ItemStack offered,
             boolean simulate) {
