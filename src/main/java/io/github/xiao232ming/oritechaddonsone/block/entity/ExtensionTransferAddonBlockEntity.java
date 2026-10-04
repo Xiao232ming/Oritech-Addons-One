@@ -269,11 +269,16 @@ public class ExtensionTransferAddonBlockEntity extends ExtensionAddonBlockEntity
             var neighbour = MachineFaceStorage.storageAt(level, hostPos, face);
             if (neighbour == null) continue;
 
+            // Each direction is gated by its own filter (see #faceFilter): the OUTPUT one decides what may leave
+            // the machine through this face, the INPUT one what may enter it. These faces are the machine's
+            // own six faces, so they are exactly the ones the Extension Transfer page's 过滤 button writes.
             if (mode.allowsExtract()) {
-                MachineFaceStorage.move(machine, machineEntity, neighbour, null, MachineFaceStorage.itemsPerTick());
+                MachineFaceStorage.move(machine, machineEntity, neighbour, null, MachineFaceStorage.itemsPerTick(),
+                        faceFilter(face, TransferMode.OUTPUT));
             }
             if (mode.allowsInsert()) {
-                MachineFaceStorage.move(neighbour, null, machine, machineEntity, MachineFaceStorage.itemsPerTick());
+                MachineFaceStorage.move(neighbour, null, machine, machineEntity, MachineFaceStorage.itemsPerTick(),
+                        faceFilter(face, TransferMode.INPUT));
             }
         }
     }

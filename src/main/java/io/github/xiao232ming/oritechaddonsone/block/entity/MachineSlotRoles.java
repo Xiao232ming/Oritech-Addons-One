@@ -86,15 +86,14 @@ public final class MachineSlotRoles {
         if (machine == null) return null;
 
         var cached = CACHE.get(machinePos);
-        if (cached != null && cached.machine() == machine) return cached.roles();
-
         var storage = MachineFaceStorage.machineStorageAt(level, machinePos);
         if (storage == null) return null;
 
-        if (cached != null && cached.size() == storage.getSlotCount()) return cached.roles();
+        var size = storage.getSlotCount();
+        if (cached != null && cached.machine() == machine && cached.size() == size) return cached.roles();
 
-        var roles = resolve(machine, storage.getSlotCount());
-        CACHE.put(machinePos.immutable(), new CacheEntry(machine, storage.getSlotCount(), roles));
+        var roles = resolve(machine, size);
+        CACHE.put(machinePos.immutable(), new CacheEntry(machine, size, roles));
         return roles;
     }
 
@@ -105,8 +104,9 @@ public final class MachineSlotRoles {
      * roles keeps behaving exactly as it did before.
      */
     public static boolean allowsInsertAt(@Nullable BlockEntity owner, int index) {
-        var roles = owner == null ? null : of(owner);
-        return roles == null || index < 0 || index >= roles.length || !roles[index].allowsExtract();
+        if (owner == null) return true;
+        var roles = of(owner);
+        return roles != null && index >= 0 && index < roles.length && roles[index].allowsInsert();
     }
 
     /**
@@ -114,8 +114,9 @@ public final class MachineSlotRoles {
      * input slot never and on a slot of unknown role up to the inventory itself.
      */
     public static boolean allowsExtractAt(@Nullable BlockEntity owner, int index) {
-        var roles = owner == null ? null : of(owner);
-        return roles == null || index < 0 || index >= roles.length || !roles[index].allowsInsert();
+        if (owner == null) return true;
+        var roles = of(owner);
+        return roles != null && index >= 0 && index < roles.length && roles[index].allowsExtract();
     }
 
     /**

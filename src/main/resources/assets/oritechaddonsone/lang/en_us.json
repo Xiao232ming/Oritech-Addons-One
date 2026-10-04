@@ -109,5 +109,17 @@
   "gui.oritechaddonsone.transfer.side.east": "East",
   "gui.oritechaddonsone.transfer.side.west": "West",
   "gui.oritechaddonsone.transfer.side.up": "Up",
-  "gui.oritechaddonsone.transfer.side.down": "Down"
+  "gui.oritechaddonsone.transfer.side.down": "Down",
+  "gui.oritechaddonsone.transfer.filter": "Filter",
+  "gui.oritechaddonsone.filter.direction.input": "In",
+  "gui.oritechaddonsone.filter.direction.output": "Out",
+  "gui.oritechaddonsone.filter.whitelist": "Whitelist",
+  "gui.oritechaddonsone.filter.nbt": "NBT",
+  "gui.oritechaddonsone.filter.components": "Components",
+  "gui.oritechaddonsone.filter.tooltip.whitelist": "Currently only allows items through which \nmatch the listed items",
+  "gui.oritechaddonsone.filter.tooltip.blacklist": "Currently only allows items through which \ndo NOT match the listed items",
+  "gui.oritechaddonsone.filter.tooltip.nbt": "Currently checks the listed items for custom NBT Data",
+  "gui.oritechaddonsone.filter.tooltip.no_nbt": "Currently only checks the item type/id",
+  "gui.oritechaddonsone.filter.tooltip.components": "Currently checks the listed items for all data component values",
+  "gui.oritechaddonsone.filter.tooltip.no_components": "Currently ignores all item data components, such as enchantments, energy, etc."
 }

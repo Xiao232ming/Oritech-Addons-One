@@ -54,6 +54,8 @@ import io.github.xiao232ming.oritechaddonsone.block.entity.TransferAddonBlockEnt
 import io.github.xiao232ming.oritechaddonsone.block.entity.WirelessExtensionAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonLayout;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonMenu;
+import io.github.xiao232ming.oritechaddonsone.menu.FaceFilterMenu;
+import io.github.xiao232ming.oritechaddonsone.network.FilterNetworking;
 import io.github.xiao232ming.oritechaddonsone.network.ProxyNetworking;
 import io.github.xiao232ming.oritechaddonsone.network.TransferNetworking;
 
@@ -361,6 +363,14 @@ public class OritechAddonsOne {
     public static final DeferredHolder<MenuType<?>, MenuType<ExtensionAddonMenu>> EXTENSION_ADDON_MENU =
             MENUS.register("extension_addon", () -> IMenuTypeExtension.create(ExtensionAddonMenu::new));
 
+    /**
+     * The container behind the 过滤 page of a transfer face. Its own type because the filter is a dozen items and
+     * three switches rather than a page of settings, and because it is opened for <em>one filter</em> instead of
+     * for a whole block - see {@code FaceFilterMenu}.
+     */
+    public static final DeferredHolder<MenuType<?>, MenuType<FaceFilterMenu>> FACE_FILTER_MENU =
+            MENUS.register("face_filter", () -> IMenuTypeExtension.create(FaceFilterMenu::new));
+
     /** Own creative tab, so the blocks are always reachable even if Oritech changes its own tabs. */
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> TAB = TABS.register("extension_addons",
             () -> CreativeModeTab.builder()
@@ -457,6 +467,7 @@ public class OritechAddonsOne {
         // the four packets of the Item Proxy page (see ProxyNetworking) and the transfer page's mode packet
         modEventBus.addListener(ProxyNetworking::register);
         modEventBus.addListener(TransferNetworking::register);
+        modEventBus.addListener(FilterNetworking::register);
 
         // Tells Oritech to expose this block entity's energy storage (see
         // ExtensionAddonBlockEntity#getEnergyStorage) to Oritech's own energy network *and* to

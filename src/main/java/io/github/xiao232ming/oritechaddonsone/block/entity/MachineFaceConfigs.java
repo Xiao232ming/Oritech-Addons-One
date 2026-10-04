@@ -8,6 +8,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.core.Vec3i;
 import net.minecraft.world.level.Level;
 import net.minecraft.nbt.CompoundTag;
@@ -53,6 +54,8 @@ public final class MachineFaceConfigs {
     private static final class Shared {
         private final TransferFaceModes faces = new TransferFaceModes();
         private final CellFaceModes cells = new CellFaceModes();
+        private final FaceFilters faceFilters = new FaceFilters();
+        private final CellFilters cellFilters = new CellFilters();
     }
 
     @Nullable
@@ -84,6 +87,31 @@ public final class MachineFaceConfigs {
     /** The cell-face settings of a block, i.e. of the machine it serves - see {@link #faceModes}. */
     public static CellFaceModes cellFaces(ExtensionAddonBlockEntity block) {
         return cellFaces(block.getLevel(), block.servedMachinePos());
+    }
+
+    /**
+     * The item filters of the machine's six faces, never {@code null}: a machine nobody filtered answers an
+     * empty map, which reads as "this face moves everything".
+     */
+    public static FaceFilters faceFilters(@Nullable Level level, @Nullable BlockPos machine) {
+        var shared = get(machine);
+        return shared == null ? new FaceFilters() : shared.faceFilters;
+    }
+
+    /** The item filters of the machine's cell-faces, never {@code null} - same shape as {@link #faceFilters}. */
+    public static CellFilters cellFilters(@Nullable Level level, @Nullable BlockPos machine) {
+        var shared = get(machine);
+        return shared == null ? new CellFilters() : shared.cellFilters;
+    }
+
+    /** The item filters of a block, i.e. of the machine it serves - see {@link #faceModes(ExtensionAddonBlockEntity)}. */
+    public static FaceFilters faceFilters(ExtensionAddonBlockEntity block) {
+        return faceFilters(block.getLevel(), block.servedMachinePos());
+    }
+
+    /** The item filters of a block's machine, seen through its cell-face model - see {@link #cellFilters}. */
+    public static CellFilters cellFilters(ExtensionAddonBlockEntity block) {
+        return cellFilters(block.getLevel(), block.servedMachinePos());
     }
 
     /**
@@ -122,6 +150,27 @@ public final class MachineFaceConfigs {
     }
 
     /**
+     * Merges what one block had saved into the machine's six-face item filters, called while it loads.
+     * <p>
+     * The same rule as for the modes: the block's own copy wins, so a filter a plugin of the machine configured
+     * survives a block that does not know about it being loaded.
+     */
+    public static void contribute(@Nullable Level level, @Nullable BlockPos machine, FaceFilters own) {
+        var shared = get(machine);
+        if (shared == null) return;
+
+        own.entries().forEach((key, data) -> shared.faceFilters.set(key.face(), key.flow(), data));
+    }
+
+    /** Merges what one block had saved into the machine's cell-face item filters - see {@link #contribute}. */
+    public static void contribute(@Nullable Level level, @Nullable BlockPos machine, CellFilters own) {
+        var shared = get(machine);
+        if (shared == null) return;
+
+        own.entries().forEach((key, data) -> shared.cellFilters.set(key.cell(), key.face(), key.flow(), data));
+    }
+
+    /**
      * Drops the settings of one machine, called when its last serving transfer plugin is taken away: a machine
      * nobody serves has no transfer settings.
      * <p>
@@ -147,7 +196,7 @@ public final class MachineFaceConfigs {
      * is deliberate: the alternative - electing one owner - would need the other blocks to know about it, and
      * this way a machine whose plugins are taken apart and rebuilt still comes back with its settings.
      */
-    public static void save(ExtensionAddonBlockEntity block, CompoundTag nbt) {
+    public static void save(ExtensionAddonBlockEntity block, CompoundTag nbt, HolderLookup.Provider registries) {
         var faces = faceModes(block);
         var faceValues = new int[Direction.values().length];
         for (var face : Direction.values()) {
@@ -164,10 +213,17 @@ public final class MachineFaceConfigs {
         var packed = new int[values.size()];
         for (int index = 0; index < packed.length; index++) packed[index] = values.get(index);
         nbt.putIntArray(CELL_TAG, packed);
+
+        // the filters belong to the machine just like the modes do, so every block that serves it writes the
+        // whole map as well - any one of them is enough to restore the configuration. They are the one part of
+        // this save that is not a packed int per entry: a listed item is an ItemStack, which needs the
+        // registries of the block that is being written.
+        faceFilters(block).save(nbt, registries);
+        cellFilters(block).save(nbt, registries);
     }
 
     /** Reads the machine's settings back out of the block's save data; see {@link #save}. */
-    public static void load(ExtensionAddonBlockEntity block, CompoundTag nbt) {
+    public static void load(ExtensionAddonBlockEntity block, CompoundTag nbt, HolderLookup.Provider registries) {
         // Read into the block's own map, never into the machine's, and never mind whether the machine can be
         // named yet: while a world loads, the block entity is still being built and the controller offset that
         // names its machine is written by Oritech afterwards - so asking for the machine here answers "none" and
@@ -188,13 +244,18 @@ public final class MachineFaceConfigs {
         }
 
         var values = nbt.getIntArray(CELL_TAG);
-        if (values.length == 0) return;
-
-        for (var value : values) {
-            var entry = CellFaceModes.unpack(value);
-            if (entry == null || !TransferFaceModes.isConfigured(entry.value())) continue;
-            own.set(entry.cell(), entry.face(), entry.mode(), entry.automation());
+        if (values.length != 0) {
+            for (var value : values) {
+                var entry = CellFaceModes.unpack(value);
+                if (entry == null || !TransferFaceModes.isConfigured(entry.value())) continue;
+                own.set(entry.cell(), entry.face(), entry.mode(), entry.automation());
+            }
         }
+
+        // same rule for the filters: they are read into the block's own copies, never into the machine's, because
+        // while a world loads the machine cannot be named yet (see above) - syncCellFaces merges them later
+        block.savedFaceFilters().load(nbt, registries);
+        block.savedCellFilters().load(nbt, registries);
     }
 
     /** Save tag of the machine's six faces. */

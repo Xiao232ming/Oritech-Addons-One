@@ -10,6 +10,7 @@ import org.jetbrains.annotations.Nullable;
 
 import rearth.oritech.api.item.ItemApi;
 import rearth.oritech.api.item.containers.DelegatingInventoryStorage;
+import rearth.oritech.util.MachineAddonController;
 
 import io.github.xiao232ming.oritechaddonsone.Config;
 
@@ -101,9 +102,14 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
     public static ItemApi.InventoryStorage machineStorageAt(@Nullable Level level, @Nullable BlockPos machinePos) {
         if (level == null || machinePos == null || !level.isLoaded(machinePos)) return null;
 
-        return level.getBlockEntity(machinePos) instanceof ItemApi.BlockProvider provider
-                ? provider.getInventoryStorage(null)
-                : null;
+        var machine = level.getBlockEntity(machinePos);
+        if (machine == null) return null;
+
+        // Oritech's external machine inventory is the handler used by its own pipes. The
+        // generic block-provider view can expose a different wrapper that does not include
+        // the product/output slots, so prefer the controller's addon inventory here.
+        if (machine instanceof MachineAddonController controller) return controller.getInventoryForAddon();
+        return machine instanceof ItemApi.BlockProvider provider ? provider.getInventoryStorage(null) : null;
     }
 
     /**
@@ -114,7 +120,10 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
      */
     @Nullable
     static BlockPos machinePos(BlockEntity owner) {
-        return owner instanceof ExtensionAddonBlockEntity addon ? addon.connectedMachinePos() : null;
+        // Transfer automation passes the real machine as the owner so slot roles can be read.
+        // An addon owner still resolves its connected machine; any other owner is itself.
+        return owner instanceof ExtensionAddonBlockEntity addon ? addon.connectedMachinePos()
+                : owner == null ? null : owner.getBlockPos();
     }
 
     /**
@@ -124,7 +133,8 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
      */
     @Nullable
     static Level machineLevel(BlockEntity owner) {
-        return owner instanceof ExtensionAddonBlockEntity addon ? addon.getLevel() : null;
+        return owner instanceof ExtensionAddonBlockEntity addon ? addon.getLevel()
+                : owner == null ? null : owner.getLevel();
     }
 
     /**
@@ -209,22 +219,37 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
      */
     public static int move(ItemApi.InventoryStorage from, @Nullable BlockEntity fromOwner,
             ItemApi.InventoryStorage to, @Nullable BlockEntity toOwner, int amount) {
+        return move(from, fromOwner, to, toOwner, amount, null);
+    }
+
+    /**
+     * The form the automation of a face calls <b>with the face's item filter</b>: the same move as above, but an
+     * item the filter refuses is never taken out of the source in the first place.
+     * <p>
+     * <b>The filter gates the walk over the source, not the insert into the target.</b> One refusal point is
+     * enough: an item the filter does not allow is skipped exactly like a slot the machine's roles refuse, so the
+     * dry run and the insert behind it never see it either - and the item is not pulled out of the source and put
+     * back, which would cost a write per item per tick for nothing.
+     * <p>
+     * <b>26.1.2 asks the filter about a {@code ItemResource}; this branch asks about the {@link ItemStack} the
+     * slot hands out.</b> The walk below therefore reads {@code from.getStackInSlot(slot)} first and asks the
+     * filter about that stack, which is the same question with the same answer - the Oritech storage has no
+     * resource object on this branch to ask about.
+     *
+     * @param filter the face's filter for the direction this move runs in, or {@code null} while the face is not
+     *               filtered - which is what a face without a 过滤 configuration answers, and moves everything
+     */
+    public static int move(ItemApi.InventoryStorage from, @Nullable BlockEntity fromOwner,
+            ItemApi.InventoryStorage to, @Nullable BlockEntity toOwner, int amount,
+            @Nullable ItemFilterData filter) {
         var budget = Math.max(1, Math.min(amount, itemsPerTick()));
         var total = 0;
 
         while (budget > 0) {
-            var moved = moveDose(from, fromOwner, to, toOwner, budget, true);
-            if (moved <= 0) {
-                // Nothing travelled while the machine's slot roles were respected. Those roles are a reading of
-                // the machine's own slot layout, and a reading can be wrong in a way that blocks <em>every</em>
-                // slot: a machine whose whole inventory falls inside one of the two ranges forbids the other
-                // direction outright, and its faces would then move nothing at all. The dose is therefore
-                // retried once without them - the machine's own handler still decides what a slot accepts, so
-                // the worst case is the behaviour this mod had before the roles existed, and the best case is
-                // that the items travel after all.
-                moved = moveDose(from, fromOwner, to, toOwner, budget, false);
-                if (moved <= 0) return total;
-            }
+            // Slot roles are a hard boundary: never fall back to an unrestricted move, or an
+            // INPUT face could fill a product slot and an OUTPUT face could drain ingredients.
+            var moved = moveDose(from, fromOwner, to, toOwner, budget, true, filter);
+            if (moved <= 0) return total;
 
             budget -= moved;
             total += moved;
@@ -255,20 +280,31 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
      * @return number of items moved, or {@code 0} while nothing could be moved
      */
     private static int moveDose(ItemApi.InventoryStorage from, @Nullable BlockEntity fromOwner,
-            ItemApi.InventoryStorage to, @Nullable BlockEntity toOwner, int amount, boolean useRoles) {
+            ItemApi.InventoryStorage to, @Nullable BlockEntity toOwner, int amount, boolean useRoles,
+            @Nullable ItemFilterData filter) {
         // A side that could not be resolved is nothing to move between, and both handlers are looked up per
         // tick: a machine that is broken, replaced or unloaded in between leaves a null here, which used to
         // reach the target and crash the server on the tick.
         if (from == null || to == null) return 0;
         if (!from.supportsExtraction() || !to.supportsInsertion()) return 0;
 
+        // the machine's slot roles and the face's item filter are both decided once for this dose: asking the
+        // world for them per slot is what made a pipe's neighbour walk cost a block entity lookup per slot
+        var fromRoles = useRoles ? MachineSlotRoles.of(fromOwner) : null;
         var moved = 0;
 
         for (int slot = 0; slot < from.getSlotCount(); slot++) {
-            if (useRoles && !MachineSlotRoles.allowsExtractAt(fromOwner, slot)) continue;
+            if (fromRoles != null
+                    && (slot >= fromRoles.length || !fromRoles[slot].allowsExtract())) {
+                continue;
+            }
 
             var stack = from.getStackInSlot(slot);
             if (stack.isEmpty()) continue;
+
+            // the face's filter: an item it does not allow is skipped like a slot the roles refuse, so it is
+            // never taken out of the source at all
+            if (filter != null && !filter.allows(stack)) continue;
 
             // dry run: how much of the dose would the target take, and how much can this slot give?
             var offered = stack.copyWithCount(Math.min(stack.getCount(), amount));
@@ -318,8 +354,9 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
     }
 
     /**
-     * The same insert with the machine's slot roles switchable: the retry of {@link #move} that runs after a
-     * dose moved nothing passes {@code false} to fall back to the plain handler.
+     * The same insert with the machine's slot roles switchable: the roles are read once here and then read
+     * straight out of the array, because asking {@link MachineSlotRoles} again per slot would resolve the whole
+     * machine again for every slot of every dose.
      */
     private static int insertInto(ItemApi.InventoryStorage to, @Nullable BlockEntity toOwner, ItemStack offered,
             boolean simulate, boolean useRoles) {
@@ -330,7 +367,7 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
 
         var inserted = 0;
         for (var slot = 0; slot < to.getSlotCount() && inserted < offered.getCount(); slot++) {
-            if (!MachineSlotRoles.allowsInsertAt(toOwner, slot)) continue;
+            if (slot >= roles.length || !roles[slot].allowsInsert()) continue;
             inserted += to.insertToSlot(offered.copyWithCount(offered.getCount() - inserted), slot, simulate);
         }
         return inserted;
@@ -501,17 +538,41 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
      * input slots and never a slot Oritech reserved for its results. The item proxy behaviour, which has no
      * mode, is only gated by the role of its one bound slot, which is what keeps a face bound to an output
      * slot from pushing items into it.
+     * <p>
+     * The face's item filter for the direction is a third gate ({@link #allows}), so a pipe cannot push an item
+     * through a face whose filter refuses it. The index free {@link #insert(ItemStack, boolean)} walks the slots
+     * through here, which is what makes it obey the filter as well.
      */
+    /**
+     * The face's item filter for one direction of the movement, or {@code null} while this face is not filtered
+     * in that direction - which is what every face without a 过滤 configuration answers.
+     */
+    @Nullable
+    private ItemFilterData filter(TransferMode flow) {
+        if (!(owner instanceof ExtensionAddonBlockEntity addon)) return null;
+        return addon.faceFilter(face, flow);
+    }
+
+    /** True while the face's filter for that direction lets the given item through. */
+    private boolean allows(TransferMode flow, ItemStack stack) {
+        var filter = filter(flow);
+        return filter == null || filter.allows(stack);
+    }
+
     @Override
     public int insertToSlot(ItemStack inserted, int index, boolean simulate) {
-        if (!allowsInsert() || !covers(index) || !MachineSlotRoles.allowsInsertAt(machineEntity(), index)) return 0;
+        if (!allowsInsert() || !covers(index)) return 0;
+        if (!allows(TransferMode.INPUT, inserted)) return 0;
+        if (!MachineSlotRoles.allowsInsertAt(machineEntity(), index)) return 0;
         return super.insertToSlot(inserted, index, simulate);
     }
 
     /** Indexed extract, gated like {@link #insertToSlot(ItemStack, int, boolean)}. */
     @Override
     public int extractFromSlot(ItemStack extracted, int index, boolean simulate) {
-        if (!allowsExtract() || !covers(index) || !MachineSlotRoles.allowsExtractAt(machineEntity(), index)) return 0;
+        if (!allowsExtract() || !covers(index)) return 0;
+        if (!allows(TransferMode.OUTPUT, extracted)) return 0;
+        if (!MachineSlotRoles.allowsExtractAt(machineEntity(), index)) return 0;
         return super.extractFromSlot(extracted, index, simulate);
     }
 

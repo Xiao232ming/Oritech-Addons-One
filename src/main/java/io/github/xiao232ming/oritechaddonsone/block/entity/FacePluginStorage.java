@@ -306,10 +306,41 @@ public class FacePluginStorage extends DelegatingInventoryStorage {
      * Indexed insert of a pipe or a hopper: gated by the face's mode (an OUTPUT face takes nothing) and by the
      * machine's slot roles ({@link MachineSlotRoles}). The roles are asked of the machine this face reaches into,
      * which is resolved from the host exactly like the machine's own storage is.
+     * <p>
+     * The face's item filter for the direction is a third gate, and it is asked of the <b>same</b> machine the
+     * inventory comes from, so the filter, the roles and the slots can never describe three different machines.
      */
+    /**
+     * The face's item filter for one direction of the movement, or {@code null} while this face is not filtered
+     * in that direction - which is what every face without a 过滤 configuration answers.
+     * <p>
+     * The filter is taken from the machine the plugin on this host works on, exactly like the inventory and the
+     * slot roles above, so the three can never be read from three different machines.
+     */
+    @Nullable
+    private ItemFilterData filter(TransferMode flow) {
+        var current = host();
+        if (current == null) return null;
+
+        var level = current.getLevel();
+        if (level == null) return null;
+
+        var pos = machine.machinePos(current);
+        if (pos == null) return null;
+
+        return MachineFaceConfigs.faceFilters(level, pos).of(face, flow);
+    }
+
+    /** True while the face's filter for that direction lets the given item through. */
+    private boolean allows(TransferMode flow, ItemStack stack) {
+        var filter = filter(flow);
+        return filter == null || filter.allows(stack);
+    }
+
     @Override
     public int insertToSlot(ItemStack inserted, int index, boolean simulate) {
         if (!allowsInsert() || !covers(index)) return 0;
+        if (!allows(TransferMode.INPUT, inserted)) return 0;
         if (!MachineSlotRoles.allowsInsertAt(machineEntity(), index)) return 0;
         return super.insertToSlot(inserted, index, simulate);
     }
@@ -337,6 +368,7 @@ public class FacePluginStorage extends DelegatingInventoryStorage {
     @Override
     public int extractFromSlot(ItemStack extracted, int index, boolean simulate) {
         if (!allowsExtract() || !covers(index)) return 0;
+        if (!allows(TransferMode.OUTPUT, extracted)) return 0;
         if (!MachineSlotRoles.allowsExtractAt(machineEntity(), index)) return 0;
         return super.extractFromSlot(extracted, index, simulate);
     }

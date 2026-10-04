@@ -468,7 +468,6 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
      * while no transfer addon is stored, which is what turns every face into "transfers nothing".
      */
     private final TransferFaceModes transferFaces = new TransferFaceModes();
-
     /**
      * What every <b>individual face of every cell</b> of the machine's structure does - the model of the
      * 传输插件 page (see {@link CellFaceModes}).
@@ -481,6 +480,25 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
      * that a machine whose blocks are all unloaded still comes back with what the player configured.
      */
     private final CellFaceModes savedCellFaces = new CellFaceModes();
+
+    /**
+     * Which items may cross which of this block's six faces, and in which direction - the model of the 过滤
+     * page of the Extension Transfer page (see {@link FaceFilters}).
+     * <p>
+     * Like {@link #savedCellFaces} this is only <b>the copy this block saves</b>: the filters themselves belong
+     * to the machine and are read and written through {@link #faceFilters()}, so every plugin serving that
+     * machine filters on the same configuration. The copy is what lets a machine whose blocks are all unloaded
+     * still come back with what the player listed.
+     */
+    private final FaceFilters savedFaceFilters = new FaceFilters();
+
+    /**
+     * Which items may cross which face of which cell of the machine's structure, and in which direction - the
+     * model of the 过滤 page of the 传输插件 page (see {@link CellFilters}).
+     *
+     * @see #savedFaceFilters
+     */
+    private final CellFilters savedCellFilters = new CellFilters();
 
     /**
      * Faces of this block a placed transfer addon hangs on, as a bitmask over {@link Direction#values()}.
@@ -637,6 +655,92 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         return true;
     }
 
+    // ------------------------------------------------------------------ item filters of the transfer faces
+
+    /**
+     * The filter that decides which items may cross one of this block's faces in one direction, or {@code null}
+     * while that face was never filtered for that direction - which every caller reads as "everything may cross".
+     *
+     * @param flow {@link TransferMode#INPUT} for the items entering the machine, {@link TransferMode#OUTPUT} for
+     *             the ones leaving it; a face set to 输入 + 输出 has one of each
+     */
+    @Nullable
+    public ItemFilterData faceFilter(Direction face, TransferMode flow) {
+        return MachineFaceConfigs.faceFilters(level, servedMachinePos()).of(face, flow);
+    }
+
+    /** The filter of one face of one cell of the machine's structure - see {@link #faceFilter}. */
+    @Nullable
+    public ItemFilterData cellFilter(Vec3i cell, Direction face, TransferMode flow) {
+        return MachineFaceConfigs.cellFilters(level, servedMachinePos()).of(cell, face, flow);
+    }
+
+    /**
+     * Stores the filter of one of this block's faces for one direction, exactly as it was given. Refused on the
+     * client, while no transfer addon is stored, and while the direction is neither 输入 nor 输出.
+     * <p>
+     * <b>What may be stored is checked here, not trusted from the client.</b> A modified client could name a
+     * direction this class never stores a filter for, or a filter of any size, so both are validated before the
+     * write: the direction against the two a filter exists for, and the filter against {@link ItemFilterData}
+     * itself, which is the one place that knows how many items a filter may list.
+     */
+    public boolean setFaceFilter(Direction face, TransferMode flow, ItemFilterData data) {
+        if (level == null || level.isClientSide() || face == null || data == null) return false;
+        if (!isAFilterFlow(flow)) return false;
+        if (!data.isEmpty() && !canTransferItems()) return false;
+
+        var settings = MachineFaceConfigs.faceFilters(level, servedMachinePos());
+        var before = settings.of(face, flow);
+        if (!settings.set(face, flow, data)) return true;
+
+        setChanged();
+        OritechAddonsOne.LOGGER.info(
+                "[transfer] set the {} filter of {} face {} (machine {}): was {}, now {} ({} listed)",
+                flow, worldPosition, face, servedMachinePos(), describe(before), describe(settings.of(face, flow)),
+                data.items().size());
+        return true;
+    }
+
+    /**
+     * Stores the filter of one face of one cell of the machine's structure, exactly as it was given.
+     * <p>
+     * The cell is checked the same way {@link #setCellFaceConfig} checks it: the offset has to be in the range one
+     * entry can express <b>and</b> be a cell of the machine's own structure, so a modified client cannot make a
+     * plugin filter items against a part that is not there.
+     */
+    public boolean setCellFilter(Vec3i cell, Direction face, TransferMode flow, ItemFilterData data) {
+        if (level == null || level.isClientSide() || cell == null || face == null || data == null) return false;
+        if (!isAFilterFlow(flow)) return false;
+        if (!CellFaceModes.isCellOffsetInRange(cell)) return false;
+        if (!data.isEmpty() && !canTransferItems()) return false;
+        if (servedMachinePos() == null) return false;
+        if (!data.isEmpty() && !machineCellOffsets().contains(cell)) return false;
+
+        var settings = MachineFaceConfigs.cellFilters(level, servedMachinePos());
+        var before = settings.of(cell, face, flow);
+        if (!settings.set(cell, face, flow, data)) return true;
+
+        setChanged();
+        OritechAddonsOne.LOGGER.info(
+                "[transfer] set the {} filter of {} cell {} face {} (machine {}): was {}, now {} ({} listed)",
+                flow, worldPosition, cell, face, servedMachinePos(), describe(before),
+                describe(settings.of(cell, face, flow)), data.items().size());
+        return true;
+    }
+
+    /** True while a filter exists for that direction of the movement; {@link TransferMode#NONE} and BOTH do not. */
+    private static boolean isAFilterFlow(@Nullable TransferMode flow) {
+        return flow == TransferMode.INPUT || flow == TransferMode.OUTPUT;
+    }
+
+    /** What a filter answers, for the diagnostics above - a filter that lists nothing says so. */
+    private static String describe(@Nullable ItemFilterData filter) {
+        if (filter == null) return "none";
+        return (filter.useWhitelist() ? "whitelist" : "blacklist")
+                + (filter.useNbt() ? " +nbt" : "")
+                + (filter.useComponents() ? " +components" : "");
+    }
+
     // ------------------------------------------------------------------ automation of the transfer faces
 
     /**
@@ -722,6 +826,10 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
                             savedCellFaces.configuredFaces(), describeFaces(savedTransferFaces()));
                 }
             }
+
+            // The 3D transfer plugin stores its automation in cell-face settings rather than in this
+            // block's six-face map. Do not skip that path just because the ordinary map is empty.
+            tickCellFaces();
             return;
         }
 
@@ -765,13 +873,18 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
             // inputs and which are outputs (see MachineSlotRoles) instead of moving anything anywhere.
             // The budget is passed so the step keeps filling while the machine's input slots have room and
             // keeps emptying while its output slots hold something, instead of stopping after one stack.
+            // Each direction is gated by its own filter (see #faceFilter): the OUTPUT one decides what may leave
+            // the machine through this face, the INPUT one what may enter it - a face set to 输入 + 输出 really
+            // does answer two different questions here.
             var out = 0;
             var in = 0;
             if (mode.allowsExtract()) {
-                out = MachineFaceStorage.move(machine, machineEntity, neighbour, null, MachineFaceStorage.itemsPerTick());
+                out = MachineFaceStorage.move(machine, machineEntity, neighbour, null,
+                        MachineFaceStorage.itemsPerTick(), faceFilter(face, TransferMode.OUTPUT));
             }
             if (mode.allowsInsert()) {
-                in = MachineFaceStorage.move(neighbour, null, machine, machineEntity, MachineFaceStorage.itemsPerTick());
+                in = MachineFaceStorage.move(neighbour, null, machine, machineEntity,
+                        MachineFaceStorage.itemsPerTick(), faceFilter(face, TransferMode.INPUT));
             }
 
             if (out + in <= 0 && diagnosticsDue()) {
@@ -838,10 +951,14 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
             var out = 0;
             var in = 0;
             if (mode.allowsExtract()) {
-                out = MachineFaceStorage.move(machine, machineEntity, neighbour, null, MachineFaceStorage.itemsPerTick());
+                out = MachineFaceStorage.move(machine, machineEntity, neighbour, null,
+                        MachineFaceStorage.itemsPerTick(),
+                        cellFilter(entry.cell(), entry.face(), TransferMode.OUTPUT));
             }
             if (mode.allowsInsert()) {
-                in = MachineFaceStorage.move(neighbour, null, machine, machineEntity, MachineFaceStorage.itemsPerTick());
+                in = MachineFaceStorage.move(neighbour, null, machine, machineEntity,
+                        MachineFaceStorage.itemsPerTick(),
+                        cellFilter(entry.cell(), entry.face(), TransferMode.INPUT));
             }
 
             if (diagnosticsDue()) {
@@ -902,6 +1019,26 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         return savedCellFaces;
     }
 
+    /** This block's own copy of the six-face filters, i.e. what it saves - see {@link #savedFaceFilters}. */
+    FaceFilters savedFaceFilters() {
+        return savedFaceFilters;
+    }
+
+    /** This block's own copy of the cell-face filters, i.e. what it saves - see {@link #savedCellFilters}. */
+    CellFilters savedCellFilters() {
+        return savedCellFilters;
+    }
+
+    /** The item filters of this block's six faces, i.e. of the machine it serves; never {@code null}. */
+    public FaceFilters faceFilters() {
+        return MachineFaceConfigs.faceFilters(this);
+    }
+
+    /** The item filters of the machine's cell-faces, i.e. of the machine it serves; never {@code null}. */
+    public CellFilters cellFilters() {
+        return MachineFaceConfigs.cellFilters(this);
+    }
+
     /**
      * Merges what this block has saved into the machine's shared settings and mirrors the result back, called
      * while loading and whenever the block starts serving a machine.
@@ -949,6 +1086,8 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         // both are mirrored back afterwards - the merge is what makes a world load keep what the player set
         MachineFaceConfigs.contribute(level, machinePos, transferFaces);
         MachineFaceConfigs.contribute(level, machinePos, savedCellFaces);
+        MachineFaceConfigs.contribute(level, machinePos, savedFaceFilters);
+        MachineFaceConfigs.contribute(level, machinePos, savedCellFilters);
 
         var sharedFaces = MachineFaceConfigs.faceModes(level, machinePos);
         for (var face : Direction.values()) {
@@ -960,10 +1099,28 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         for (var entry : shared.packedEntries()) {
             savedCellFaces.set(entry.cell(), entry.face(), entry.mode(), entry.automation());
         }
+
+        // the filters are mirrored the same way, so this block's save data carries the whole configuration
+        var sharedFaceFilters = MachineFaceConfigs.faceFilters(level, machinePos);
+        savedFaceFilters.clear();
+        for (var entry : sharedFaceFilters.packedEntries()) {
+            var key = FaceFilters.unpack(entry.key());
+            if (key != null) savedFaceFilters.set(key.face(), key.flow(), entry.data());
+        }
+
+        var sharedCellFilters = MachineFaceConfigs.cellFilters(level, machinePos);
+        savedCellFilters.clear();
+        for (var entry : sharedCellFilters.packedEntries()) {
+            var key = CellFilters.unpack(entry.key());
+            if (key != null) savedCellFilters.set(key.cell(), key.face(), key.flow(), entry.data());
+        }
+
         setChanged();
 
-        OritechAddonsOne.LOGGER.debug("[transfer] syncCellFaces on {} -> machine {}, shared now {} face(s)",
-                worldPosition, machinePos, shared.configuredFaces());
+        OritechAddonsOne.LOGGER.debug("[transfer] syncCellFaces on {} -> machine {}, shared now {} face(s), "
+                        + "{} face filter(s), {} cell filter(s)",
+                worldPosition, machinePos, shared.configuredFaces(),
+                sharedFaceFilters.configured(), sharedCellFilters.configured());
     }
 
     /**
@@ -1548,7 +1705,7 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         transferFaces.save(nbt);
         // the machine's shared settings as this block knows them, so that this block alone is enough to
         // restore them (see MachineFaceConfigs#save)
-        MachineFaceConfigs.save(this, nbt);
+        MachineFaceConfigs.save(this, nbt, registries);
     }
 
     @Override
@@ -1562,7 +1719,7 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         transferFaces.load(nbt);
         // the machine's shared settings this block was saved with; the machine's controller offset is read by
         // the superclass above, so servedMachinePos() is available here
-        MachineFaceConfigs.load(this, nbt);
+        MachineFaceConfigs.load(this, nbt, registries);
         // the machine cannot be named at this moment, so the merge happens once it can (see mergePending)
         markMergePending();
         syncCellFaces();
