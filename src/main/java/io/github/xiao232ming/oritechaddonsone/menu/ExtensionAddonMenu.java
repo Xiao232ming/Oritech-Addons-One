@@ -777,8 +777,26 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
      */
     public boolean holdsTransferPlugin(BlockPos pluginPos) {
         var level = containerLevel();
-        return level != null && level.getBlockEntity(pluginPos) instanceof TransferAddonBlockEntity plugin
-                && plugin.servedMachinePos() != null;
+        if (level == null) return false;
+
+        if (level.getBlockEntity(pluginPos) instanceof TransferAddonBlockEntity plugin
+                && plugin.servedMachinePos() != null) {
+            return true;
+        }
+
+        // A plugin stored in this addon's slots is a BlockEntity reached through a block next to it
+        // (see menuBlockPos), and on the client that block entity cannot answer servedMachinePos() at all: the
+        // plugin's controller offset is plain server side save data, so the client's copy answers null - exactly
+        // like the addon's own offset does (see ExtensionAddonMenu#servedMachine). Asking only for
+        // "serves a machine" therefore failed on the client and made transferPluginPos() fall back to the
+        // addon's own position, which is a position no transfer plugin stands at: every setting was then sent
+        // for the addon and dropped by the server.
+        return isTransferPluginBlock(level, pluginPos);
+    }
+
+    /** True while a transfer plugin block - with or without a machine - stands at {@code pos}. */
+    private static boolean isTransferPluginBlock(Level level, BlockPos pos) {
+        return level != null && level.getBlockEntity(pos) instanceof TransferAddonBlockEntity;
     }
 
     /**
@@ -787,27 +805,26 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
      * <p>
      * <b>It is not always {@link #position()}.</b> For the plugin's own screen the two are the same - that menu
      * belongs to the plugin. For an Extension Addon's screen the menu is opened on the <b>addon</b>, while the
-     * page draws and configures the plugin standing in its slots ({@code TransferAddonBlockEntity}), and the
+     * page draws and configures the plugin standing next to it ({@code TransferAddonBlockEntity}), and the
      * server keys everything it sends by that plugin's position
      * ({@code TransferNetworking.FaceModes}). A page that asked {@code position()} for the map therefore looked
      * up a key nothing is ever stored under, which is why a stored plugin drew no configured face - and why
      * every setting the player made was sent with the wrong position and refused.
      * <p>
      * The plugin's own position is derivable on both sides: a placed plugin's menu is opened on it, and a stored
-     * one stands in the cell of the addon that holds it, so no synced field is needed for it.
+     * one stands in a cell next to the addon that holds it, so the six neighbours are asked.
      */
     public BlockPos transferPluginPos() {
         return holdsTransferPlugin(position) ? position : menuBlockPos();
     }
 
     /**
-     * Position of the transfer plugin in this addon's slots, or this menu's own position while there is none.
+     * Position of the transfer plugin of this addon, or this menu's own position while there is none.
      * <p>
-     * A stored plugin is a <b>block</b> of the world ({@code oritechaddonsone:transfer_addon}), not an item that
-     * carries its own identity, and it occupies a cell next to the addon it was put into - a plugin can only be
-     * stored in an addon that stands next to the machine it serves, so the cell is one of the addon's six
-     * neighbours. The neighbours are checked rather than assumed, because a menu whose block holds no transfer
-     * plugin has no plugin position to report and has to keep its own.
+     * A stored plugin is a <b>block</b> of the world ({@code oritechaddonsone:transfer_addon}) standing next to
+     * the addon whose slot holds it, so the cell is one of the addon's six neighbours. The neighbours are
+     * checked rather than assumed, because a menu whose block holds no transfer plugin has no plugin position
+     * to report and has to keep its own.
      */
     private BlockPos menuBlockPos() {
         for (var face : Direction.values()) {
