@@ -269,8 +269,12 @@ public class ExtensionTransferAddonBlockEntity extends ExtensionAddonBlockEntity
             var neighbour = MachineFaceStorage.storageAt(level, hostPos, face);
             if (neighbour == null) continue;
 
-            if (mode.allowsExtract()) MachineFaceStorage.move(machine, machineEntity, neighbour, null);
-            if (mode.allowsInsert()) MachineFaceStorage.move(neighbour, null, machine, machineEntity);
+            if (mode.allowsExtract()) {
+                MachineFaceStorage.move(machine, machineEntity, neighbour, null, MachineFaceStorage.itemsPerTick());
+            }
+            if (mode.allowsInsert()) {
+                MachineFaceStorage.move(neighbour, null, machine, machineEntity, MachineFaceStorage.itemsPerTick());
+            }
         }
     }
 
