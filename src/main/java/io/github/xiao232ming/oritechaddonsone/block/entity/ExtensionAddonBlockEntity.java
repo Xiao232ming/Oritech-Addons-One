@@ -620,8 +620,20 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         if (level == null || level.isClientSide() || face == null || mode == null) return false;
         if (mode != TransferMode.NONE && !canTransferItems()) return false;
 
-        MachineFaceConfigs.faceModes(level, servedMachinePos()).set(face, mode, automation);
+        var machinePos = servedMachinePos();
+        var settings = MachineFaceConfigs.faceModes(level, machinePos);
+        var before = settings.modeOf(face);
+        var beforeAutomation = settings.automationOf(face);
+        settings.set(face, mode, automation);
         setChanged();
+
+        // INFO on purpose: this is the one place a face is configured, so it names what was asked for, what the
+        // machine's shared map holds afterwards, and whether the machine position the write used is the one the
+        // automation reads with - the three things that have to agree for a face to move items by itself.
+        OritechAddonsOne.LOGGER.info(
+                "[transfer] set {} face {} of {} (machine {}): was {} / auto {}, now {} / auto {}, {} configured",
+                mode, face, worldPosition, machinePos, before, beforeAutomation, settings.modeOf(face),
+                settings.automationOf(face), settings.configuredFaces());
         return true;
     }
 
@@ -641,6 +653,32 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
      * and a face whose automation is off simply keeps offering its inventory to pipes instead of moving items
      * itself.
      */
+    /**
+     * When this block last printed its throttled transfer diagnosis. Server side only, and only ever read by the
+     * two branches that explain why a configured face does nothing: a line per tick buries the rest of the log.
+     */
+    private long lastDiagnosis;
+
+    /** True at most once per second, so a stuck face reports its state without flooding the log. */
+    private boolean diagnosticsDue() {
+        var now = System.nanoTime();
+        if (now - lastDiagnosis < 1_000_000_000L) return false;
+        lastDiagnosis = now;
+        return true;
+    }
+
+    /** What every configured face of a map does, for the throttled diagnosis above. */
+    private static String describeFaces(TransferFaceModes faces) {
+        var text = new StringBuilder();
+        for (var face : Direction.values()) {
+            var mode = faces.modeOf(face);
+            if (mode == TransferMode.NONE) continue;
+            if (text.length() > 0) text.append(", ");
+            text.append(face).append(' ').append(mode).append(faces.automationOf(face) ? " auto" : " manual");
+        }
+        return text.length() == 0 ? "none" : text.toString();
+    }
+
     public void serverTickTransfer() {
         if (level == null || level.isClientSide()) return;
 
@@ -667,7 +705,7 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
             if (mode == TransferMode.NONE || !faces.automationOf(face)) continue;
 
             var machine = MachineFaceStorage.machineStorage(this);
-            if (machine == null) {
+            if (machine == null && diagnosticsDue()) {
                 OritechAddonsOne.LOGGER.info(
                         "[transfer] face {} of {} is {} and automated, but the machine's inventory is not resolvable (machine {})",
                         face, worldPosition, mode, connectedMachinePos());
@@ -680,7 +718,7 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
             if (worldPosition.relative(face).equals(connectedMachinePos())) continue;
 
             var neighbour = MachineFaceStorage.storageAt(level, worldPosition, face);
-            if (neighbour == null) {
+            if (neighbour == null && diagnosticsDue()) {
                 OritechAddonsOne.LOGGER.info(
                         "[transfer] face {} of {} is {} and automated, but {} holds no item handler",
                         face, worldPosition, mode, worldPosition.relative(face));
@@ -711,7 +749,7 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
                 in = MachineFaceStorage.move(neighbour, null, machine, machineEntity, MachineFaceStorage.itemsPerTick());
             }
 
-            if (out + in <= 0) {
+            if (out + in <= 0 && diagnosticsDue()) {
                 OritechAddonsOne.LOGGER.info(
                         "[transfer] face {} mode {} of {} moved nothing: neighbour {}, out {}, in {}",
                         face, mode, worldPosition, neighbour.getClass().getSimpleName(), out, in);
@@ -778,7 +816,7 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
                 in = MachineFaceStorage.move(neighbour, null, machine, machineEntity, MachineFaceStorage.itemsPerTick());
             }
 
-            if (out + in <= 0) {
+            if (out + in <= 0 && diagnosticsDue()) {
                 OritechAddonsOne.LOGGER.info(
                         "[transfer] cell {} face {} mode {} of {} moved nothing: neighbour {}, out {}, in {}",
                         entry.cell(), entry.face(), mode, worldPosition,

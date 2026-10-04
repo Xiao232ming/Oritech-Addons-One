@@ -21,6 +21,7 @@ import rearth.oritech.api.screen.Insets;
 import rearth.oritech.api.screen.OritechSurface;
 import rearth.oritech.api.screen.widgets.SurfaceWidget;
 
+import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferFaceModes;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferMode;
 import io.github.xiao232ming.oritechaddonsone.client.AddonPanelStyle;
@@ -502,6 +503,10 @@ public final class ExtensionTransferAddonPage implements AddonPage {
      * use for a face.
      */
     private static void send(BlockPos pos, Direction face, TransferMode mode, boolean automation) {
+        // INFO on purpose: what the page asks the server to store, so "the switch did nothing" can be told apart
+        // from "the switch was never sent" without guessing at the GUI
+        OritechAddonsOne.LOGGER.info("[transfer] page sends {} / auto {} for face {} of {}", mode, automation,
+                face, pos);
         PacketDistributor.sendToServer(new TransferNetworking.SetTransferMode(
                 pos, ProxyNetworking.faceIndex(face), TransferFaceModes.pack(mode, automation)));
     }
