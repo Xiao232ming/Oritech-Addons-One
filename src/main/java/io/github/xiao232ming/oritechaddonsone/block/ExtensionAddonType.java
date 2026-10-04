@@ -317,24 +317,21 @@ public enum ExtensionAddonType {
      * Every Oritech addon that is not one of the stat plugins. Discovered from the block registry so
      * addons from other mods are included as well.
      * <p>
+     * <b>A plugin of a stat category is never one of these, whatever tier it is and whichever mod added
+     * it.</b> That is what keeps the tiered plugins of other addon mods - Oritech Things adds one per tier
+     * of every category - out of type II: they belong into types I and III, which accept them by category
+     * (see {@link #categoryOf(Block)}), and letting them into type II as well would offer a second, weaker
+     * home for a plugin whose numbers type II does not aggregate.
+     * <p>
      * The inventory proxy is one of them since the Item Proxy page exists: the page lets a face of this
      * block proxy one slot of the machine inventory, which is exactly what the proxy would do if it were
      * attached to the machine directly (see {@code MachineFaceStorage}). Type I and III still refuse it,
      * because proxying is not a stat the aggregated numbers could carry. The transfer addon of this mod is
      * one of them as well, and it is also the reason that class handles whole-inventory transfer.
-     * <p>
-     * The two plugins of this mod are excluded as well: their effect (a bigger inventory / bigger tanks)
-     * is implemented by this mod instead of by Oritech, so they belong into the stat categories and not
-     * in type II.
      */
     public static Set<Block> type2Plugins() {
         if (type2 == null) {
-            // The two plugins of this mod are listed explicitly as well: they are stat plugins of their
-            // own category, and their effect (a bigger inventory / bigger tanks) is implemented by this
-            // mod instead of by Oritech, so they belong in the stat categories and not in type II.
             var excluded = new HashSet<>(type1Plugins());
-            excluded.add(OritechAddonsOne.WAREHOUSE_ADDON.get());
-            excluded.add(OritechAddonsOne.TANK_ADDON.get());
             // The chunk anchor has no effect at all inside a plugin slot: it works while it is attached to
             // a machine as a block, or while it sits in the reserved item slot of the wireless page (which
             // is not a plugin slot of this list). Keeping it out of the plugin sets is what makes a slot
@@ -344,7 +341,10 @@ public enum ExtensionAddonType {
             var result = new HashSet<Block>();
             for (var block : BuiltInRegistries.BLOCK) {
                 if (block instanceof ExtensionAddonBlock) continue;
-                if (block instanceof MachineAddonBlock && !excluded.contains(block)) result.add(block);
+                if (!(block instanceof MachineAddonBlock)) continue;
+                if (excluded.contains(block)) continue;
+                if (categoryOf(block) != null) continue;
+                result.add(block);
             }
             type2 = Set.copyOf(result);
         }
