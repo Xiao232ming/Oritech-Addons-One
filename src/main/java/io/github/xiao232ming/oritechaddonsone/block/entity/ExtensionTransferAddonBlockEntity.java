@@ -217,7 +217,7 @@ public class ExtensionTransferAddonBlockEntity extends ExtensionAddonBlockEntity
      * <p>
      * The two sides are the machine the <b>extender</b> is attached to and the container on the extender's
      * face, so the trade happens exactly where the page's net says it does. INPUT fills the machine,
-     * OUTPUT empties it and BOTH does both, with up to {@link MachineFaceStorage#ITEMS_PER_TICK} items per
+     * OUTPUT empties it and BOTH does both, with up to {@link MachineFaceStorage#itemsPerTick()} items per
      * face and tick. The face the plugin itself hangs on is skipped (there is no container there, only the
      * plugin), as is the face the machine itself sits on - trading "machine to machine" there would only
      * shuffle the machine's own items through its own inventory.

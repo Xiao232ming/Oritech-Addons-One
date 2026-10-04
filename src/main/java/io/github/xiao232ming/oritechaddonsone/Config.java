@@ -8,6 +8,7 @@ import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonLayout;
 /**
  * Common config of the mod. The inventory of the three plugin types can be adjusted here:
  * the slot count of type I and II (1-36) and the capacity of every slot of type III.
+ * The rate the transfer plugins automate at can be adjusted here as well.
  * The file is created at {@code config/oritechaddonsone-common.toml}.
  */
 public final class Config {
@@ -28,6 +29,19 @@ public final class Config {
             .comment("Capacity of every plugin slot of the Extension Addon Type III (how many plugins fit per slot).",
                     "扩展插件Ⅲ型每个格子的容量（每格最多能放多少个插件）。")
             .defineInRange("type3SlotCapacity", 256, 1, Integer.MAX_VALUE);
+
+    public static final ModConfigSpec.IntValue TRANSFER_ITEMS_PER_TICK = BUILDER
+            .comment("How many items one configured face of a transfer plugin moves per tick, i.e. the rate of the",
+                    "automation switch of the Extension Transfer / Transfer page. The budget is PER FACE and PER",
+                    "DIRECTION: a face set to INPUT takes this many items out of the container outside it, an",
+                    "OUTPUT face pushes this many into it, and a face set to both does each of the two, so the",
+                    "worst case of one face is twice this number per tick.",
+                    "The default 64 is one full stack per tick and per direction.",
+                    "传输插件每个已配置面每 tick 搬运的物品数（即“自动化”开关的速度）。",
+                    "该额度按【每个面、每个方向】计算：输入面从外侧容器抽取这么多，输出面向外侧容器弹出这么多，",
+                    "双向面两个方向各算一次，因此单个面每 tick 的上限是这个数字的两倍。",
+                    "默认 64，即每 tick 每个方向一整组。")
+            .defineInRange("transferItemsPerTick", 64, 1, 6400);
 
     public static final ModConfigSpec.BooleanValue SHOW_WIRELESS_DOCKS_IN_ADDON_PAGE = BUILDER
             .comment("List the wireless extension addons of a machine in its addon page, next to Oritech's own addons.",
@@ -52,6 +66,20 @@ public final class Config {
         } catch (IllegalStateException notLoadedYet) {
             // Config values are not available in every early loading stage; fall back to the default.
             return type.defaultSlots();
+        }
+    }
+
+    /**
+     * How many items one configured face of a transfer plugin moves per tick, per direction
+     * ({@link #TRANSFER_ITEMS_PER_TICK}). Never below 1, so an automation face can never end up doing
+     * nothing at all, and clamped like the other accessors for the stages the values are not readable in.
+     */
+    public static int transferItemsPerTick() {
+        try {
+            return Math.max(1, TRANSFER_ITEMS_PER_TICK.get());
+        } catch (IllegalStateException notLoadedYet) {
+            // Config values are not available in every early loading stage; fall back to the default.
+            return 64;
         }
     }
 

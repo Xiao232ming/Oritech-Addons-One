@@ -283,14 +283,14 @@ public class TransferAddonBlockEntity extends ExtensionAddonBlockEntity {
      * server re-checks that too, see {@link #setCellFaceConfig}), so an entry always names a real outside face.
      * <p>
      * The trade happens between the machine's inventory and that container, with up to
-     * {@link MachineFaceStorage#ITEMS_PER_TICK} items per <b>entry</b> and tick, in the order the two directions run in
+     * {@link MachineFaceStorage#itemsPerTick()} items per <b>entry</b> and tick, in the order the two directions run in
      * {@link MachineFaceStorage#move}: the machine is the owner on its own side of both, so its slot roles are
      * respected ({@link MachineSlotRoles}) - an INPUT face fills the machine's input slots only and an OUTPUT face
      * empties its output slots only. The container outside is passed without an owner, which is what a chest, a pipe
      * or another mod's inventory is.
      * <p>
      * <b>The budget is per configured cell-face and not shared.</b> The model has no maximum, so a machine whose
-     * surface is configured all over would move {@code ITEMS_PER_TICK} per entry - which is exactly what the page's
+     * surface is configured all over would move {@code itemsPerTick()} per entry - which is exactly what the page's
      * counter reports and what a player who configured that many faces asked for. What keeps it bounded is the
      * machine's own inventory: every entry moves items into or out of the same inventory, so an empty or full machine
      * starves the rest of the entries instead of the loop doing more work than the items allow. The loop itself is one

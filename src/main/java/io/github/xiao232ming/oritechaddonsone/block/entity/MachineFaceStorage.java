@@ -17,6 +17,8 @@ import rearth.oritech.api.transfer.item.DelegatingInventoryStorage;
 import rearth.oritech.api.transfer.item.ItemProvider;
 import rearth.oritech.util.MachineAddonController;
 
+import io.github.xiao232ming.oritechaddonsone.Config;
+
 /**
  * The item inventory one <b>face</b> of an Extension Addon / Wireless Extension Dock offers to the outside
  * world. A face answers for exactly one of two features, read on every single call:
@@ -51,11 +53,20 @@ import rearth.oritech.util.MachineAddonController;
 public final class MachineFaceStorage extends DelegatingInventoryStorage {
 
     /**
-     * How many items automation moves per face and tick. Eight is a fast but unremarkable rate - a hopper
-     * moves one item, an Oritech item pipe up to a stack - and it keeps a face that is fed and emptied at the
-     * same time from starving its own other direction.
+     * How many items automation moves per face and tick, <b>per direction</b> - read from the config
+     * ({@code Config#transferItemsPerTick()}, {@code transferItemsPerTick} in
+     * {@code config/oritechaddonsone-common.toml}, default 64).
+     * <p>
+     * A hopper moves one item per tick, an Oritech item pipe up to a stack, so the default is one full stack
+     * per direction and per face - and a face that is fed and emptied at the same time gets that budget for
+     * each of the two directions rather than sharing one.
+     * <p>
+     * The value is read on every call instead of being cached, so an edited config file takes effect on the
+     * next automation step without a restart; the call is a field read of an already loaded value.
      */
-    public static final int ITEMS_PER_TICK = 8;
+    public static int itemsPerTick() {
+        return Config.transferItemsPerTick();
+    }
 
     private final BlockEntity owner;
     /** Face this storage belongs to, resolved against the block entity on every call. */
@@ -143,7 +154,7 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
     }
 
     /**
-     * Moves up to {@link #ITEMS_PER_TICK} items of one stack from {@code from} to {@code to}, if the target
+     * Moves up to {@link #itemsPerTick()} items of one stack from {@code from} to {@code to}, if the target
      * takes any of it, and stops after that one stack. It is the {@link #move(ResourceHandler, BlockEntity,
      * ResourceHandler, BlockEntity) four argument form} without owners, i.e. for two handlers whose machines
      * are not known here.
@@ -176,7 +187,7 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
             var resource = from.getResource(slot);
             if (resource.isEmpty()) continue;
 
-            var wanted = amountAccepted(to, toOwner, resource, ITEMS_PER_TICK);
+            var wanted = amountAccepted(to, toOwner, resource, itemsPerTick());
             if (wanted <= 0) continue;
 
             try (var transaction = Transaction.openRoot()) {
