@@ -38,7 +38,7 @@ And a few extra features:
 
 | Option | Default | Range | Meaning |
 | --- | --- | --- | --- |
-| `type1Slots` | 5 | 1 – 96 (1.21.1), 1 – 72 (26.1.2) | Usable addon slots of Extension Addon Type I |
+| `type1Slots` | 5 | 1 – 72 | Usable addon slots of Extension Addon Type I |
 | `type2Slots` | 5 | as above | Usable addon slots of Extension Addon Type II |
 | `type3SlotCapacity` | 256 | ≥ 1 | How many addons one slot of Extension Addon Type III holds |
 | `transferItemsPerTick` | 64 | 1 – 6400 | Items one configured face moves per tick |
