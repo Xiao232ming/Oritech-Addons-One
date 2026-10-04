@@ -100,6 +100,27 @@ public class WirelessExtensionAddonBlockEntity extends ExtensionAddonBlockEntity
         return linkedMachine;
     }
 
+    /**
+     * The link is also the machine 传输插件's page renders while one is stored in this dock.
+     * <p>
+     * The base class answers with the controller offset Oritech's addon scan writes into the block it claimed -
+     * and a dock is never scanned, so that answer would be {@code null} for a dock that is linked. The menu the
+     * page draws from is filled with this method when the screen is opened
+     * ({@code PluginAddonMenus#resolveServedMachine}), so without this override a stored transfer plugin showed
+     * "the machine this plugin serves is not loaded" while the dock's own wireless page named that very machine
+     * one tab away.
+     * <p>
+     * {@code linkedMachine} is what the dock itself works on - the same value {@link #getControllerPos()} reports -
+     * so the page and the movement can never disagree about which machine they mean. It is read on the server only:
+     * the link is save data of a plain block entity and does not reach a client, which is why the position travels
+     * with the menu instead (see {@code ExtensionAddonMenu#transferMachinePos()}).
+     */
+    @Override
+    @Nullable
+    public BlockPos servedMachinePos() {
+        return linkedMachine;
+    }
+
     // The inherited isTargetChunkForceLoaded() answers for the link as well, because it follows
     // connectedMachinePos() - a dock that is not linked has no target and therefore nothing kept loaded.
 
