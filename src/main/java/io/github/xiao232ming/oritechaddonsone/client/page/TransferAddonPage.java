@@ -20,6 +20,7 @@ import rearth.oritech.api.screen.OritechSurface;
 
 import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 import io.github.xiao232ming.oritechaddonsone.block.entity.CellFaceModes;
+import io.github.xiao232ming.oritechaddonsone.block.entity.TransferAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferFaceModes;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferMode;
 import io.github.xiao232ming.oritechaddonsone.client.AddonPanelStyle;
@@ -530,6 +531,25 @@ public final class TransferAddonPage implements AddonPage {
             // the position is the plugin's, not the menu's: a page inside an addon has to address the plugin
             // standing in its slots, which is the block the server knows as the transfer plugin
             var pluginPos = context.menu().transferPluginPos();
+            // INFO while the addressing of a stored plugin is being chased: it names the menu the page belongs
+            // to, what the menu resolved, and every neighbour it had to choose from
+            var level = Minecraft.getInstance().level;
+            var at = level == null ? null : level.getBlockEntity(pluginPos);
+            var neighbours = new StringBuilder();
+            if (level != null) {
+                for (var side : Direction.values()) {
+                    var candidate = context.menu().position().relative(side);
+                    var entity = level.getBlockEntity(candidate);
+                    if (entity != null) {
+                        neighbours.append(side).append('=').append(entity.getClass().getSimpleName()).append(' ');
+                    }
+                }
+            }
+            OritechAddonsOne.LOGGER.info(
+                    "[transfer] sending from menu {} -> plugin {} (entity there: {}, serves {}; neighbours: {})",
+                    context.menu().position(), pluginPos, at == null ? "none" : at.getClass().getSimpleName(),
+                    at instanceof TransferAddonBlockEntity stored ? stored.servedMachinePos() : "n/a",
+                    neighbours.length() == 0 ? "none" : neighbours.toString().trim());
             PacketDistributor.sendToServer(new TransferNetworking.SetCellFaceMode(pluginPos,
                     CellFaceModes.pack(cell, face, TransferFaceModes.pack(mode, automation))));
         };
