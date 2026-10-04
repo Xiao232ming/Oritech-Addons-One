@@ -100,7 +100,7 @@ public final class MachineFaceConfigs {
         for (var face : Direction.values()) {
             var mode = own.modeOf(face);
             if (mode == TransferMode.NONE) continue;
-            shared.faces.setIfAbsent(face, mode, own.automationOf(face));
+            shared.faces.set(face, mode, own.automationOf(face));
         }
     }
 
@@ -116,7 +116,9 @@ public final class MachineFaceConfigs {
         if (shared == null) return;
 
         for (var entry : own.packedEntries()) {
-            shared.cells.setIfAbsent(entry.cell(), entry.face(), entry.mode(), entry.automation());
+            // the block's own copy is what the player configured for this entry, so it wins over whatever the
+            // machine's map holds - the map is a runtime cache, the block's data is the save file
+            shared.cells.set(entry.cell(), entry.face(), entry.mode(), entry.automation());
         }
     }
 
