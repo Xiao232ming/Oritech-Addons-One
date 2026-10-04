@@ -76,7 +76,13 @@ public final class ExtensionTransferAddonPage implements AddonPage {
      */
     private static final int GOLD = TransferFaceStyle.GOLD;
 
-    /** Icon of the tab: the light blue arrow ({@code oritechaddonsone:textures/gui/extension_transfer_tab.png}, 16x16). */
+    /**
+     * Icon of the tab: the light blue arrow
+     * ({@code oritechaddonsone:textures/gui/extension_transfer_tab.png}, 16x16).
+     * <p>
+     * It is this page's own texture and not 传输插件's orange one: the two tabs have to be told apart at a glance,
+     * and an arrow that differs from the other page's only by nothing at all is a tab the player cannot aim at.
+     */
     private static final ResourceLocation ICON =
             ResourceLocation.fromNamespaceAndPath("oritechaddonsone", "textures/gui/extension_transfer_tab.png");
 
