@@ -108,12 +108,20 @@ public class FaceFilterScreen extends OritechWidgetScreen<FaceFilterMenu> {
 
     /**
      * The direction row: <b>two</b> buttons, not one per direction per model - a page edits one face and that face
-     * has exactly two filters. They are centred as a pair in the band, with the same two pixel gap four 40 pixel
-     * plates would have used, so the row reads as one centred control instead of a row of unrelated switches.
+     * has exactly two filters. The pair is laid out from {@link #DIRECTION_X}, the same two pixel gap four 40 pixel
+     * plates would have used, so the row reads as one control instead of a row of unrelated switches.
+     * <p>
+     * <b>输入 then sits {@link #INPUT_NUDGE} pixels left of where the centred pair would put it</b>, and 输出 stays
+     * where the centring put it. The row is therefore deliberately off centre: the two labels are read far more
+     * often in the 输入 -> 输出 order, so the button a player reaches for first gets the room, and widening the
+     * space between the two is what makes the switch read as a switch rather than as two unrelated tabs.
      */
     private static final int DIRECTION_Y = 5;
     private static final int DIRECTION_WIDTH = 40;
     private static final int DIRECTION_GAP = 2;
+
+    /** How far the 输入 button sits left of the centred pair; 输出 keeps the centred position. */
+    private static final int INPUT_NUDGE = 8;
     private static final int DIRECTION_X = (IMAGE_WIDTH - (2 * DIRECTION_WIDTH + DIRECTION_GAP)) / 2;
 
     private static final String WHITELIST_LABEL = "gui.oritechaddonsone.filter.whitelist";
@@ -241,7 +249,7 @@ public class FaceFilterScreen extends OritechWidgetScreen<FaceFilterMenu> {
      * once there is one.
      */
     private void addDirectionRow() {
-        var input = new DirectionButton(DIRECTION_X, TransferMode.INPUT, INPUT_LABEL);
+        var input = new DirectionButton(DIRECTION_X - INPUT_NUDGE, TransferMode.INPUT, INPUT_LABEL);
         var output = new DirectionButton(DIRECTION_X + DIRECTION_WIDTH + DIRECTION_GAP, TransferMode.OUTPUT,
                 OUTPUT_LABEL);
 

@@ -418,14 +418,20 @@ public final class FacePreviewWidget extends UIComponent {
         graphics.pose().mulPose(Axis.XP.rotationDegrees(pitch));
         graphics.pose().mulPose(Axis.YP.rotationDegrees(yaw));
         // the model's origin is the centre of the drawn structure, which is where the picking and the markings put it
-        // as well; Oritech's own "-0.5 + offset" cancels against it for a block at offset zero
+        // as well
         graphics.pose().translate(-centerX, -centerY, -centerZ);
 
         RenderSystem.runAsFancy(() -> {
             for (var part : visibleBlocks()) {
                 graphics.pose().pushPose();
-                // the part's own cell, in the same model space the picking tests
-                graphics.pose().translate(part.offset().getX(), part.offset().getY(), part.offset().getZ());
+                // the part's own cell, in the same model space the picking tests - and Oritech's own "-0.5 + offset"
+                // on top of it: a block model is drawn in the block's own 0..1 cube, so the half unit is what puts the
+                // block around the centre of its cell, which is where the slab test's box ({@link #entryHit}) and the
+                // markings ({@link #drawQuad}) already place it. Splitting Oritech's single "-0.5 + offset - centre"
+                // into the centre above and a bare "offset" here dropped that half unit, and the machine was drawn
+                // half a block up and to the side of the very cells a click answered and a wash marked.
+                graphics.pose().translate(part.offset().getX() - 0.5F, part.offset().getY() - 0.5F,
+                        part.offset().getZ() - 0.5F);
 
                 if (part.state().getRenderShape() != RenderShape.ENTITYBLOCK_ANIMATED) {
                     client.getBlockRenderer().renderSingleBlock(part.state(), graphics.pose(), bufferSource,
@@ -958,6 +964,12 @@ public final class FacePreviewWidget extends UIComponent {
      * describes them ({@link PreviewTransform}), so the picking and the drawing cannot disagree.
      */
     private PreviewTransform transform() {
+        // The scale of the frame about to be drawn, not of the one before it: the page hands the rotation over once
+        // per frame and the scale depends on the pitch, so a picking test that read a stale value would answer the
+        // face a previous frame's model had under the cursor. It is the same call renderContent makes, and it only
+        // measures while the model or the rotation really changed, so the drawing still sees the value computed here.
+        renderedScale = scale(contentWidth(), contentHeight());
+
         return PreviewTransform.of(contentX() + contentWidth() * 0.5F, contentY() + contentHeight() * 0.5F, PLANE_Z,
                 renderedScale, pitch, yaw);
     }

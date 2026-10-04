@@ -20,10 +20,12 @@ import org.joml.Vector3f;
  * the model on the panel moves the ray with it, and the two cannot drift apart.
  * <p>
  * <b>The order of the composition</b> is exactly the one the widget uses: the panel's centre and its own z, the
- * model scale with the negated Y, the pitch, the yaw. {@link #screenToModel} is built by inverting those very
- * pieces rather than by copying signs, and the model's own {@code offset - 0.5} per block is <b>not</b> part of
- * it - the widget applies that inside its render loop and the picking applies the same offset when it builds the
- * block's box.
+ * model scale with the negated Y, the pitch, the yaw. What it deliberately leaves out is the rest of the widget's
+ * pose - the translation of the model's own centre to the origin and the {@code -0.5 + offset} of one block - and
+ * the picking accounts for both where it belongs: the widget applies the centre inside its render loop and the
+ * slab test subtracts the same centre from the box it builds, and the half unit puts a block around its cell,
+ * which is the box's own place. {@link #screenToModel} is built by inverting those very pieces rather than by
+ * copying signs, so a ray and the drawing it belongs to cannot drift apart.
  */
 public final class PreviewTransform {
 
@@ -93,7 +95,9 @@ public final class PreviewTransform {
 
     /**
      * The model-to-screen-pixel transform: a model point to its pixel on the panel, in absolute screen
-     * coordinates. It is the exact composition {@link FacePreviewWidget#renderContent} applies to the GUI pose.
+     * coordinates. It is the composition {@link FacePreviewWidget#renderContent} applies to the GUI pose, up to
+     * the model's own centre and the {@code -0.5 + offset} of one block, which that method adds inside its render
+     * loop and the picking adds to the box instead (see the class comment).
      */
     public Matrix4f modelToScreen() {
         return new Matrix4f()
