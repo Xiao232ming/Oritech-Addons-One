@@ -76,9 +76,17 @@ public final class ExtensionTransferAddonPage implements AddonPage {
      */
     private static final int GOLD = TransferFaceStyle.GOLD;
 
-    /** Icon of the tab: the light blue arrow ({@code oritechaddonsone:textures/gui/transfer_tab.png}, 16x16). */
+    /**
+     * Icon of the tab: the light blue arrow
+     * ({@code oritechaddonsone:textures/gui/extension_transfer_tab.png}, 16x16).
+     * <p>
+     * It is this page's own texture and not 传输插件's orange one, which the two pages shared by mistake: the path
+     * here pointed at {@code transfer_tab.png}, so both tabs drew the orange arrow and the cyan texture this page
+     * was always meant to show sat unused in the jar. A page whose icon is indistinguishable from another page's
+     * icon is a tab the player cannot aim at.
+     */
     private static final Identifier ICON =
-            Identifier.fromNamespaceAndPath("oritechaddonsone", "textures/gui/transfer_tab.png");
+            Identifier.fromNamespaceAndPath("oritechaddonsone", "textures/gui/extension_transfer_tab.png");
 
     /** Faces of the block, i.e. the maximum of the counter - there is no per-addon limit. */
     private static final int MAX_FACES = Direction.values().length;
