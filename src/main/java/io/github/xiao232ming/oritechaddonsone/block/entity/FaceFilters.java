@@ -27,10 +27,11 @@ import org.jetbrains.annotations.Nullable;
  * for the same reason: the six directions of one block. The cells of a machine structure have their own map
  * ({@link CellFilters}), which has no such bound.
  * <p>
- * <b>A filter that was never touched is not stored.</b> {@link ItemFilterData#DEFAULT} answers exactly what no
- * filter at all answers, so writing it back would only make the save file grow; {@link #set} therefore drops the
- * entry instead, and {@link #of} answers {@code null} for a face nobody filtered - which is what every caller
- * reads as "this face moves everything".
+ * <b>A face that was never touched has no filter.</b> {@link #of} answers {@code null} for it, which every
+ * caller reads as "this face moves everything" - and that is how a face behaves exactly as it did before the
+ * 过滤 page existed. Once the page has sent a filter, though, what it sent is kept <b>as it is</b>: a whitelist
+ * with nothing in it is a real answer (it refuses everything) and is stored as one, because deleting the last
+ * listed item is a decision and not an undo.
  */
 public final class FaceFilters {
 
@@ -70,17 +71,20 @@ public final class FaceFilters {
     }
 
     /**
-     * Stores one filter, and drops the entry again while the filter is the {@link ItemFilterData#DEFAULT} one -
-     * a filter the player cleared is not a filter, and keeping it would write the same bytes into every save.
+     * Stores one filter, exactly as it was given.
+     * <p>
+     * <b>An emptied filter is kept, not dropped.</b> A whitelist with nothing in it refuses everything, which is
+     * what a player who deletes every listed item has asked for - dropping the entry instead would answer the
+     * opposite of what they did and let everything through. The <b>absence</b> of an entry is what means "this
+     * face was never filtered", and that state is only ever reached by never calling this: the page sends a
+     * filter only after an edit, so a face nobody ever touched keeps moving everything, exactly as it did before
+     * the page existed.
      *
      * @return true while the settings really changed
      */
     public boolean set(Direction face, TransferMode flow, ItemFilterData data) {
         if (face == null || !isAFlow(flow) || data == null) return false;
-
-        var key = new Key(face, flow);
-        if (ItemFilterData.DEFAULT.equals(data)) return filters.remove(key) != null;
-        return !data.equals(filters.put(key, data));
+        return !data.equals(filters.put(new Key(face, flow), data));
     }
 
     /** Drops every filter. */

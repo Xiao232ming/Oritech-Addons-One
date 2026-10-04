@@ -75,18 +75,18 @@ public final class CellFilters {
     }
 
     /**
-     * Stores one filter, and drops the entry again while the filter is the {@link ItemFilterData#DEFAULT} one -
-     * a filter the player cleared is not a filter, and keeping it would write the same bytes into every save.
+     * Stores one filter, exactly as it was given.
+     * <p>
+     * <b>An emptied filter is kept, not dropped</b>, for the reason {@link FaceFilters#set} gives: a whitelist
+     * with nothing in it refuses everything, and the absence of an entry - not an empty one - is what means
+     * "this face was never filtered".
      *
      * @return true while the settings really changed
      */
     public boolean set(Vec3i cell, Direction face, TransferMode flow, ItemFilterData data) {
         if (cell == null || face == null || !isAFlow(flow) || data == null) return false;
         if (!CellFaceModes.isCellOffsetInRange(cell)) return false;
-
-        var key = new Key(cell, face, flow);
-        if (ItemFilterData.DEFAULT.equals(data)) return filters.remove(key) != null;
-        return !data.equals(filters.put(key, data));
+        return !data.equals(filters.put(new Key(cell, face, flow), data));
     }
 
     /** Drops every filter. */

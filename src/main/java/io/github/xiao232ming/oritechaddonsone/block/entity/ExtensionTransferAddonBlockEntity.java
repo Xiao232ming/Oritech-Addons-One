@@ -269,11 +269,17 @@ public class ExtensionTransferAddonBlockEntity extends ExtensionAddonBlockEntity
             var neighbour = MachineFaceStorage.storageAt(level, hostPos, face);
             if (neighbour == null) continue;
 
+            // each direction is gated by its own item filter, exactly as on the addon's own faces: the OUTPUT
+            // one decides what may leave the machine through this face, the INPUT one what may enter it. The
+            // filters live in the same per-machine map the page edited them in, so a filter configured anywhere
+            // on this machine - on this plugin, on another one, or on a wired addon around it - applies here.
             if (mode.allowsExtract()) {
-                MachineFaceStorage.move(machine, machineEntity, neighbour, null, MachineFaceStorage.itemsPerTick());
+                MachineFaceStorage.move(machine, machineEntity, neighbour, null, MachineFaceStorage.itemsPerTick(),
+                        faceFilter(face, TransferMode.OUTPUT));
             }
             if (mode.allowsInsert()) {
-                MachineFaceStorage.move(neighbour, null, machine, machineEntity, MachineFaceStorage.itemsPerTick());
+                MachineFaceStorage.move(neighbour, null, machine, machineEntity, MachineFaceStorage.itemsPerTick(),
+                        faceFilter(face, TransferMode.INPUT));
             }
         }
     }
