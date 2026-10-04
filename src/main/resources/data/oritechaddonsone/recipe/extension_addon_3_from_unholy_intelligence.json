@@ -4,13 +4,13 @@
   "key": {
     "A": "oritech:steel_ingot",
     "B": "oritech:machine_extender",
-    "C": "oritech:processing_unit"
+    "C": "oritech:unholy_intelligence"
   },
   "pattern": [
     "ABA",
     "ACA"
   ],
   "result": {
-    "id": "oritechaddonsone:extension_addon_1"
+    "id": "oritechaddonsone:extension_addon_3"
   }
 }

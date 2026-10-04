@@ -4,13 +4,15 @@
   "key": {
     "A": "oritech:steel_ingot",
     "B": "oritech:machine_extender",
-    "C": "oritech:processing_unit"
+    "C": "oritech:unholy_intelligence",
+    "D": "minecraft:ender_pearl"
   },
   "pattern": [
     "ABA",
-    "ACA"
+    "ACA",
+    "ADA"
   ],
   "result": {
-    "id": "oritechaddonsone:extension_addon_1"
+    "id": "oritechaddonsone:wireless_extension_addon_3"
   }
 }

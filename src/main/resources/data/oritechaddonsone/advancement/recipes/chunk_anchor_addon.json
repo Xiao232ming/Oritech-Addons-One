@@ -1,11 +1,11 @@
 {
   "parent": "minecraft:recipes/root",
   "criteria": {
-    "has_super_ai_chip": {
+    "has_platinum_ingot": {
       "conditions": {
         "items": [
           {
-            "items": "oritech:super_ai_chip"
+            "items": "oritech:platinum_ingot"
           }
         ]
       },
@@ -13,7 +13,7 @@
     },
     "has_the_recipe": {
       "conditions": {
-        "recipe": "oritechaddonsone:extension_addon_3"
+        "recipe": "oritechaddonsone:chunk_anchor_addon"
       },
       "trigger": "minecraft:recipe_unlocked"
     }
@@ -21,12 +21,12 @@
   "requirements": [
     [
       "has_the_recipe",
-      "has_super_ai_chip"
+      "has_platinum_ingot"
     ]
   ],
   "rewards": {
     "recipes": [
-      "oritechaddonsone:extension_addon_3"
+      "oritechaddonsone:chunk_anchor_addon"
     ]
   }
 }

@@ -1,11 +1,11 @@
 {
   "parent": "minecraft:recipes/root",
   "criteria": {
-    "has_target_designator": {
+    "has_ender_pearl": {
       "conditions": {
         "items": [
           {
-            "items": "oritech:target_designator"
+            "items": "minecraft:ender_pearl"
           }
         ]
       },
@@ -21,7 +21,7 @@
   "requirements": [
     [
       "has_the_recipe",
-      "has_target_designator"
+      "has_ender_pearl"
     ]
   ],
   "rewards": {

@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "A": "oritech:plastic_sheet",
+    "B": "minecraft:chest",
+    "C": "#minecraft:planks",
+    "D": "#oritech:plating"
+  },
+  "pattern": [
+    "AAA",
+    "ABA",
+    "CDC"
+  ],
+  "result": {
+    "id": "oritechaddonsone:warehouse_addon"
+  }
+}

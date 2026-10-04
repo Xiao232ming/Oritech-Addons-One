@@ -1,11 +1,11 @@
 {
   "parent": "minecraft:recipes/root",
   "criteria": {
-    "has_super_ai_chip": {
+    "has_piston": {
       "conditions": {
         "items": [
           {
-            "items": "oritech:super_ai_chip"
+            "items": "minecraft:piston"
           }
         ]
       },
@@ -13,7 +13,7 @@
     },
     "has_the_recipe": {
       "conditions": {
-        "recipe": "oritechaddonsone:extension_addon_3"
+        "recipe": "oritechaddonsone:transfer_addon"
       },
       "trigger": "minecraft:recipe_unlocked"
     }
@@ -21,12 +21,12 @@
   "requirements": [
     [
       "has_the_recipe",
-      "has_super_ai_chip"
+      "has_piston"
     ]
   ],
   "rewards": {
     "recipes": [
-      "oritechaddonsone:extension_addon_3"
+      "oritechaddonsone:transfer_addon"
     ]
   }
 }

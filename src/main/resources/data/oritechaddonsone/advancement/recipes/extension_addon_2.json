@@ -1,11 +1,11 @@
 {
   "parent": "minecraft:recipes/root",
   "criteria": {
-    "has_computing_engine": {
+    "has_flux_gate": {
       "conditions": {
         "items": [
           {
-            "items": "oritech:advanced_computing_engine"
+            "items": "oritech:flux_gate"
           }
         ]
       },
@@ -21,7 +21,7 @@
   "requirements": [
     [
       "has_the_recipe",
-      "has_computing_engine"
+      "has_flux_gate"
     ]
   ],
   "rewards": {

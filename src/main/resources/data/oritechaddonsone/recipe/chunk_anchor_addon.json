@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "A": "oritech:plastic_sheet",
+    "B": "oritech:platinum_ingot",
+    "C": "minecraft:ender_eye",
+    "D": "oritech:processing_unit",
+    "E": "#oritech:plating"
+  },
+  "pattern": [
+    "ABA",
+    "ACA",
+    "DED"
+  ],
+  "result": {
+    "id": "oritechaddonsone:chunk_anchor_addon"
+  }
+}
