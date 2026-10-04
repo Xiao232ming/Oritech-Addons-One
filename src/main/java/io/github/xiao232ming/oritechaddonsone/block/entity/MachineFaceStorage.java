@@ -205,8 +205,18 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
         var budget = Math.max(1, Math.min(amount, itemsPerTick()));
 
         while (budget > 0) {
-            var moved = moveDose(from, fromOwner, to, toOwner, budget);
-            if (moved <= 0) return;
+            var moved = moveDose(from, fromOwner, to, toOwner, budget, true);
+            if (moved <= 0) {
+                // Nothing travelled while the machine's slot roles were respected. Those roles are a reading of
+                // the machine's own slot layout, and a reading can be wrong in a way that blocks <em>every</em>
+                // slot: a machine whose whole inventory falls inside one of the two ranges forbids the other
+                // direction outright, and its faces would then move nothing at all. The dose is therefore
+                // retried once without them - the machine's own handler still decides what a slot accepts, so
+                // the worst case is the behaviour this mod had before the roles existed, and the best case is
+                // that the items travel after all.
+                moved = moveDose(from, fromOwner, to, toOwner, budget, false);
+                if (moved <= 0) return;
+            }
 
             budget -= moved;
         }
@@ -234,20 +244,20 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
      * @return number of items moved, or {@code 0} while nothing could be moved
      */
     private static int moveDose(ItemApi.InventoryStorage from, @Nullable BlockEntity fromOwner,
-            ItemApi.InventoryStorage to, @Nullable BlockEntity toOwner, int amount) {
+            ItemApi.InventoryStorage to, @Nullable BlockEntity toOwner, int amount, boolean useRoles) {
         if (!from.supportsExtraction() || !to.supportsInsertion()) return 0;
 
         var moved = 0;
 
         for (int slot = 0; slot < from.getSlotCount(); slot++) {
-            if (!MachineSlotRoles.allowsExtractAt(fromOwner, slot)) continue;
+            if (useRoles && !MachineSlotRoles.allowsExtractAt(fromOwner, slot)) continue;
 
             var stack = from.getStackInSlot(slot);
             if (stack.isEmpty()) continue;
 
             // dry run: how much of the dose would the target take, and how much can this slot give?
             var offered = stack.copyWithCount(Math.min(stack.getCount(), amount));
-            var wanted = acceptedBy(to, toOwner, offered);
+            var wanted = acceptedBy(to, toOwner, offered, useRoles);
             if (wanted <= 0) continue;
 
             var takeable = from.extractFromSlot(offered.copyWithCount(wanted), slot, true);
@@ -256,7 +266,7 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
             var extracted = from.extractFromSlot(offered.copyWithCount(takeable), slot, false);
             if (extracted <= 0) continue;
 
-            var inserted = insertInto(to, toOwner, offered.copyWithCount(extracted), false);
+            var inserted = insertInto(to, toOwner, offered.copyWithCount(extracted), false, useRoles);
             if (inserted < extracted) {
                 // the target changed its mind in between: give the refused items back to where they came from
                 from.insert(offered.copyWithCount(extracted - inserted), false);
@@ -274,8 +284,9 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
      * slot roles respected; a target that is not a machine - a chest, a pipe, another mod's inventory - has
      * no roles and is asked exactly as before.
      */
-    private static int acceptedBy(ItemApi.InventoryStorage to, @Nullable BlockEntity toOwner, ItemStack offered) {
-        return insertInto(to, toOwner, offered, true);
+    private static int acceptedBy(ItemApi.InventoryStorage to, @Nullable BlockEntity toOwner, ItemStack offered,
+            boolean useRoles) {
+        return insertInto(to, toOwner, offered, true, useRoles);
     }
 
     /**
@@ -288,7 +299,16 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
      */
     private static int insertInto(ItemApi.InventoryStorage to, @Nullable BlockEntity toOwner, ItemStack offered,
             boolean simulate) {
-        var roles = toOwner == null ? null : MachineSlotRoles.of(toOwner);
+        return insertInto(to, toOwner, offered, simulate, true);
+    }
+
+    /**
+     * The same insert with the machine's slot roles switchable: the retry of {@link #move} that runs after a
+     * dose moved nothing passes {@code false} to fall back to the plain handler.
+     */
+    private static int insertInto(ItemApi.InventoryStorage to, @Nullable BlockEntity toOwner, ItemStack offered,
+            boolean simulate, boolean useRoles) {
+        var roles = !useRoles || toOwner == null ? null : MachineSlotRoles.of(toOwner);
         if (roles == null) return to.insert(offered, simulate);
 
         var inserted = 0;
