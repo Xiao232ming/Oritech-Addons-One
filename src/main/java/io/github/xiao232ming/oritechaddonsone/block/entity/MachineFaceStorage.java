@@ -146,10 +146,10 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
     }
 
     /**
-     * Moves up to {@link #itemsPerTick()} items of one stack from {@code from} to {@code to}, if the target
-     * takes any of it, and stops after that one stack. It is the
-     * {@link #move(ItemApi.InventoryStorage, BlockEntity, ItemApi.InventoryStorage, BlockEntity) four
-     * argument form} without owners, i.e. for two storages whose machines are not known here.
+     * Moves up to {@link #itemsPerTick()} items from {@code from} to {@code to}, as whole stacks, and reports
+     * nothing: it is the four argument form without owners, i.e. for two storages whose machines are not known
+     * here - a caller that has the machine's block entity passes it so the machine's slot roles can be
+     * respected.
      */
     public static void move(ItemApi.InventoryStorage from, ItemApi.InventoryStorage to) {
         move(from, null, to, null);
@@ -170,10 +170,55 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
      * is only taken out of a slot the source may give away and only put into a slot the target may take it
      * in - never out of a machine's input slot and never into one of its output slots. A {@code null} owner
      * is a container with no roles to respect: a chest, a pipe, another mod's inventory.
+     * <p>
+     * It moves whole stacks and stops at the first one that really travels; the loop that keeps going until the
+     * budget is used up is {@link #move(ItemApi.InventoryStorage, BlockEntity, ItemApi.InventoryStorage,
+     * BlockEntity, int)}.
      */
     public static void move(ItemApi.InventoryStorage from, @Nullable BlockEntity fromOwner,
             ItemApi.InventoryStorage to, @Nullable BlockEntity toOwner) {
-        if (!from.supportsExtraction() || !to.supportsInsertion()) return;
+        move(from, fromOwner, to, toOwner, itemsPerTick());
+    }
+
+    /**
+     * The form the <b>automation of a face</b> calls: keeps moving items between the two storages while the
+     * target still takes them and the budget lasts, instead of stopping after one stack.
+     * <p>
+     * <b>That is what makes "fill while there is room, empty while there is something" true.</b> A face set to
+     * INPUT keeps pulling from the container outside it until the machine's input slots are full (or nothing
+     * else fits), and a face set to OUTPUT keeps pushing the machine's products out until its output slots are
+     * empty - the budget is what bounds one tick, not which slot the move happened to look at first. Stopping
+     * after the first stack meant a machine could sit with empty input slots and a full container next to it and
+     * still move nothing, because the first stack the loop met was one whose slot was already full.
+     * <p>
+     * Each stack still travels as its own step with the simulated insert and the handed-back remainder (see the
+     * four argument form), so nothing can be lost here either; a step that moves nothing ends the loop, so a
+     * target that refuses everything cannot spin.
+     *
+     * @param amount total number of items this call may move, and the cap of a single stack as well
+     */
+    public static void move(ItemApi.InventoryStorage from, @Nullable BlockEntity fromOwner,
+            ItemApi.InventoryStorage to, @Nullable BlockEntity toOwner, int amount) {
+        // a machine's slots hold vanilla stacks, so one step never has to look at more than one of them
+        var budget = Math.max(1, Math.min(amount, itemsPerTick()));
+
+        while (budget > 0) {
+            var moved = moveOneStack(from, fromOwner, to, toOwner, Math.min(budget, 64));
+            if (moved <= 0) return;
+
+            budget -= moved;
+        }
+    }
+
+    /**
+     * Moves the first stack that fits, the way this helper has always done it: ask the target, ask the source,
+     * then take exactly that amount out and put it in, handing back whatever the target refuses in between.
+     *
+     * @return number of items moved, or {@code 0} while nothing could be moved
+     */
+    private static int moveOneStack(ItemApi.InventoryStorage from, @Nullable BlockEntity fromOwner,
+            ItemApi.InventoryStorage to, @Nullable BlockEntity toOwner, int amount) {
+        if (!from.supportsExtraction() || !to.supportsInsertion()) return 0;
 
         for (int slot = 0; slot < from.getSlotCount(); slot++) {
             if (!MachineSlotRoles.allowsExtractAt(fromOwner, slot)) continue;
@@ -182,7 +227,7 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
             if (stack.isEmpty()) continue;
 
             // dry run: how much would the target take of this stack, and how much can the source give?
-            var offered = stack.copyWithCount(Math.min(stack.getCount(), itemsPerTick()));
+            var offered = stack.copyWithCount(Math.min(stack.getCount(), amount));
             var wanted = acceptedBy(to, toOwner, offered);
             if (wanted <= 0) continue;
 
@@ -198,8 +243,10 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
                 from.insert(offered.copyWithCount(extracted - inserted), false);
             }
 
-            return;
+            return inserted;
         }
+
+        return 0;
     }
 
     /**

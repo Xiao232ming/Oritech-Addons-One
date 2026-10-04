@@ -604,6 +604,12 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
      * Moves items for every face whose automation is switched on. Polled once per server tick by
      * {@link ExtensionAddonBlock#getTicker} (and by the wireless dock's own ticker).
      * <p>
+     * <b>A face fills while the machine has room and empties while it has something.</b> An INPUT face keeps
+     * pulling from the container outside it until the machine's input slots are full, an OUTPUT face keeps
+     * pushing the machine's products out until its output slots are empty, and BOTH does the two in turn -
+     * each up to the configured rate per tick
+     * ({@code Config#transferItemsPerTick()}), never one stack and no more.
+     * <p>
      * Cheap while nothing is automated: without a configured face - the common case - it returns immediately,
      * and a face whose automation is off simply keeps offering its inventory to pipes instead of moving items
      * itself.
@@ -637,8 +643,14 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
             // container on that side and "output" empties the machine into it. The machine itself is passed
             // along as the owner of the machine side, so both directions respect which of its slots are
             // inputs and which are outputs (see MachineSlotRoles) instead of moving anything anywhere.
-            if (mode.allowsExtract()) MachineFaceStorage.move(machine, this, neighbour, null);
-            if (mode.allowsInsert()) MachineFaceStorage.move(neighbour, null, machine, this);
+            // The budget is passed so the step keeps filling while the machine's input slots have room and
+            // keeps emptying while its output slots hold something, instead of stopping after one stack.
+            if (mode.allowsExtract()) {
+                MachineFaceStorage.move(machine, this, neighbour, null, MachineFaceStorage.itemsPerTick());
+            }
+            if (mode.allowsInsert()) {
+                MachineFaceStorage.move(neighbour, null, machine, this, MachineFaceStorage.itemsPerTick());
+            }
         }
     }
 

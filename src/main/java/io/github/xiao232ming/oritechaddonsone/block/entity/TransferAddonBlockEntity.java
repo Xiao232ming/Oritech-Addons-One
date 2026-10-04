@@ -282,11 +282,13 @@ public class TransferAddonBlockEntity extends ExtensionAddonBlockEntity {
      * server re-checks that too, see {@link #setCellFaceConfig}), so an entry always names a real outside face.
      * <p>
      * The trade happens between the machine's inventory and that container, with up to
-     * {@link MachineFaceStorage#itemsPerTick()} items per <b>entry</b> and tick, in the order the two directions run in
-     * {@link MachineFaceStorage#move}: the machine is the owner on its own side of both, so its slot roles are
-     * respected ({@link MachineSlotRoles}) - an INPUT face fills the machine's input slots only and an OUTPUT face
-     * empties its output slots only. The container outside is passed without an owner, which is what a chest, a pipe
-     * or another mod's inventory is.
+     * {@link MachineFaceStorage#itemsPerTick()} items per <b>entry</b> and tick - and it keeps going until the
+     * budget is used up or the machine has nothing left to take in or out, so an INPUT face really fills the
+     * machine while its input slots have room and an OUTPUT face really empties it while its output slots hold
+     * something (see {@link MachineFaceStorage#move}). The machine is the owner on its own side of both, so its
+     * slot roles are respected ({@link MachineSlotRoles}) - an INPUT face fills the machine's input slots only
+     * and an OUTPUT face empties its output slots only. The container outside is passed without an owner, which
+     * is what a chest, a pipe or another mod's inventory is.
      * <p>
      * <b>The budget is per configured cell-face and not shared.</b> The model has no maximum, so a machine whose
      * surface is configured all over would move {@code itemsPerTick()} per entry - which is exactly what the page's
@@ -347,8 +349,12 @@ public class TransferAddonBlockEntity extends ExtensionAddonBlockEntity {
             var neighbour = MachineFaceStorage.storageAt(level, machinePos.offset(entry.cell()), entry.face());
             if (neighbour == null) continue;
 
-            if (mode.allowsExtract()) MachineFaceStorage.move(machine, machineEntity, neighbour, null);
-            if (mode.allowsInsert()) MachineFaceStorage.move(neighbour, null, machine, machineEntity);
+            if (mode.allowsExtract()) {
+                MachineFaceStorage.move(machine, machineEntity, neighbour, null, MachineFaceStorage.itemsPerTick());
+            }
+            if (mode.allowsInsert()) {
+                MachineFaceStorage.move(neighbour, null, machine, machineEntity, MachineFaceStorage.itemsPerTick());
+            }
         }
     }
 
