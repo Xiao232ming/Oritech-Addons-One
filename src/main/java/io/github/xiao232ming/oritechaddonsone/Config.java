@@ -31,16 +31,19 @@ public final class Config {
             .defineInRange("type3SlotCapacity", 256, 1, Integer.MAX_VALUE);
 
     public static final ModConfigSpec.IntValue TRANSFER_ITEMS_PER_TICK = BUILDER
-            .comment("How many items one configured face of a transfer plugin moves per tick, i.e. the rate of the",
-                    "automation switch of the Extension Transfer / Transfer page. The budget is PER FACE and PER",
-                    "DIRECTION: a face set to INPUT takes this many items out of the container outside it, an",
-                    "OUTPUT face pushes this many into it, and a face set to both does each of the two, so the",
-                    "worst case of one face is twice this number per tick.",
-                    "The default 64 is one full stack per tick and per direction.",
-                    "传输插件每个已配置面每 tick 搬运的物品数（即“自动化”开关的速度）。",
-                    "该额度按【每个面、每个方向】计算：输入面从外侧容器抽取这么多，输出面向外侧容器弹出这么多，",
-                    "双向面两个方向各算一次，因此单个面每 tick 的上限是这个数字的两倍。",
-                    "默认 64，即每 tick 每个方向一整组。")
+            .comment("How many items one slot of a machine may move per tick through one configured face, i.e. the",
+                    "rate of the automation switch of the Extension Transfer / Transfer page. The budget is PER",
+                    "SLOT and PER DIRECTION: an INPUT face fills the machine's accepting slots with this many items",
+                    "each (a slot that already holds part of the item is topped up to its maximum), an OUTPUT face",
+                    "empties this many items out of each slot that holds something, and a face set to both does each",
+                    "of the two. Every transferable slot of the machine is served in the same tick, so a machine",
+                    "with several input or output slots is filled or emptied in one tick as well.",
+                    "The default 64 is one full stack per slot and per direction.",
+                    "传输插件每个已配置面、每 tick、每个可搬运槽位的物品数（即“自动化”开关的速度）。",
+                    "该额度按【每个槽位、每个方向】计算：输入面把机器的可插入槽各填这么多（已有部分同种物品的",
+                    "槽会先补满到上限），输出面把每个有货的槽各弹出这么多，双向面两个方向各算一次。",
+                    "机器所有可搬运的槽位在同一 tick 内一起处理，因此多个输入/输出槽也是一次性填满或弹空。",
+                    "默认 64，即每 tick 每槽每方向一整组。")
             .defineInRange("transferItemsPerTick", 64, 1, 6400);
 
     public static final ModConfigSpec.BooleanValue SHOW_WIRELESS_DOCKS_IN_ADDON_PAGE = BUILDER
