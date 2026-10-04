@@ -53,14 +53,42 @@ public final class PluginAddonMenus {
      * client, because the answer is built from controller offsets that are plain save data and never leave the
      * server. {@code null} is a real answer here - it means "this block serves no machine", which the page shows as
      * its "no machine" state.
+     * <p>
+     * No machine is passed explicitly; this overload resolves it from the block entity itself, so a caller cannot
+     * forget it (see {@link #resolveServedMachine}).
      */
     public static InteractionResult openPluginMenu(Level level, BlockPos pos, Player player,
             @Nullable BlockPos servedMachine) {
         if (level.isClientSide() || !(player instanceof ServerPlayer serverPlayer)) return InteractionResult.PASS;
         if (!(level.getBlockEntity(pos) instanceof ExtensionAddonBlockEntity blockEntity)) return InteractionResult.PASS;
 
-        serverPlayer.openMenu(blockEntity, buffer -> writeMenuData(buffer, blockEntity, pos, servedMachine));
+        serverPlayer.openMenu(blockEntity,
+                buffer -> writeMenuData(buffer, blockEntity, pos,
+                        servedMachine != null ? servedMachine : resolveServedMachine(blockEntity)));
         return InteractionResult.SUCCESS;
+    }
+
+    /**
+     * The machine a block serves, as the block entity itself reports it, or {@code null} while it serves none.
+     * <p>
+     * It is {@link ExtensionAddonBlockEntity#servedMachinePos()} and nothing narrower, and that is the whole point:
+     * the answer has to be asked of <b>every</b> block that owns this menu, not only of 传输插件. A transfer plugin
+     * stored in an Extension Addon is reached through the addon's own screen, so the <b>addon</b> is the block the
+     * opener was handed - and a type II addon, which is the one that accepts the plugin, answers that question from
+     * the controller offset Oritech's addon scan wrote into <em>it</em>, i.e. with the machine it hangs on. Narrowing
+     * the question to the plugin's own class answered {@code null} there, and the addon's transfer page then claimed
+     * "the machine this plugin serves is not loaded" about the machine standing right next to it.
+     * <p>
+     * It is a server side answer: the controller offset is plain save data and never leaves the server, which is
+     * why the value travels with the menu instead of being looked up on the client (see
+     * {@link ExtensionAddonMenu#transferMachinePos()}).
+     * <p>
+     * It exists so that a caller which has no machine to pass still sends the right one, instead of sending
+     * {@code null} and making the client draw an empty page for a block that does serve something.
+     */
+    @Nullable
+    private static BlockPos resolveServedMachine(ExtensionAddonBlockEntity blockEntity) {
+        return blockEntity.servedMachinePos();
     }
 
     /**
