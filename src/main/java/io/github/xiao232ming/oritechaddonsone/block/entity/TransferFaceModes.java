@@ -115,6 +115,24 @@ public final class TransferFaceModes {
         faces.clear();
     }
 
+    /**
+     * Sets one face only while nothing is configured there yet, and reports whether it did.
+     * <p>
+     * It is what the shared, per-machine settings are merged with ({@code MachineFaceConfigs#contribute}): a
+     * block that is loaded into a machine which already has settings must not overwrite what another plugin of
+     * that machine configured, so the existing entry wins. {@link TransferMode#NONE} is not a setting and is
+     * therefore ignored here - removing a face is an explicit edit, not a merge (see {@link #set}).
+     *
+     * @return true while this call was the one that configured the face
+     */
+    public boolean setIfAbsent(Direction face, TransferMode mode, boolean automation) {
+        if (face == null || mode == null || mode == TransferMode.NONE) return false;
+        if (isConfigured(face)) return false;
+
+        set(face, mode, automation);
+        return true;
+    }
+
     /** Writes the settings into the block entity tag. */
     public void save(CompoundTag nbt) {
         var directions = Direction.values();

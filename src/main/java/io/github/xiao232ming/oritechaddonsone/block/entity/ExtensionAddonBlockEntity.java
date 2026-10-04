@@ -470,18 +470,17 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
     private final TransferFaceModes transferFaces = new TransferFaceModes();
 
     /**
-     * What every <b>individual face of every cell</b> of the machine's structure does - the 传输插件 page's
-     * model (see {@link CellFaceModes}).
+     * What every <b>individual face of every cell</b> of the machine's structure does - the model of the
+     * 传输插件 page (see {@link CellFaceModes}).
      * <p>
-     * <b>It lives here, on the block that holds or hosts the plugin, and not on the plugin block.</b> A
-     * transfer plugin that was <em>put into</em> an addon's plugin slot is an item: its block - and with it its
-     * block entity - does not exist in the world, so there is nothing else that could carry the settings. The
-     * page therefore addresses the block it was opened on, which is exactly this one: the addon for a stored
-     * plugin, the plugin's own block entity for one that hangs on an extender. Both write into this field, and
-     * both {@link #tickCellFaces() automation loops} read it, which is also what makes several plugins of one
-     * machine agree - each of them is reached through this block.
+     * <b>It is not a field of this block.</b> The settings belong to the <b>machine</b>: a machine can be
+     * served by several transfer plugins - two Extension Addons around it, a wireless dock linked to it - and
+     * all of them have to see and act on the same settings, otherwise a face configured through one plugin
+     * would be invisible and inert in the others ({@link MachineFaceConfigs}). This block reads and writes the
+     * machine's map through {@link #cellFaceModes()}; the field it keeps below is only the copy it saves, so
+     * that a machine whose blocks are all unloaded still comes back with what the player configured.
      */
-    private final CellFaceModes cellFaces = new CellFaceModes();
+    private final CellFaceModes savedCellFaces = new CellFaceModes();
 
     /**
      * Faces of this block a placed transfer addon hangs on, as a bitmask over {@link Direction#values()}.
@@ -597,20 +596,31 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         return hasExtensionTransferAddon() || hasTransferAddon();
     }
 
-    /** The per-face transfer modes of this block; never {@code null}, empty while nothing is configured. */
+    /**
+     * The per-face transfer modes of the machine this block serves; never {@code null}, empty while nothing is
+     * configured.
+     * <p>
+     * <b>Shared with every other plugin of that machine</b>, like the cell-face settings: a machine can be
+     * served by several transfer plugins, and a face configured through one of them has to be visible and active
+     * in the others ({@link MachineFaceConfigs}). A block that serves no machine answers an empty map, which is
+     * what the cube net page shows as "this face transfers nothing".
+     */
     public TransferFaceModes transferModes() {
-        return transferFaces;
+        return MachineFaceConfigs.faceModes(level, servedMachinePos());
     }
 
     /**
      * Sets what one face does with the machine's items and whether it does it on its own, or clears the face
      * again with {@link TransferMode#NONE}. Refused on the client and while no transfer addon is stored.
+     * <p>
+     * The setting goes into the machine's shared map (see {@link #transferModes()}), so every plugin serving
+     * that machine acts on it and shows it.
      */
     public boolean setTransferConfig(Direction face, TransferMode mode, boolean automation) {
         if (level == null || level.isClientSide() || face == null || mode == null) return false;
         if (mode != TransferMode.NONE && !canTransferItems()) return false;
 
-        transferFaces.set(face, mode, automation);
+        MachineFaceConfigs.faceModes(level, servedMachinePos()).set(face, mode, automation);
         setChanged();
         return true;
     }
@@ -639,11 +649,12 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         // nothing is configured yet, but the page has to appear or disappear.
         refreshAttachedTransferFaces();
 
-        if (transferFaces.isEmpty() || !canTransferItems()) return;
+        var faces = transferModes();
+        if (faces.isEmpty() || !canTransferItems()) return;
 
         for (var face : Direction.values()) {
-            var mode = transferFaces.modeOf(face);
-            if (mode == TransferMode.NONE || !transferFaces.automationOf(face)) continue;
+            var mode = faces.modeOf(face);
+            if (mode == TransferMode.NONE || !faces.automationOf(face)) continue;
 
             var machine = MachineFaceStorage.machineStorage(this);
             if (machine == null) continue;
@@ -671,14 +682,14 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         }
 
         // and the same for the cell-faces of the 传输插件 page, which this block carries while it holds or
-        // hosts that plugin (see #cellFaces)
+        // hosts that plugin (see #cellFaceModes)
         tickCellFaces();
     }
 
     /**
      * Moves items for every <b>cell-face</b> of the served machine whose automation is switched on - the
-     * automation of the 传输插件 page, which the block that holds or hosts the plugin carries (see
-     * {@link #cellFaces}).
+     * automation of the 传输插件 page, whose settings every block serving the machine shares
+     * ({@link MachineFaceConfigs}).
      * <p>
      * A configured entry names one face of one cell, so the container it trades with is the one outside that
      * face of that cell of the machine's structure: INPUT pulls from it into the machine, OUTPUT pushes the
@@ -694,10 +705,14 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
      */
     private void tickCellFaces() {
         if (level == null || level.isClientSide()) return;
-        if (cellFaces.isEmpty()) return;
 
         var machinePos = servedMachinePos();
         if (machinePos == null) return;
+
+        // the machine's shared settings, not this block's copy: every plugin that serves the machine moves the
+        // same configuration, so a face configured through another plugin works here as well
+        var settings = cellFaceModes();
+        if (settings.isEmpty()) return;
 
         var machine = MachineFaceStorage.machineStorageAt(level, machinePos);
         if (machine == null) return;
@@ -708,7 +723,7 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         var machineEntity = level.isLoaded(machinePos) ? level.getBlockEntity(machinePos) : null;
         var hostFace = hostFaceOfMachine();
 
-        for (var entry : cellFaces.packedEntries()) {
+        for (var entry : settings.packedEntries()) {
             var mode = entry.mode();
             if (mode == TransferMode.NONE || !entry.automation()) continue;
 
@@ -753,15 +768,46 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         if (!CellFaceModes.isCellOffsetInRange(cell)) return false;
         if (mode != TransferMode.NONE && !machineCellOffsets().contains(cell)) return false;
 
-        if (!cellFaces.set(cell, face, mode, automation)) return true;
+        // written into the machine's shared map, which is what every plugin serving that machine reads - and
+        // mirrored into this block's own copy so that its save data carries the setting
+        if (!cellFaceModes().set(cell, face, mode, automation)) return true;
+        savedCellFaces.set(cell, face, mode, automation);
 
         setChanged();
         return true;
     }
 
-    /** The cell-face settings of this block; never {@code null}, empty while nothing is configured. */
+    /** The cell-face settings of the machine this block serves; never {@code null}, empty while none are set. */
     public CellFaceModes cellFaceModes() {
-        return cellFaces;
+        return MachineFaceConfigs.cellFaces(this);
+    }
+
+    /** This block's own copy of the settings, i.e. what it saves - see {@link #savedCellFaces}. */
+    CellFaceModes savedCellFaces() {
+        return savedCellFaces;
+    }
+
+    /**
+     * Merges what this block has saved into the machine's shared settings and mirrors the result back, called
+     * while loading and whenever the block starts serving a machine.
+     * <p>
+     * The merge is what makes the shared map survive a world load: every block that serves the machine brings
+     * its own copy, and a block that is loaded later finds the settings of the others already there. The mirror
+     * keeps this block's save data complete, so any one of the machine's plugins is enough to restore the whole
+     * configuration.
+     */
+    void syncCellFaces() {
+        var machinePos = servedMachinePos();
+        if (level == null || level.isClientSide() || machinePos == null) return;
+
+        MachineFaceConfigs.contribute(level, machinePos, savedCellFaces);
+
+        var shared = MachineFaceConfigs.cellFaces(level, machinePos);
+        savedCellFaces.clear();
+        for (var entry : shared.packedEntries()) {
+            savedCellFaces.set(entry.cell(), entry.face(), entry.mode(), entry.automation());
+        }
+        setChanged();
     }
 
     /**
@@ -818,8 +864,13 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
     /**
      * Drops every mode while the block no longer holds a transfer addon of either kind. Called from
      * {@link #contentsChanged}: a block that lost its last transfer plugin must stop feeding or emptying the
-     * machine through its faces. Both plugins share the per-face modes of this block, so either of them being
-     * present (see {@link #canTransferItems()}) keeps them.
+     * machine through its faces. Both plugins of this block share the modes, so either of them being present
+     * (see {@link #canTransferItems()}) keeps them.
+     * <p>
+     * <b>Only this block's own share goes away.</b> The modes themselves belong to the machine and are shared
+     * with the other plugins serving it ({@link MachineFaceConfigs}), so clearing the machine's map here would
+     * silently wipe what a player configured through a plugin that is still there. What this block does is drop
+     * the copy it saves and its contribution to the shared map is rebuilt from the blocks that remain.
      */
     private void reconcileTransferModes() {
         if (level == null || level.isClientSide()) return;
@@ -1336,7 +1387,9 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         // Extension Transfer page and the cell-faces of the 传输插件 page
         proxyFaces.save(nbt);
         transferFaces.save(nbt);
-        cellFaces.save(nbt);
+        // the machine's shared settings as this block knows them, so that this block alone is enough to
+        // restore them (see MachineFaceConfigs#save)
+        MachineFaceConfigs.save(this, nbt);
     }
 
     @Override
@@ -1348,7 +1401,10 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         // a stale binding or mode is harmless: it only resolves to an inventory while the machine is there
         proxyFaces.load(nbt);
         transferFaces.load(nbt);
-        cellFaces.load(nbt);
+        // the machine's shared settings this block was saved with; the machine's controller offset is read by
+        // the superclass above, so servedMachinePos() is available here
+        MachineFaceConfigs.load(this, nbt);
+        syncCellFaces();
 
         var counts = nbt.getIntArray("counts");
         if (counts.length == 0) return;

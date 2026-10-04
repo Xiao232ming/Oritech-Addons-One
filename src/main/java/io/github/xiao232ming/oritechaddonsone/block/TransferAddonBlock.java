@@ -2,6 +2,7 @@ package io.github.xiao232ming.oritechaddonsone.block;
 
 import org.jetbrains.annotations.Nullable;
 
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.InteractionHand;
@@ -208,9 +209,11 @@ public class TransferAddonBlock extends PluginAddonBlock {
         // The page draws what every cell-face of that machine does, and that map is the server's: it cannot travel
         // with the menu, whose container data is a fixed set of slots and cannot hold one setting per face of every
         // cell of a structure (see TransferNetworking.FaceModes). It is sent right after the menu, so the page has
-        // it before the first frame it draws - and again after every change the player makes.
-        if (opened == ItemInteractionResult.SUCCESS) {
-            TransferNetworking.sendFaceModes(level, pos);
+        // it before the first frame it draws - and again after every change the player makes. The key is the
+        // <b>machine</b>, because that is what the settings describe: several plugins can serve it, and all of
+        // their pages draw the same map.
+        if (opened == ItemInteractionResult.SUCCESS && player instanceof ServerPlayer serverPlayer) {
+            TransferNetworking.sendFaceModes(serverPlayer, plugin.servedMachinePos());
         }
 
         return opened.result();
