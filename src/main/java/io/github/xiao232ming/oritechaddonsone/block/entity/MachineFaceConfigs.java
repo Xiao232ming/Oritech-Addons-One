@@ -166,40 +166,33 @@ public final class MachineFaceConfigs {
 
     /** Reads the machine's settings back out of the block's save data; see {@link #save}. */
     public static void load(ExtensionAddonBlockEntity block, CompoundTag nbt) {
-        var machine = block.servedMachinePos();
-        if (machine == null) {
-            OritechAddonsOne.LOGGER.debug("[transfer] load: {} has no machine, {} face(s) in its save data ignored",
-                    block.getBlockPos(), nbt.getIntArray(CELL_TAG).length);
-            return;
-        }
+        // Read into the block's own map, never into the machine's, and never mind whether the machine can be
+        // named yet: while a world loads, the block entity is still being built and the controller offset that
+        // names its machine is written by Oritech afterwards - so asking for the machine here answers "none" and
+        // the settings on disk were dropped on every single load. The merge into the machine's map happens as
+        // soon as the machine really can be named (see ExtensionAddonBlockEntity#syncCellFaces, which the tick
+        // keeps retrying until it can).
+        var own = block.savedCellFaces();
 
         var faceValues = nbt.getIntArray(FACE_TAG);
         if (faceValues.length > 0) {
-            var shared = get(machine);
+            var ownFaces = block.savedTransferFaces();
             var directions = Direction.values();
-            if (shared != null) {
-                for (int index = 0; index < faceValues.length && index < directions.length; index++) {
-                    if (!TransferFaceModes.isConfigured(faceValues[index])) continue;
-                    shared.faces.setIfAbsent(directions[index], TransferFaceModes.modeOf(faceValues[index]),
-                            TransferFaceModes.automationOf(faceValues[index]));
-                }
+            for (int index = 0; index < faceValues.length && index < directions.length; index++) {
+                if (!TransferFaceModes.isConfigured(faceValues[index])) continue;
+                ownFaces.set(directions[index], TransferFaceModes.modeOf(faceValues[index]),
+                        TransferFaceModes.automationOf(faceValues[index]));
             }
         }
 
         var values = nbt.getIntArray(CELL_TAG);
         if (values.length == 0) return;
 
-        var shared = get(machine);
-        if (shared == null) return;
-
         for (var value : values) {
             var entry = CellFaceModes.unpack(value);
             if (entry == null || !TransferFaceModes.isConfigured(entry.value())) continue;
-            shared.cells.setIfAbsent(entry.cell(), entry.face(), entry.mode(), entry.automation());
+            own.set(entry.cell(), entry.face(), entry.mode(), entry.automation());
         }
-
-        OritechAddonsOne.LOGGER.debug("[transfer] load: {} brought {} face(s) for machine {}, shared now {}",
-                block.getBlockPos(), values.length, machine, shared.cells.configuredFaces());
     }
 
     /** Save tag of the machine's six faces. */
