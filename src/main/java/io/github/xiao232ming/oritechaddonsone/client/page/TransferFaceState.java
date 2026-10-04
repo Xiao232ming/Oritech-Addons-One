@@ -49,7 +49,7 @@ public final class TransferFaceState {
         // INFO while "the config disappears when the UI closes" is being chased: every arrival says under
         // which key and with how many faces it came, which is what separates a lost packet from a map that is
         // stored under a key nothing looks up
-        OritechAddonsOne.LOGGER.info("[transfer] client received {} face(s) for key {} (holds {})",
+        OritechAddonsOne.LOGGER.debug("[transfer] client received {} face(s) for key {} (holds {})",
                 entries.size(), machine, MODES.keySet());
     }
 

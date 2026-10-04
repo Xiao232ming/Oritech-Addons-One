@@ -303,7 +303,7 @@ public final class TransferAddonPage implements AddonPage {
             var openCell = TransferPickerState.openCell();
             // INFO on purpose: it separates "the click never reached the page" from "it reached the page and
             // missed every control", which is the difference between a hit test and a packet problem
-            OritechAddonsOne.LOGGER.info("[transfer] click {} on the open modal of cell {} face {} (at {}/{})",
+            OritechAddonsOne.LOGGER.debug("[transfer] click {} on the open modal of cell {} face {} (at {}/{})",
                     button, openCell, openFace, (int) mouseX, (int) mouseY);
             return TransferFaceModal.mouseClicked(context, openFace, current(context, openCell, openFace),
                     send(context), false, mouseX, mouseY, button);
@@ -311,14 +311,14 @@ public final class TransferAddonPage implements AddonPage {
 
         var preview = currentPreview(context);
         if (preview == null) {
-            OritechAddonsOne.LOGGER.info("[transfer] click on the page, but there is no model (machine {})",
+            OritechAddonsOne.LOGGER.debug("[transfer] click on the page, but there is no model (machine {})",
                     machinePos(menu));
             return false;
         }
 
         // a click on the model picks a cell-face; the widget remembers the pick, the page remembers the selection
         var picked = preview.widget().pickFace(screenX(context, mouseX), screenY(context, mouseY));
-        OritechAddonsOne.LOGGER.info("[transfer] click {} on the model picked {} of cell {} (at {}/{})",
+        OritechAddonsOne.LOGGER.debug("[transfer] click {} on the model picked {} of cell {} (at {}/{})",
                 button, picked, preview.widget().pickedOffset(), (int) mouseX, (int) mouseY);
         if (picked == null) return false;
 
@@ -509,7 +509,7 @@ public final class TransferAddonPage implements AddonPage {
             // INFO while "the config disappears when the UI closes" is being chased, and only once per key: it
             // names the key the page looks under and every key the client holds, which is what tells a map that
             // never arrived from one that arrived under another key
-            OritechAddonsOne.LOGGER.info("[transfer] page looks up machine {} (client holds {}) - menu {}",
+            OritechAddonsOne.LOGGER.debug("[transfer] page looks up machine {} (client holds {}) - menu {}",
                     key, TransferFaceState.keys(), context.menu().position());
         }
         return TransferFaceState.modeOf(key, cell, face);

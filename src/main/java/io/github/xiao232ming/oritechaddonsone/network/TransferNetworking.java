@@ -138,7 +138,7 @@ public final class TransferNetworking {
                 // stored, and it is invisible in the default log otherwise - the position the client addressed
                 // did not hold a block of this mod at all
                 var found = player.level().getBlockEntity(packet.pos());
-                OritechAddonsOne.LOGGER.info(
+                OritechAddonsOne.LOGGER.debug(
                         "[transfer] dropped a cell-face setting for {}: no transfer-capable block there (block {}, entity {})",
                         packet.pos(), player.level().getBlockState(packet.pos()).getBlock(),
                         found == null ? "none" : found.getClass().getSimpleName());
@@ -149,13 +149,13 @@ public final class TransferNetworking {
             // re-checked here - the ranges by unpack, the cell against this machine's own cells by the block entity
             var entry = CellFaceModes.unpack(packet.entry());
             if (entry == null) {
-                OritechAddonsOne.LOGGER.info("[transfer] dropped a cell-face setting for {}: unreadable entry {}",
+                OritechAddonsOne.LOGGER.debug("[transfer] dropped a cell-face setting for {}: unreadable entry {}",
                         packet.pos(), packet.entry());
                 return;
             }
 
             if (!owner.setCellFaceConfig(entry.cell(), entry.face(), entry.mode(), entry.automation())) {
-                OritechAddonsOne.LOGGER.info(
+                OritechAddonsOne.LOGGER.debug(
                         "[transfer] refused {} for {} cell {} face {} (machine {} - cell in range {} / part of it {})",
                         entry.mode(), packet.pos(), entry.cell(), entry.face(), owner.servedMachinePos(),
                         CellFaceModes.isCellOffsetInRange(entry.cell()),
@@ -167,7 +167,7 @@ public final class TransferNetworking {
             // machine gets the authoritative copy back - including the entry a clear just removed
             sendFaceModes(player.level(), packet.machine());
 
-            OritechAddonsOne.LOGGER.info(
+            OritechAddonsOne.LOGGER.debug(
                     "[transfer] stored {} on {} cell {} face {} (machine {}, automation {}, {} face(s) now)",
                     entry.mode(), packet.pos(), entry.cell(), entry.face(), packet.machine(), entry.automation(),
                     owner.cellFaceModes().configuredFaces());
@@ -217,7 +217,7 @@ public final class TransferNetworking {
 
             // INFO while "the config disappears" is being chased: an arrival with entries that none of them
             // survived the decode is a different bug from an arrival with no entries at all
-            OritechAddonsOne.LOGGER.info("[transfer] map packet for {} carried {} entry(ies), {} unreadable",
+            OritechAddonsOne.LOGGER.debug("[transfer] map packet for {} carried {} entry(ies), {} unreadable",
                     packet.pos(), packet.entries().size(), unreadable);
 
             // Client side hook, behind a no-op holder so a dedicated server never touches a client class
@@ -267,7 +267,7 @@ public final class TransferNetworking {
             sendFaceModes(player, machine, settings);
             // INFO so that "the page stayed empty" can be told apart from "the map never went out": an empty
             // page after this line means the client had the data and did not draw it
-            OritechAddonsOne.LOGGER.info("[transfer] sent {} configured face(s) of machine {} to {}",
+            OritechAddonsOne.LOGGER.debug("[transfer] sent {} configured face(s) of machine {} to {}",
                     settings.configuredFaces(), machine, player.getName().getString());
         }
     }

@@ -801,7 +801,7 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
             // INFO while "the config disappears when the UI closes" is being chased: a block that cannot name
             // its machine keeps what it has and never contributes, which is what makes a configuration look
             // lost - and this early return is the only place that state is visible
-            OritechAddonsOne.LOGGER.info(
+            OritechAddonsOne.LOGGER.debug(
                     "[transfer] syncCellFaces skipped on {} (level {}, client {}, machine {}, saved {} face(s))",
                     worldPosition, level, level != null && level.isClientSide(), machinePos,
                     savedCellFaces.configuredFaces());
@@ -817,7 +817,7 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         }
         setChanged();
 
-        OritechAddonsOne.LOGGER.info("[transfer] syncCellFaces on {} -> machine {}, shared now {} face(s)",
+        OritechAddonsOne.LOGGER.debug("[transfer] syncCellFaces on {} -> machine {}, shared now {} face(s)",
                 worldPosition, machinePos, shared.configuredFaces());
     }
 
@@ -891,7 +891,7 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         transferFaces.clear();
         setChanged();
 
-        OritechAddonsOne.LOGGER.info("[transfer] reconcileTransferModes cleared the copy of {} (no transfer plugin)",
+        OritechAddonsOne.LOGGER.debug("[transfer] reconcileTransferModes cleared the copy of {} (no transfer plugin)",
                 worldPosition);
     }
 

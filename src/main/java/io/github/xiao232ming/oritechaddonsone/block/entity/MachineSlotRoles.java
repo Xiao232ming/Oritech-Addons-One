@@ -139,11 +139,12 @@ public final class MachineSlotRoles {
             if (roles[index] == null) roles[index] = TransferMode.BOTH;
         }
 
-        // INFO on purpose: which slot of a machine counts as an input and which as an output decides every
+        // DEBUG on purpose, and the one diagnostic kept for the open report about a machine that does not empty
+        // its output slots: which slot of a machine counts as an input and which as an output decides every
         // transfer this mod makes, and the two sources it is read from are not always in agreement - a machine
         // whose roles come out wrong would move items into its product slots and empty its input slots, which
         // is impossible to tell apart from a bug in the movement itself without this line
-        OritechAddonsOne.LOGGER.info("[transfer] slot roles of {} ({} slots): {}",
+        OritechAddonsOne.LOGGER.debug("[transfer] slot roles of {} ({} slots): {}",
                 machine.getBlockPos(), size, describe(roles));
         return roles;
     }
