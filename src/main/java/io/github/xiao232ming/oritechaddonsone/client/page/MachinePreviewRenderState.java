@@ -27,8 +27,8 @@ import io.github.xiao232ming.oritechaddonsone.block.entity.TransferMode;
  * @param entries    the blocks this state draws, one per drawn part of the machine, in the same offset space the
  *                   picking uses (see {@link FacePreviewWidget#partOffsets()}) - the model has to be drawn at the
  *                   offsets it is picked at, or a click and the face under it would point at different cells
- * @param overlays   the markings of the machine's faces: for every face that is configured or occupied, the part that
- *                   carries it and what it is (see {@link Overlay}), drawn in the model's own pose over the blocks
+ * @param overlays   the markings of the machine's faces: for every configured face, the part that carries it and what
+ *                   it is (see {@link Overlay}), drawn in the model's own pose over the blocks
  * @param face       the face of the machine the mouse is over, i.e. the face to highlight, or {@code null} while the
  *                   mouse is not on the model
  * @param offset     the part of the machine that face belongs to, in model space, or {@code null} while no face is
@@ -93,13 +93,13 @@ public record MachinePreviewRenderState(
     }
 
     /**
-     * One marking of one face of the machine: the part that carries it, which of its faces it is, the mode that face
-     * is configured with and whether a plugin of this mod occupies it.
+     * One marking of one face of the machine: the part that carries it, which of its faces it is and the mode that
+     * face is configured with.
      * <p>
-     * The renderer turns this into geometry - a wash in the mode's colours ({@link TransferFaceStyle#wash}) and, for
-     * an occupied face, the gold outline of {@link TransferFaceStyle#GOLD}. A face that is both keeps both, so an
-     * outline can be read over a wash; a face with neither is not in this list at all.
+     * The renderer turns this into geometry - a wash in the mode's colours ({@link TransferFaceStyle#wash}). It is the
+     * only kind of marking: every cell-face of the machine can be configured, so there is no face this list would have
+     * to carry in order to show that it cannot be.
      */
-    public record Overlay(Vec3i offset, Direction face, TransferMode mode, boolean occupied) {
+    public record Overlay(Vec3i offset, Direction face, TransferMode mode) {
     }
 }

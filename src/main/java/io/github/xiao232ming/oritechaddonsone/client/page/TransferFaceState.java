@@ -25,7 +25,7 @@ import io.github.xiao232ming.oritechaddonsone.block.entity.TransferMode;
  * <p>
  * The client is a <b>mirror</b> here, never the authority: every entry in it came from the server, so what the page
  * draws and what the automation does cannot drift. A click does not write here - it sends a packet and waits for the
- * answer, which is what makes a refused configuration (an occupied face, a cell that is not part of the structure)
+ * answer, which is what makes a refused configuration (a cell that is not part of the machine's structure)
  * visible on the page as "nothing happened".
  * <p>
  * It is dropped with the model when the GUI closes, so a page that is opened again starts from whatever the server

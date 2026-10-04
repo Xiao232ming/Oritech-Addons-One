@@ -43,7 +43,7 @@ import io.github.xiao232ming.oritechaddonsone.block.entity.TransferMode;
  * keyed on exactly that direction, which is why the answer is a direction and not a part index.
  * <p>
  * <b>The user's zoom is folded into the measured scale</b> ({@link #setZoom}), so it reaches the drawing, the picking,
- * the hover highlight and the mode and gold markings through the one {@link PreviewTransform} they all read. The model
+ * the hover highlight and the mode markings through the one {@link PreviewTransform} they all read. The model
  * grows and shrinks about the centre of the structure it is measured at, so a zoomed model is still the same cells in
  * the same places - just bigger - and a click keeps landing on the face the player sees.
  * <b>The picking is not a second copy of the drawing any more.</b> It used to be Oritech's own
@@ -129,12 +129,6 @@ public final class FacePreviewWidget extends BlockPreviewWidget {
     public record CellFace(Vec3i cell, Direction face) {
     }
 
-    /**
-     * Faces of the machine a plugin of this mod occupies, as the bitmask the page's menu reports. {@code 0} while
-     * none is, which is the case for the extender placement by the rule the page and the server share.
-     */
-    private int occupiedFaces;
-
     /** The 3D preview of one machine: 140x110 pixels, the size the page's panel reserves for it. */
     public FacePreviewWidget(int x, int y, int width, int height) {
         super(x, y, width, height);
@@ -143,17 +137,19 @@ public final class FacePreviewWidget extends BlockPreviewWidget {
     }
 
     /**
-     * Sets what the frame after this one marks on the model: the mode of every configured cell-face, and which faces
-     * a plugin occupies. The page calls this once per frame, before it renders this widget, so the model always shows
-     * what the server last reported (and the pending value the page has just sent) rather than a copy of its own.
+     * Sets what the frame after this one marks on the model: the mode of every configured cell-face. The page calls
+     * this once per frame, before it renders this widget, so the model always shows what the server last reported (and
+     * the pending value the page has just sent) rather than a copy of its own.
+     * <p>
+     * A configured cell-face is the only thing that is marked: the page configures <b>every</b> cell-face of the
+     * machine, the one the plugin block itself stands in included (see
+     * {@code TransferAddonBlockEntity#setCellFaceConfig}), so there is no second kind of marking - no face this model
+     * would have to show as one that cannot be configured.
      *
-     * @param modes    the mode of every <b>configured</b> cell-face; a cell-face that is absent transfers nothing
-     * @param occupied bitmask over {@link Direction#ordinal()} of the faces of the controller's own cell a plugin
-     *                 occupies - the only cell that can be occupied, because a plugin is one block
+     * @param modes the mode of every <b>configured</b> cell-face; a cell-face that is absent transfers nothing
      */
-    public void setFaceOverlays(Map<CellFace, TransferMode> modes, int occupied) {
+    public void setFaceOverlays(Map<CellFace, TransferMode> modes) {
         this.faceModes = Map.copyOf(modes);
-        this.occupiedFaces = occupied;
     }
 
     /**
@@ -270,9 +266,8 @@ public final class FacePreviewWidget extends BlockPreviewWidget {
     }
 
     /**
-     * Submits the model of this frame: every part of the machine, the markings of the faces (their mode's wash and
-     * the gold outline of an occupied face) and, while the mouse is on it, the face to highlight and the part that
-     * face is on.
+     * Submits the model of this frame: every part of the machine, the markings of the configured faces (their
+     * mode's wash) and, while the mouse is on it, the face to highlight and the part that face is on.
      * <p>
      * It takes the place of Oritech's own content, which draws its private block list - a list this widget never
      * fills - and is therefore the one place the model's numbers are worked out. The rotation it submits is the
@@ -310,8 +305,8 @@ public final class FacePreviewWidget extends BlockPreviewWidget {
     }
 
     /**
-     * Where each configured or occupied <b>cell-face</b> of the machine is marked, as the renderer wants it: which
-     * part carries the marking and what that marking is.
+     * Where each configured <b>cell-face</b> of the machine is marked, as the renderer wants it: which part carries
+     * the marking and what that marking is.
      * <p>
      * One entry per cell-face, and the cell it names is the cell the setting belongs to - <b>not</b> a
      * representative cell worked out from the direction. That indirection was the old model's: with a setting per
@@ -320,14 +315,11 @@ public final class FacePreviewWidget extends BlockPreviewWidget {
      * the marking is drawn exactly where the player clicked, even when two cells of the same side are configured
      * differently.
      * <p>
-     * Cell-faces with nothing to say carry no quad at all:
-     * <ul>
-     *     <li>a cell-face with a mode carries that mode's wash (see {@link TransferFaceStyle#wash}),</li>
-     *     <li>a face of the controller's own cell that a plugin occupies carries the gold outline of
-     *     {@link TransferFaceStyle#GOLD} - and it may well carry a wash as well, so a cell-face that was configured
-     *     before the plugin was placed keeps showing what it does under the outline,</li>
-     *     <li>a cell-face that is neither is not marked ({@link TransferMode#NONE} and no occupied bit).</li>
-     * </ul>
+     * A cell-face with a mode carries that mode's wash (see {@link TransferFaceStyle#wash}); a cell-face with nothing
+     * configured is not in this list at all and therefore carries no quad. There is deliberately no second kind of
+     * marking: the page refuses no cell-face, so no face of the model has to be shown as one that cannot be
+     * configured.
+     * <p>
      * The overlay is built here rather than in the renderer because this is where the part list lives: the renderer
      * only draws the quads it is handed.
      */
@@ -340,24 +332,9 @@ public final class FacePreviewWidget extends BlockPreviewWidget {
             if (entry.getValue() == TransferMode.NONE) continue;
 
             overlays.add(new MachinePreviewRenderState.Overlay(entry.getKey().cell(), entry.getKey().face(),
-                    entry.getValue(), isOccupied(entry.getKey())));
-        }
-
-        // the occupied faces of the controller's own cell: they carry no mode of their own here - an entry with a
-        // mode was already added above - so this only covers the ones a plugin took without anything configured
-        for (var face : Direction.values()) {
-            if ((occupiedFaces & 1 << face.ordinal()) == 0) continue;
-            if (modes.containsKey(new CellFace(Vec3i.ZERO, face))) continue;
-
-            overlays.add(new MachinePreviewRenderState.Overlay(Vec3i.ZERO, face, TransferMode.NONE, true));
+                    entry.getValue()));
         }
         return overlays;
-    }
-
-    /** True while the given cell-face is one a plugin of this mod occupies, i.e. a face of the controller's cell. */
-    private boolean isOccupied(CellFace cellFace) {
-        if (!cellFace.cell().equals(Vec3i.ZERO)) return false;
-        return (occupiedFaces & 1 << cellFace.face().ordinal()) != 0;
     }
 
     /** Face the last drawn frame had under the mouse, or {@code null} while it was outside the model. */

@@ -28,8 +28,8 @@ import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferMode;
 
 /**
- * Draws the page model of 传输插件: every drawn part of the machine, the markings of its configured and
- * occupied faces, and the outline of the face the mouse is over.
+ * Draws the page model of 传输插件: every drawn part of the machine, the wash of its configured faces, and the
+ * outline of the face the mouse is over.
  * <p>
  * <b>Why this exists at all.</b> Oritech's own preview draws through a picture-in-picture state that carries block
  * states and nothing else ({@code BlockPreviewRenderState} / {@code BlockPreviewPipRenderer}), and the GUI API next to
@@ -71,8 +71,7 @@ public class MachinePreviewPipRenderer extends PictureInPictureRenderer<MachineP
 
     /**
      * Distance the hover fill floats off the face, so it never trades depth with the block face behind it. It is
-     * above {@link #MARKING_LIFT} + {@link #MARKING_STEP}, i.e. above a mode wash and above the gold outline of an
-     * occupied face, so the hover is the topmost marking of the three.
+     * above {@link #MARKING_LIFT}, i.e. above a mode wash, so the hover is the topmost of the two markings.
      */
     private static final float HIGHLIGHT_LIFT = 0.004F;
 
@@ -86,15 +85,8 @@ public class MachinePreviewPipRenderer extends PictureInPictureRenderer<MachineP
     /** How far a wash's edges stay inside the face, in model units, so it reads as a marking and not as a lid. */
     private static final float WASH_INSET = 0.03F;
 
-    /**
-     * Distance a face's markings float off that face, and the step between two markings on the same face, so the wash
-     * and the gold outline of one face never trade depth with each other.
-     */
+    /** Distance a face's mode wash floats off that face, so it never trades depth with the block face behind it. */
     private static final float MARKING_LIFT = 0.001F;
-    private static final float MARKING_STEP = 0.001F;
-
-    /** Thickness of the gold outline of an occupied face, in model units. */
-    private static final float OUTLINE_THICKNESS = 0.05F;
 
     /**
      * One axis of the coordinate frame the markings and the hover outline are built in, per face: {@code [0]} is the
@@ -172,40 +164,29 @@ public class MachinePreviewPipRenderer extends PictureInPictureRenderer<MachineP
 
         featureDispatcher.renderAllFeatures();
 
-        // After the machine, and in this order, so the three markings read over each other the way they are meant to:
-        // the mode wash lies under everything, the gold outline of an occupied face is drawn over that wash (that is
-        // what makes it readable on a coloured face), and the white hover outline is drawn last, on top of both.
+        // After the machine, and in this order, so the two markings read over each other the way they are meant to:
+        // the mode wash lies under everything and the white hover fill is drawn last, over it - which is what keeps
+        // the mode's colour readable while the face is hovered (see #HIGHLIGHT_COLOR).
         drawOverlays(renderState, poseStack);
         drawHighlight(renderState, poseStack);
     }
 
     /**
-     * Draws the markings of the machine's faces, in the pose that is still active from the model above: each overlay
-     * names the part that carries it ({@link MachinePreviewRenderState.Overlay#offset()}), so its quad lands on that
-     * part's face whatever the model is rotated to.
+     * Draws the markings of the machine's <b>configured</b> faces, in the pose that is still active from the model
+     * above: each overlay names the part that carries it ({@link MachinePreviewRenderState.Overlay#offset()}), so its
+     * quad lands on that part's face whatever the model is rotated to.
      * <p>
-     * Two kinds of marking, and a face can carry both:
-     * <ul>
-     *     <li>the <b>mode wash</b> - the translucent blue of an input face, the orange of an output face, and both
-     *     halves side by side on a face that does both, taken from {@link TransferFaceStyle#wash} so the model and the
-     *     cube net page colour a face the same way. The wash covers the inner part of the face and leaves a rim free
-     *     for the outline.</li>
-     *     <li>the <b>gold outline</b> of a face a plugin of this mod occupies, in
-     *     {@link TransferFaceStyle#GOLD} - the same gold the cube net page draws around that face. It is an outline
-     *     rather than a fill, so a wash underneath it stays visible and the two meanings can be read at once.</li>
-     * </ul>
-     * Both are lifted off the face by {@link #MARKING_LIFT} / {@link #MARKING_STEP}, so they never trade depth with
-     * the block face or with each other.
+     * There is one kind of marking: the <b>mode wash</b> - the translucent blue of an input face, the orange of an
+     * output face, and both halves side by side on a face that does both, taken from {@link TransferFaceStyle#wash} so
+     * the model and the cube net page colour a face the same way. The wash covers the inner part of the face and
+     * leaves a rim free, and it is lifted off the face by {@link #MARKING_LIFT}, so it never trades depth with the
+     * block face behind it.
      */
     private void drawOverlays(MachinePreviewRenderState renderState, PoseStack poseStack) {
         for (var overlay : renderState.overlays()) {
             poseStack.pushPose();
             poseStack.translate(overlay.offset().getX(), overlay.offset().getY(), overlay.offset().getZ());
             drawWash(poseStack, overlay.face(), overlay.mode());
-            if (overlay.occupied()) {
-                drawOutline(poseStack, overlay.face(), MARKING_LIFT + MARKING_STEP, OUTLINE_THICKNESS,
-                        TransferFaceStyle.GOLD);
-            }
             poseStack.popPose();
         }
     }
@@ -233,21 +214,6 @@ public class MachinePreviewPipRenderer extends PictureInPictureRenderer<MachineP
         float middle = 0.0F;
         drawQuad(poseStack, face, near, middle, near, far, MARKING_LIFT, TransferFaceStyle.INPUT_FILL);
         drawQuad(poseStack, face, middle, far, near, far, MARKING_LIFT, TransferFaceStyle.OUTPUT_FILL);
-    }
-
-    /**
-     * The outline of one face: a frame {@link #OUTLINE_THICKNESS} wide inside the face's own edge, built from the four
-     * strips between the outer and the inner rectangle, all in model units of the cell the pose is translated to.
-     */
-    private void drawOutline(PoseStack poseStack, Direction face, float lift, float thickness, int color) {
-        float outer = FACE_HALF_EXTENT;
-        float inner = FACE_HALF_EXTENT - thickness;
-
-        // the two strips across the face and the two down its sides; the corners are covered by both
-        drawQuad(poseStack, face, -outer, outer, inner, outer, lift, color);
-        drawQuad(poseStack, face, -outer, outer, -outer, -inner, lift, color);
-        drawQuad(poseStack, face, -outer, -inner, -inner, inner, lift, color);
-        drawQuad(poseStack, face, inner, outer, -inner, inner, lift, color);
     }
 
     /**
@@ -309,9 +275,9 @@ public class MachinePreviewPipRenderer extends PictureInPictureRenderer<MachineP
      * {@code 0x55669DF8} and the orange of an output face to {@code 0x55F7B341}, both lighter than the unmarked face
      * and both still their own colour - and a face with no mode reads as lit rather than as painted.
      * <p>
-     * The gold outline of an occupied face is drawn over the fill (see {@link #drawOverlays} running before this), so
-     * the "a plugin stands here" reading survives being hovered, and the lift is raised above that outline's so the
-     * white is never hidden by it.
+     * The mode wash of a face is drawn before this (see {@link #drawOverlays} running first) and lies under the fill,
+     * which is the point of the low alpha: the colour the face already carried stays readable while it is hovered, and
+     * {@link #HIGHLIGHT_LIFT} is raised above the wash's own lift so the white is never hidden by it.
      * <p>
      * Nothing is drawn while no face is hovered, i.e. while the mouse is not on the model - the page's picking keeps
      * working unchanged, because this only ever adds geometry to the frame and never touches the mouse.
