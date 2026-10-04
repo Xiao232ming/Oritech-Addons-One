@@ -214,8 +214,18 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
         var budget = Math.max(1, Math.min(amount, itemsPerTick()));
 
         while (budget > 0) {
-            var moved = moveDose(from, fromOwner, to, toOwner, budget);
-            if (moved <= 0) return;
+            var moved = moveDose(from, fromOwner, to, toOwner, budget, true);
+            if (moved <= 0) {
+                // Nothing travelled while the machine's slot roles were respected. The roles are a reading of the
+                // machine's own slot layout, and that reading can be wrong in a way that blocks <em>every</em>
+                // slot - a machine whose whole inventory falls inside one range forbids the other direction
+                // completely, and then its faces would move nothing at all. The dose is therefore retried once
+                // without them: the machine's own item handler still decides what a slot accepts, so the worst
+                // case is the behaviour this mod had before the roles were read at all, and the best case is
+                // that the items do travel after all.
+                moved = moveDose(from, fromOwner, to, toOwner, budget, false);
+                if (moved <= 0) return;
+            }
 
             budget -= moved;
         }
@@ -242,16 +252,16 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
      * @return number of items moved, or {@code 0} while nothing could be moved
      */
     private static int moveDose(ResourceHandler<ItemResource> from, @Nullable BlockEntity fromOwner,
-            ResourceHandler<ItemResource> to, @Nullable BlockEntity toOwner, int amount) {
+            ResourceHandler<ItemResource> to, @Nullable BlockEntity toOwner, int amount, boolean useRoles) {
         var moved = 0;
 
         for (var slot = 0; slot < from.size(); slot++) {
-            if (!MachineSlotRoles.allowsExtractAt(fromOwner, slot)) continue;
+            if (useRoles && !MachineSlotRoles.allowsExtractAt(fromOwner, slot)) continue;
 
             var resource = from.getResource(slot);
             if (resource.isEmpty()) continue;
 
-            var wanted = amountAccepted(to, toOwner, resource, amount);
+            var wanted = amountAccepted(to, toOwner, resource, amount, useRoles);
             if (wanted <= 0) continue;
 
             // the amount that really travelled; the transaction is not committed unless extract and insert
@@ -261,7 +271,7 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
             try (var transaction = Transaction.openRoot()) {
                 var extracted = from.extract(slot, resource, wanted, transaction);
                 if (extracted > 0) {
-                    inserted = insertInto(to, toOwner, resource, extracted, transaction);
+                    inserted = insertInto(to, toOwner, resource, extracted, transaction, useRoles);
                     if (inserted == extracted) transaction.commit();
                 }
             }
@@ -278,9 +288,9 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
      * dry run {@link #move} has always made, just with the machine's slot roles respected.
      */
     private static int amountAccepted(ResourceHandler<ItemResource> to, @Nullable BlockEntity toOwner,
-            ItemResource resource, int amount) {
+            ItemResource resource, int amount, boolean useRoles) {
         try (var probe = Transaction.openRoot()) {
-            return insertInto(to, toOwner, resource, amount, probe);
+            return insertInto(to, toOwner, resource, amount, probe, useRoles);
         }
     }
 
@@ -293,8 +303,8 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
      * asked exactly as before.
      */
     private static int insertInto(ResourceHandler<ItemResource> to, @Nullable BlockEntity toOwner,
-            ItemResource resource, int amount, TransactionContext transaction) {
-        var roles = toOwner == null ? null : MachineSlotRoles.of(toOwner);
+            ItemResource resource, int amount, TransactionContext transaction, boolean useRoles) {
+        var roles = !useRoles || toOwner == null ? null : MachineSlotRoles.of(toOwner);
         if (roles == null) return to.insert(resource, amount, transaction);
 
         var inserted = 0;
