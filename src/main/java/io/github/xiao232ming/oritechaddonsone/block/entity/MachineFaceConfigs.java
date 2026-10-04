@@ -13,6 +13,8 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 
+import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
+
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -127,7 +129,11 @@ public final class MachineFaceConfigs {
      */
     public static void forget(@Nullable Level level, @Nullable BlockPos machine) {
         if (machine == null) return;
-        SHARED.remove(machine);
+        var dropped = SHARED.remove(machine);
+        // INFO while "the config disappears" is being chased: this is the only place shared settings are
+        // dropped, so a lost configuration either passes through here or was never in the map at all
+        OritechAddonsOne.LOGGER.info("[transfer] forget({}) dropped {} face(s)", machine,
+                dropped == null ? 0 : dropped.cells.configuredFaces());
     }
 
     // ------------------------------------------------------------------ save data
@@ -162,7 +168,11 @@ public final class MachineFaceConfigs {
     /** Reads the machine's settings back out of the block's save data; see {@link #save}. */
     public static void load(ExtensionAddonBlockEntity block, ValueInput input) {
         var machine = block.servedMachinePos();
-        if (machine == null) return;
+        if (machine == null) {
+            OritechAddonsOne.LOGGER.info("[transfer] load: {} has no machine, {} face(s) in its save data ignored",
+                    block.getBlockPos(), input.getIntArray(CELL_TAG).map(ints -> ints.length).orElse(0));
+            return;
+        }
 
         var faceValues = input.getIntArray(FACE_TAG).orElse(null);
         if (faceValues != null) {
@@ -188,6 +198,9 @@ public final class MachineFaceConfigs {
             if (entry == null || !TransferFaceModes.isConfigured(entry.value())) continue;
             shared.cells.setIfAbsent(entry.cell(), entry.face(), entry.mode(), entry.automation());
         }
+
+        OritechAddonsOne.LOGGER.info("[transfer] load: {} brought {} face(s) for machine {}, shared now {}",
+                block.getBlockPos(), values.length, machine, shared.cells.configuredFaces());
     }
 
     /** Save tag of the machine's six faces. */
