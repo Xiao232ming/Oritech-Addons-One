@@ -686,13 +686,30 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         // nothing is configured yet, but the page has to appear or disappear.
         refreshAttachedTransferFaces();
 
+        // A world load reads a block's settings while its machine cannot be named yet, so the merge into the
+        // machine's map is retried here, from the tick, until it can be - exactly once, because the merge clears
+        // the block's own copy. Without this the settings on disk stayed in the block and the machine's map was
+        // empty for the whole session: every face did nothing, however often it was configured.
+        if (!savedTransferFaces().isEmpty() || !savedCellFaces.isEmpty()) {
+            var machinePos = servedMachinePos();
+            var mapIsEmpty = machinePos == null
+                    || (MachineFaceConfigs.faceModes(level, machinePos).isEmpty()
+                        && MachineFaceConfigs.cellFaces(level, machinePos).isEmpty());
+            if (mapIsEmpty) {
+                syncCellFaces();
+                OritechAddonsOne.LOGGER.info(
+                        "[transfer] retried the merge of {} for machine {}: shared now {} face(s)",
+                        worldPosition, servedMachinePos(),
+                        machinePos == null ? 0 : MachineFaceConfigs.cellFaces(level, machinePos).configuredFaces());
+            }
+        }
+
         var faces = transferModes();
+        // Only a block that really holds a transfer plugin is worth reporting: an addon whose map is legitimately
+        // empty is the normal case, and a line per tick about it buries the log (which is exactly what happened
+        // while this was being chased).
         if (faces.isEmpty() || !canTransferItems()) {
-            // INFO on purpose, but throttled: a block that holds a transfer plugin and has no automated face
-            // configured is the state in which every configuration silently does nothing, and it is invisible
-            // otherwise. Once a second is enough to see it - a line per tick would bury the rest of the log
-            // (which is exactly what happened when this was added).
-            if (canTransferItems() && diagnosticsDue()) {
+            if (canTransferItems()) {
                 OritechAddonsOne.LOGGER.info(
                         "[transfer] {} holds a plugin but has no automated face configured (machine {}, {} face(s): {})",
                         worldPosition, servedMachinePos(), faces.configuredFaces(), describeFaces(faces));
@@ -790,7 +807,10 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         // the machine's shared settings, not this block's copy: every plugin that serves the machine moves the
         // same configuration, so a face configured through another plugin works here as well
         var settings = cellFaceModes();
-        if (settings.isEmpty()) return;
+        if (settings.isEmpty()) {
+            if (!savedCellFaces.isEmpty()) syncCellFaces();
+            return;
+        }
 
         var machine = MachineFaceStorage.machineStorageAt(level, machinePos);
         if (machine == null) return;
@@ -883,6 +903,11 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
      * keeps this block's save data complete, so any one of the machine's plugins is enough to restore the whole
      * configuration.
      */
+    /** This block's own copy of the six faces, i.e. what it saves - see {@link #syncCellFaces()}. */
+    TransferFaceModes savedTransferFaces() {
+        return transferFaces;
+    }
+
     void syncCellFaces() {
         var machinePos = servedMachinePos();
         if (level == null || level.isClientSide() || machinePos == null) {
@@ -896,7 +921,15 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
             return;
         }
 
+        // the six faces and the cell-faces of this block both belong to the machine, so both are merged here and
+        // both are mirrored back afterwards - the merge is what makes a world load keep what the player set
+        MachineFaceConfigs.contribute(level, machinePos, transferFaces);
         MachineFaceConfigs.contribute(level, machinePos, savedCellFaces);
+
+        var sharedFaces = MachineFaceConfigs.faceModes(level, machinePos);
+        for (var face : Direction.values()) {
+            transferFaces.set(face, sharedFaces.modeOf(face), sharedFaces.automationOf(face));
+        }
 
         var shared = MachineFaceConfigs.cellFaces(level, machinePos);
         savedCellFaces.clear();
@@ -908,6 +941,7 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         OritechAddonsOne.LOGGER.debug("[transfer] syncCellFaces on {} -> machine {}, shared now {} face(s)",
                 worldPosition, machinePos, shared.configuredFaces());
     }
+
 
     /**
      * The cells of the served machine's structure, as offsets from its controller block: the controller's own
