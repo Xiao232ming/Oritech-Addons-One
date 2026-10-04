@@ -844,9 +844,12 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
                 in = MachineFaceStorage.move(neighbour, null, machine, machineEntity, MachineFaceStorage.itemsPerTick());
             }
 
-            if (out + in <= 0 && diagnosticsDue()) {
+            if (diagnosticsDue()) {
+                // INFO while "the items do not move" is being chased: a cell-face that moved something is the
+                // one thing that proves the settings, the machine and both handlers all worked - and it names
+                // the count and the direction, so "nothing moved" and "moved the wrong way" differ at a glance.
                 OritechAddonsOne.LOGGER.info(
-                        "[transfer] cell {} face {} mode {} of {} moved nothing: neighbour {}, out {}, in {}",
+                        "[transfer] cell {} face {} mode {} of {}: neighbour {}, out {}, in {}",
                         entry.cell(), entry.face(), mode, worldPosition,
                         neighbour.getClass().getSimpleName(), out, in);
             }

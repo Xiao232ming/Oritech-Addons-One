@@ -385,6 +385,22 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
         return configured == null ? -1 : configured;
     }
 
+    /**
+     * The block entity the machine's slot roles are read from, or {@code null} while it cannot be resolved.
+     * <p>
+     * The roles belong to the machine, and {@code MachineSlotRoles} derives them from the <b>machine's</b> own
+     * block entity - so handing it the addon the face belongs to answers "no roles", and "no roles" means every
+     * slot is allowed. That is why a face configured as OUTPUT still took items from a pipe: the gate that was
+     * supposed to refuse them never had anything to refuse with.
+     */
+    @Nullable
+    private BlockEntity machineEntity() {
+        var machinePos = machinePos(owner);
+        if (machinePos == null || owner.getLevel() == null) return null;
+        var level = owner.getLevel();
+        return level.isLoaded(machinePos) ? level.getBlockEntity(machinePos) : null;
+    }
+
     /** True while the given slot may be read or written through this face. */
     private boolean covers(int index) {
         if (!offers(owner, face)) return false;
@@ -488,14 +504,14 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
      */
     @Override
     public int insertToSlot(ItemStack inserted, int index, boolean simulate) {
-        if (!allowsInsert() || !covers(index) || !MachineSlotRoles.allowsInsertAt(owner, index)) return 0;
+        if (!allowsInsert() || !covers(index) || !MachineSlotRoles.allowsInsertAt(machineEntity(), index)) return 0;
         return super.insertToSlot(inserted, index, simulate);
     }
 
     /** Indexed extract, gated like {@link #insertToSlot(ItemStack, int, boolean)}. */
     @Override
     public int extractFromSlot(ItemStack extracted, int index, boolean simulate) {
-        if (!allowsExtract() || !covers(index) || !MachineSlotRoles.allowsExtractAt(owner, index)) return 0;
+        if (!allowsExtract() || !covers(index) || !MachineSlotRoles.allowsExtractAt(machineEntity(), index)) return 0;
         return super.extractFromSlot(extracted, index, simulate);
     }
 
