@@ -103,7 +103,7 @@
   "gui.oritechaddonsone.transfer.occupied": "The plugin itself stands on this face - no pipe or hopper can be here",
   "gui.oritechaddonsone.transfer.mode.input": "Input",
   "gui.oritechaddonsone.transfer.mode.output": "Output",
-  "gui.oritechaddonsone.transfer.mode.both": "Input + Output",
+  "gui.oritechaddonsone.transfer.mode.both": "I+O",
   "gui.oritechaddonsone.transfer.mode.none": "Not set",
   "gui.oritechaddonsone.transfer.side.north": "North",
   "gui.oritechaddonsone.transfer.side.south": "South",

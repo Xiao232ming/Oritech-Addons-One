@@ -24,9 +24,9 @@ import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonMenu;
  * because it has no link of its own. The binding used to be a single line under the panel, drawn for every
  * page; it now lives here only.
  * <p>
- * Both variants carry the second line of this page's state, the force load state of that machine's chunk,
- * as a badge in the top right corner of the panel (see {@link #drawForceLoadStatus}) - it is the same value
- * for both, and it is kept out of the info lines so it does not repeat what they say. The badge is green
+ * Both variants carry the force load state of that machine's chunk as the <b>last line under the binding</b>
+ * - for a dock that is the line right below the coordinates it is bound to (see {@link #infoLines}),
+ * because the state belongs to that very machine and reads as the tail of its address. The line is green
  * only while something keeps that chunk loaded on purpose (vanilla {@code /forceload}, the spawn area or
  * another mod's force load) and red while the chunk is unloaded or only loaded because a player is nearby,
  * because only a chunk that is kept loaded works while nobody is around.
@@ -72,26 +72,6 @@ public final class WirelessAddonPage implements AddonPage {
     /** Appended to a text that had to be cut off. */
     private static final String ELLIPSIS = "...";
 
-    /**
-     * X the force load badge's text ends at, in panel space.
-     * <p>
-     * The badge lives in the top right corner of this page, i.e. in the free strip above the first line of
-     * content and right of where the machine name starts. That strip ends where the reserved slot's frame
-     * ends - the frame is drawn from {@code RESERVED_SLOT_X - 1 = 151} and is 18 pixels wide, so its right
-     * edge is at {@code 168} - and the tab strip reaches {@code TAB_OVERLAP = 4} pixels into the panel,
-     * i.e. down to {@code 172}. Right aligning the text to {@code 168} therefore leaves a pixel of the
-     * panel visible before the frame ends, four before the tab overlap starts, and keeps the badge clear
-     * of both.
-     */
-    private static final int CHUNK_BADGE_RIGHT = ExtensionAddonLayout.RESERVED_SLOT_X + 16;
-
-    /**
-     * Y of the force load badge's text, in panel space: the first row inside the panel's two pixel light
-     * bevel, so the text covers {@code y = 5 .. 14} - below the bevel, above the first slot frame (drawn
-     * from {@code y = 17}) and level with the first tab, which only starts four pixels further right.
-     */
-    private static final int CHUNK_BADGE_Y = 5;
-
     @Override
     public String id() {
         return ID;
@@ -109,19 +89,20 @@ public final class WirelessAddonPage implements AddonPage {
 
     /**
      * The lowest content of this page is the reserved slot's frame (level with the first plugin row) and
-     * the info lines under it. Nothing else is drawn here - the page has no net and no counter - so the
+     * the info lines under it - up to three of them, the machine's name, its coordinates and the force
+     * load state of its chunk. Nothing else is drawn here - the page has no net and no counter - so the
      * panel ends just below its text instead of showing the band the Item Proxy page reserves.
      */
     @Override
     public int drawnHeight(ExtensionAddonLayout layout) {
-        int lines = FIRST_LINE_Y + 2 * LINE_HEIGHT;
+        int lines = FIRST_LINE_Y + 3 * LINE_HEIGHT;
         return layout.pageHeight(Math.max(ExtensionAddonLayout.RESERVED_SLOT_Y + ExtensionAddonLayout.SLOT_SIZE, lines));
     }
 
     /**
-     * Draws the force load badge, the info lines and the frame of the reserved slot. The slot's item is
-     * drawn by the screen like every other slot's item; the frame is painted here, one pixel above and left
-     * of the slot, exactly like the plugin page does it for its fields.
+     * Draws the info lines and the frame of the reserved slot. The slot's item is drawn by the screen like
+     * every other slot's item; the frame is painted here, one pixel above and left of the slot, exactly
+     * like the plugin page does it for its fields.
      * <p>
      * While the slot is empty the chunk anchor's own icon is drawn into it, dimmed behind the same veil the
      * plugin page uses for its fixed slots - so the cell reads as "this is where the anchor goes" instead
@@ -134,8 +115,6 @@ public final class WirelessAddonPage implements AddonPage {
         var font = Minecraft.getInstance().font;
         var menu = context.menu();
         var lines = infoLines(menu);
-
-        drawForceLoadStatus(graphics, font, context, menu);
 
         for (int line = 0; line < lines.size(); line++) {
             var text = fit(font, lines.get(line).text().getString());
@@ -164,8 +143,8 @@ public final class WirelessAddonPage implements AddonPage {
     }
 
     /**
-     * The line of the badge. Its wording is still the plain "chunk loaded / not loaded" pair, but the value
-     * behind it is the force load state of the connected machine's chunk - see
+     * The text of the force load line. Its wording is still the plain "chunk loaded / not loaded" pair, but
+     * the value behind it is the force load state of the connected machine's chunk - see
      * {@link ExtensionAddonMenu#targetChunkForceLoaded()}.
      */
     public static Component forceLoadStatus(ExtensionAddonMenu menu) {
@@ -173,57 +152,56 @@ public final class WirelessAddonPage implements AddonPage {
     }
 
     /**
-     * Draws the force load state of the connected machine's chunk as one right aligned line in the panel's
-     * top right corner - for the wired addon and the dock alike, because both work on a machine.
+     * The force load state as the last info line of the page, in the green / red of the panel's own info
+     * text.
      * <p>
      * The value comes from {@link ExtensionAddonMenu#targetChunkForceLoaded()}, which the server resolves and
-     * pushes over a container data slot whenever it changes, so the badge is live without the client
-     * looking anything up. Green means the machine's chunk is kept loaded (vanilla {@code /forceload}, the
-     * spawn area or another mod's force load), red means it is not (nothing is linked or claimed, or the
-     * chunk is only loaded because a player is nearby). The colours and the plain (no shadow) text are the
-     * panel's usual info text style; the text is right aligned to a fixed edge, so both states end in the
-     * same place whatever their width.
+     * pushes over a container data slot whenever it changes, so the line is live without the client looking
+     * anything up. Green means the machine's chunk is kept loaded (vanilla {@code /forceload}, the spawn area
+     * or another mod's force load), red means it is not (nothing is linked or claimed, or the chunk is only
+     * loaded because a player is nearby).
      */
-    private static void drawForceLoadStatus(GuiGraphicsExtractor graphics, Font font, AddonPageContext context,
-            ExtensionAddonMenu menu) {
-        var forceLoaded = menu.targetChunkForceLoaded();
-        var text = forceLoadStatus(menu).getString();
-
-        graphics.text(font, text, context.left() + CHUNK_BADGE_RIGHT - font.width(text),
-                context.top() + CHUNK_BADGE_Y,
-                forceLoaded ? AddonPanelStyle.PANEL_TEXT_GOOD : AddonPanelStyle.PANEL_TEXT_BAD, false);
+    private static Line forceLoadLine(ExtensionAddonMenu menu) {
+        return new Line(forceLoadStatus(menu),
+                menu.targetChunkForceLoaded() ? AddonPanelStyle.PANEL_TEXT_GOOD : AddonPanelStyle.PANEL_TEXT_BAD);
     }
 
     /**
      * The lines of the page, each with the colour it is drawn in.
      * <p>
-     * A wired addon has one line - the machine it is attached to - while a dock reports its whole binding.
-     * A dock that is not linked, and a wired addon no machine ever claimed, show the same "not linked"
-     * line the under-panel line used to show. The force load state is not one of these lines: it is drawn
-     * as the badge in the panel's top right corner, so it stays out of the reading order of the text block.
+     * A wired addon has the name of the machine it is attached to, a dock its whole binding. A dock that is
+     * not linked, and a wired addon no machine ever claimed, show the same "not linked" line the under-panel
+     * line used to show. The force load state of that machine's chunk is the <b>last</b> line of all of them,
+     * so on a dock it sits right under the coordinates it belongs to.
      */
     private static List<Line> infoLines(ExtensionAddonMenu menu) {
         var nameKey = menu.linkedMachineNameKey();
+        var lines = new ArrayList<Line>(3);
 
         if (!menu.wireless()) {
             // a wired addon: only the name of the machine it is attached to, no coordinates
-            if (nameKey == null) return List.of(new Line(Component.translatable(UNLINKED_KEY), AddonPanelStyle.PANEL_TEXT_DIM));
-            return List.of(new Line(Component.translatable(MACHINE_KEY, Component.translatable(nameKey)),
-                    AddonPanelStyle.PANEL_TEXT));
+            lines.add(nameKey == null
+                    ? new Line(Component.translatable(UNLINKED_KEY), AddonPanelStyle.PANEL_TEXT_DIM)
+                    : new Line(Component.translatable(MACHINE_KEY, Component.translatable(nameKey)),
+                            AddonPanelStyle.PANEL_TEXT));
+            lines.add(forceLoadLine(menu));
+            return List.copyOf(lines);
         }
 
         var machine = menu.linkedMachine();
         if (machine == null) {
-            return List.of(new Line(Component.translatable(UNLINKED_KEY), AddonPanelStyle.PANEL_TEXT_DIM));
+            lines.add(new Line(Component.translatable(UNLINKED_KEY), AddonPanelStyle.PANEL_TEXT_DIM));
+            lines.add(forceLoadLine(menu));
+            return List.copyOf(lines);
         }
 
-        // the dock also shows where that machine stands
+        // the dock also shows where that machine stands, and the force load state under that address
         var name = nameKey == null ? Component.translatable(UNKNOWN_KEY) : Component.translatable(nameKey);
-        var lines = new ArrayList<Line>(2);
         lines.add(new Line(Component.translatable(MACHINE_KEY, name),
                 nameKey == null ? AddonPanelStyle.PANEL_TEXT_DIM : AddonPanelStyle.PANEL_TEXT));
         lines.add(new Line(Component.translatable(COORDS_KEY, machine.getX(), machine.getY(), machine.getZ()),
                 AddonPanelStyle.PANEL_TEXT));
+        lines.add(forceLoadLine(menu));
         return List.copyOf(lines);
     }
 
