@@ -177,13 +177,12 @@ public enum ExtensionAddonType {
 
         var item = block.asItem();
         if (item != Items.AIR) {
-            var stack = item.getDefaultInstance();
-            if (matches(stack, EFFICIENT_SPEED_TAGS)) return StatCategory.EFFICIENT_SPEED;
-            if (matches(stack, SPEED_TAGS)) return StatCategory.SPEED;
-            if (matches(stack, EFFICIENCY_TAGS)) return StatCategory.EFFICIENCY;
-            if (matches(stack, PROCESSING_TAGS)) return StatCategory.PROCESSING;
-            if (matches(stack, CAPACITOR_TAGS)) return StatCategory.CAPACITOR;
-            if (matches(stack, ACCEPTOR_TAGS)) return StatCategory.ACCEPTOR;
+            if (isInAnyTag(item, EFFICIENT_SPEED_TAGS)) return StatCategory.EFFICIENT_SPEED;
+            if (isInAnyTag(item, SPEED_TAGS)) return StatCategory.SPEED;
+            if (isInAnyTag(item, EFFICIENCY_TAGS)) return StatCategory.EFFICIENCY;
+            if (isInAnyTag(item, PROCESSING_TAGS)) return StatCategory.PROCESSING;
+            if (isInAnyTag(item, CAPACITOR_TAGS)) return StatCategory.CAPACITOR;
+            if (isInAnyTag(item, ACCEPTOR_TAGS)) return StatCategory.ACCEPTOR;
         }
 
         return categoryFromName(BuiltInRegistries.BLOCK.getKey(block).getPath());
@@ -207,9 +206,36 @@ public enum ExtensionAddonType {
         return 1;
     }
 
-    private static boolean matches(ItemStack stack, List<TagKey<Item>> tags) {
+    /**
+     * True while the item of the given block is in one of the given item tags.
+     * <p>
+     * <b>Asked through the item's holder, never through an {@link ItemStack}.</b> An item stack can only be
+     * built once the item's components are bound, and both that binding and the tag binding happen in one
+     * step of the datapack load - which is <em>after</em> the common setup phase in which this mod
+     * classifies the block registry and logs the result (see {@code OritechAddonsOne#onCommonSetup}).
+     * Asking any earlier therefore answers "not in the tag" instead of failing the game's load; the
+     * registry path fallback in {@link #categoryFromName} covers that phase, and the tags decide at
+     * runtime, which is when the value is used for a slot decision.
+     * <p>
+     * While it answers {@code false} for that reason, {@link #tagsUnbound} is raised: a type III slot plan
+     * built then is not remembered (see {@link #type3Slots()}).
+     */
+    private static boolean isInAnyTag(Item item, List<TagKey<Item>> tags) {
+        var holder = BuiltInRegistries.ITEM.wrapAsHolder(item);
+        if (!holder.areComponentsBound()) {
+            tagsUnbound = true;
+            return false;
+        }
+
         for (var tag : tags) {
-            if (stack.is(tag)) return true;
+            try {
+                if (holder.is(tag)) return true;
+            } catch (IllegalStateException tagsNotBoundYet) {
+                // The same phase as above, one step further: the components are bound but the tags of this
+                // holder are not. Nothing is known about the item yet, so it is not classified as a match.
+                tagsUnbound = true;
+                return false;
+            }
         }
         return false;
     }
@@ -242,6 +268,11 @@ public enum ExtensionAddonType {
     private static List<Type3Slot> type3Slots;
 
     /**
+     * Set while a classification ran before the item tags were bound, see {@link #isInAnyTag}.
+     */
+    private static boolean tagsUnbound;
+
+    /**
      * Fixed slot plan of type III: one slot per (category, tier) pair, filled column by column so that a
      * column always holds the same plugin category and the tiers increase downwards. The reference block
      * of a slot is the plugin that belongs there (and the icon drawn in the empty slot); it is
@@ -249,36 +280,44 @@ public enum ExtensionAddonType {
      * <p>
      * The plan is read from the block registry, so the tiers other addon mods bring (Oritech Things adds
      * tiers 2 to 9 of every category) become rows of their own instead of sharing the row of tier 1.
+     * <p>
+     * A plan that was built while the item tags were not bound yet is returned but <b>not remembered</b>:
+     * it could only classify the addons by their registry path (see {@link #isInAnyTag}), and the next
+     * call - the first time a GUI is opened, when the tags are in place - builds it again, this time
+     * whole. Without that the plan the common setup phase logs would be the one every later call used.
      */
     public static List<Type3Slot> type3Slots() {
-        if (type3Slots == null) {
-            // one representative plugin per (category, tier)
-            var byCategory = new java.util.EnumMap<StatCategory, java.util.SortedMap<Integer, Block>>(StatCategory.class);
-            for (var block : BuiltInRegistries.BLOCK) {
-                var category = categoryOf(block);
-                if (category == null) continue;
-                byCategory.computeIfAbsent(category, key -> new java.util.TreeMap<>())
-                        .putIfAbsent(tierOf(block), block);
-            }
+        if (type3Slots != null) return type3Slots;
 
-            var tiers = new java.util.TreeSet<Integer>();
-            byCategory.values().forEach(map -> tiers.addAll(map.keySet()));
-            if (tiers.isEmpty()) tiers.add(1);
+        tagsUnbound = false;
 
-            var allTiers = List.copyOf(tiers);
-            var rows = allTiers.subList(0, Math.min(allTiers.size(), ExtensionAddonLayout.TYPE_3_MAX_ROWS));
-
-            var slots = new ArrayList<Type3Slot>(StatCategory.values().length * rows.size());
-            for (var category : StatCategory.values()) {
-                var tierBlocks = byCategory.getOrDefault(category, java.util.Collections.emptySortedMap());
-                for (var tier : rows) {
-                    slots.add(new Type3Slot(category, tier, tierBlocks.get(tier)));
-                }
-            }
-
-            type3Slots = List.copyOf(slots);
+        // one representative plugin per (category, tier)
+        var byCategory = new java.util.EnumMap<StatCategory, java.util.SortedMap<Integer, Block>>(StatCategory.class);
+        for (var block : BuiltInRegistries.BLOCK) {
+            var category = categoryOf(block);
+            if (category == null) continue;
+            byCategory.computeIfAbsent(category, key -> new java.util.TreeMap<>())
+                    .putIfAbsent(tierOf(block), block);
         }
-        return type3Slots;
+
+        var tiers = new java.util.TreeSet<Integer>();
+        byCategory.values().forEach(map -> tiers.addAll(map.keySet()));
+        if (tiers.isEmpty()) tiers.add(1);
+
+        var allTiers = List.copyOf(tiers);
+        var rows = allTiers.subList(0, Math.min(allTiers.size(), ExtensionAddonLayout.TYPE_3_MAX_ROWS));
+
+        var slots = new ArrayList<Type3Slot>(StatCategory.values().length * rows.size());
+        for (var category : StatCategory.values()) {
+            var tierBlocks = byCategory.getOrDefault(category, java.util.Collections.emptySortedMap());
+            for (var tier : rows) {
+                slots.add(new Type3Slot(category, tier, tierBlocks.get(tier)));
+            }
+        }
+
+        var plan = List.copyOf(slots);
+        if (!tagsUnbound) type3Slots = plan;
+        return plan;
     }
 
     /** One slot of type III: a fixed plugin category combined with a fixed plugin tier. */
