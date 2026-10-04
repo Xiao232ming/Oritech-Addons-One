@@ -131,8 +131,11 @@ public final class TransferNetworking {
                 // INFO on purpose: this is the one branch that makes a configuration look like it was never
                 // stored, and it is invisible in the default log otherwise - the position the client addressed
                 // did not hold a transfer plugin (gone, other block, or the wrong position altogether)
-                OritechAddonsOne.LOGGER.info("[transfer] dropped a cell-face setting for {}: no transfer plugin there",
-                        packet.pos());
+                var found = player.level().getBlockEntity(packet.pos());
+                OritechAddonsOne.LOGGER.info(
+                        "[transfer] dropped a cell-face setting for {}: no transfer plugin there (block {}, entity {})",
+                        packet.pos(), player.level().getBlockState(packet.pos()).getBlock(),
+                        found == null ? "none" : found.getClass().getSimpleName());
                 return;
             }
 
