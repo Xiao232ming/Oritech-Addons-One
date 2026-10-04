@@ -667,6 +667,15 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
             var neighbour = MachineFaceStorage.storageAt(level, worldPosition, face);
             if (neighbour == null) continue;
 
+            // The machine's own block entity, exactly as the cell-face loop resolves it: the roles of the
+            // machine's slots - which of them are inputs and which are outputs - are read from the block entity
+            // the inventory belongs to, and the plugin block is not that entity. Handing the plugin over instead
+            // made every role unknown, and an unknown role means "put it in the first slot that takes it": the
+            // machine's products were then filled into the slots its recipes read from, and its output slots
+            // were filled with raw material while nothing emptied them (see MachineFaceStorage#insertInto).
+            var machineEntity = level.isLoaded(connectedMachinePos())
+                    ? level.getBlockEntity(connectedMachinePos()) : null;
+
             // The mode names the direction as seen from the machine, so "input" fills the machine from the
             // container on that side and "output" empties the machine into it. The machine itself is passed
             // along as the owner of the machine side, so both directions respect which of its slots are
@@ -674,10 +683,10 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
             // The budget is passed so the step keeps filling while the machine's input slots have room and
             // keeps emptying while its output slots hold something, instead of stopping after one stack.
             if (mode.allowsExtract()) {
-                MachineFaceStorage.move(machine, this, neighbour, null, MachineFaceStorage.itemsPerTick());
+                MachineFaceStorage.move(machine, machineEntity, neighbour, null, MachineFaceStorage.itemsPerTick());
             }
             if (mode.allowsInsert()) {
-                MachineFaceStorage.move(neighbour, null, machine, this, MachineFaceStorage.itemsPerTick());
+                MachineFaceStorage.move(neighbour, null, machine, machineEntity, MachineFaceStorage.itemsPerTick());
             }
         }
 
