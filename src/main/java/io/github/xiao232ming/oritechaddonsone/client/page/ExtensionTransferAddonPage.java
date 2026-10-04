@@ -8,6 +8,7 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.Vec3i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
@@ -27,6 +28,8 @@ import io.github.xiao232ming.oritechaddonsone.block.entity.TransferMode;
 import io.github.xiao232ming.oritechaddonsone.client.AddonPanelStyle;
 import io.github.xiao232ming.oritechaddonsone.client.FaceTextures;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonMenu;
+import io.github.xiao232ming.oritechaddonsone.menu.FaceFilterMenu;
+import io.github.xiao232ming.oritechaddonsone.network.FilterNetworking;
 import io.github.xiao232ming.oritechaddonsone.network.ProxyNetworking;
 import io.github.xiao232ming.oritechaddonsone.network.TransferNetworking;
 
@@ -65,6 +68,7 @@ public final class ExtensionTransferAddonPage implements AddonPage {
     // are the same words for both transfer pages and are not duplicated as extension_transfer.* keys.
     private static final String PROMPT_KEY = "gui.oritechaddonsone.transfer.prompt";
     private static final String AUTOMATION_KEY = "gui.oritechaddonsone.transfer.automation";
+    private static final String FILTER_KEY = "gui.oritechaddonsone.transfer.filter";
     /** Tooltip of the face the plugin block itself occupies, i.e. the face drawn with the gold border. */
     private static final String OCCUPIED_KEY = "gui.oritechaddonsone.transfer.occupied";
     /** Colour of the green tick and of the "this face does something" state, as on the other pages. */
@@ -106,6 +110,10 @@ public final class ExtensionTransferAddonPage implements AddonPage {
     private static final int AUTOMATION_BOX = 10;
     private static final int AUTOMATION_GAP = 4;
     private static final int AUTOMATION_Y = 60;
+    /** The 过滤 row under it: the button that opens this face's item filter page, and its y. */
+    private static final int FILTER_WIDTH = 60;
+    private static final int FILTER_HEIGHT = 12;
+    private static final int FILTER_Y = 72;
     /** Frame drawn around the configuration page, as on the Item Proxy page. */
     private static final int PANEL_FRAME = 2;
 
@@ -213,6 +221,7 @@ public final class ExtensionTransferAddonPage implements AddonPage {
         drawPanel(graphics);
         drawPlates(graphics, font, menu, face, placed, mouseX, mouseY);
         drawAutomation(graphics, font, menu, face, placed, mouseX, mouseY);
+        drawFilter(graphics, font, menu, face, placed, mouseX, mouseY);
         prompt(graphics, font);
         header(graphics, context, placed);
 
@@ -296,6 +305,38 @@ public final class ExtensionTransferAddonPage implements AddonPage {
         double x = placed.innerX() + automationBoxX(font, label);
         double y = placed.innerY() + AUTOMATION_Y;
         return mouseX >= x && mouseX < x + row && mouseY >= y && mouseY < y + AUTOMATION_BOX;
+    }
+
+    /**
+     * The 过滤 row: the one button that opens the item filter page of this face, centred between the automation
+     * row and the prompt line - the only strip of the panel that is free, and the same place the 传输插件 page
+     * puts its own ({@code TransferFaceModal}).
+     * <p>
+     * <b>It is dimmed while the face has no direction yet</b>, for the same reason the automation switch is: a
+     * face that transfers nothing has nothing to filter. It also does not show whether this face is already
+     * filtered - the client is not told the filters, they are read from the server when the page opens, and a
+     * wrong marker would be worse than none.
+     */
+    private static void drawFilter(GuiGraphicsExtractor graphics, Font font, ExtensionAddonMenu menu, Direction face,
+            AddonPickerPanel.Placed placed, double mouseX, double mouseY) {
+        var enabled = modeOf(menu, face) != TransferMode.NONE;
+        var label = Component.translatable(FILTER_KEY).getString();
+
+        int x = (AddonPickerPanel.WIDTH - FILTER_WIDTH) / 2;
+        int y = FILTER_Y;
+
+        var surface = enabled && isOverFilter(placed, mouseX, mouseY) ? OritechSurface.PANEL_DARK_HOVER
+                : OritechSurface.PANEL_DARK;
+        surface.render(graphics, x, y, FILTER_WIDTH, FILTER_HEIGHT);
+        graphics.text(font, label, x + (FILTER_WIDTH - font.width(label)) / 2, y + (FILTER_HEIGHT - 8) / 2,
+                enabled ? AddonPanelStyle.PANEL_TEXT : AddonPanelStyle.PANEL_TEXT_DIM, false);
+    }
+
+    /** True while the given panel relative mouse position is on the 过滤 button. */
+    private static boolean isOverFilter(AddonPickerPanel.Placed placed, double mouseX, double mouseY) {
+        double x = placed.innerX() + (AddonPickerPanel.WIDTH - FILTER_WIDTH) / 2;
+        double y = placed.innerY() + FILTER_Y;
+        return mouseX >= x && mouseX < x + FILTER_WIDTH && mouseY >= y && mouseY < y + FILTER_HEIGHT;
     }
 
     /** The prompt line of the configuration page, centred in Oritech's panel at its own y. */
@@ -389,6 +430,14 @@ public final class ExtensionTransferAddonPage implements AddonPage {
             var automation = !automationOf(menu, face);
             ExtensionTransferPickerState.select(mode, automation);
             send(menu.position(), face, mode, automation);
+            return true;
+        }
+
+        // The 过滤 button: it opens a page of its own, so the click is taken and the picker is left as it is -
+        // the server replaces this screen with the filter page. A click that misses it closes the picker like
+        // any other click outside a control.
+        if (isOverFilter(placed, mouseX, mouseY)) {
+            FilterNetworking.sendOpenFilter(menu.position(), FaceFilterMenu.MODEL_FACE, face, Vec3i.ZERO);
             return true;
         }
 

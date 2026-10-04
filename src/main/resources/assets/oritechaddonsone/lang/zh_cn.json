@@ -99,6 +99,7 @@
   "gui.oritechaddonsone.transfer.no_machine": "该插件所服务的机器未加载",
   "gui.oritechaddonsone.transfer.prompt": "为该面选择传输模式",
   "gui.oritechaddonsone.transfer.automation": "自动化",
+  "gui.oritechaddonsone.transfer.filter": "过滤",
   "gui.oritechaddonsone.transfer.occupied": "该面被插件本体占据，管道或漏斗无法连接",
   "gui.oritechaddonsone.transfer.mode.input": "输入",
   "gui.oritechaddonsone.transfer.mode.output": "输出",
@@ -109,5 +110,16 @@
   "gui.oritechaddonsone.transfer.side.east": "东",
   "gui.oritechaddonsone.transfer.side.west": "西",
   "gui.oritechaddonsone.transfer.side.up": "上",
-  "gui.oritechaddonsone.transfer.side.down": "下"
+  "gui.oritechaddonsone.transfer.side.down": "下",
+  "gui.oritechaddonsone.filter.direction.input": "进入",
+  "gui.oritechaddonsone.filter.direction.output": "离开",
+  "gui.oritechaddonsone.filter.whitelist": "白名单",
+  "gui.oritechaddonsone.filter.nbt": "NBT",
+  "gui.oritechaddonsone.filter.components": "组件",
+  "gui.oritechaddonsone.filter.tooltip.whitelist": "只允许列表中的物品通过",
+  "gui.oritechaddonsone.filter.tooltip.blacklist": "不允许列表中的物品通过",
+  "gui.oritechaddonsone.filter.tooltip.nbt": "当前仅检查列出物品的自定义NBT数据",
+  "gui.oritechaddonsone.filter.tooltip.no_nbt": "当前只检查物品的类型或id",
+  "gui.oritechaddonsone.filter.tooltip.components": "当前检查所列物品的所有数据组件",
+  "gui.oritechaddonsone.filter.tooltip.no_components": "当前忽略所有数据组件，如附魔，能量等。"
 }

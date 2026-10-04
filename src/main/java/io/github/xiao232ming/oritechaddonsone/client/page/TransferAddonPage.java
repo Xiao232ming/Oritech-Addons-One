@@ -26,6 +26,8 @@ import io.github.xiao232ming.oritechaddonsone.block.entity.TransferMode;
 import io.github.xiao232ming.oritechaddonsone.client.AddonPanelStyle;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonLayout;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonMenu;
+import io.github.xiao232ming.oritechaddonsone.menu.FaceFilterMenu;
+import io.github.xiao232ming.oritechaddonsone.network.FilterNetworking;
 import io.github.xiao232ming.oritechaddonsone.network.TransferNetworking;
 
 /**
@@ -209,7 +211,7 @@ public final class TransferAddonPage implements AddonPage {
             // every cell-face of this model is configurable - the plugin's own host face included - so the modal is
             // never opened in its "occupied" form here; only the cube net page still uses that form
             TransferFaceModal.render(context, graphics, openFace, current(context, openCell, openFace),
-                    false, mouseX, mouseY);
+                    false, mouseX, mouseY, openFilter(context));
         }
     }
 
@@ -306,7 +308,7 @@ public final class TransferAddonPage implements AddonPage {
             OritechAddonsOne.LOGGER.debug("[transfer] click {} on the open modal of cell {} face {} (at {}/{})",
                     button, openCell, openFace, (int) mouseX, (int) mouseY);
             return TransferFaceModal.mouseClicked(context, openFace, current(context, openCell, openFace),
-                    send(context), false, mouseX, mouseY, button);
+                    send(context), false, mouseX, mouseY, button, openFilter(context));
         }
 
         var preview = currentPreview(context);
@@ -561,8 +563,24 @@ public final class TransferAddonPage implements AddonPage {
         };
     }
 
-    /** Clears one cell-face without opening the modal: the page's right click on a configured face. */
-    private static void clear(BlockPos blockPos, BlockPos machine, Vec3i cell, Direction face) {
+    /**
+     * Where the 过滤 button of the modal sends its click: the 过滤 page of <b>this cell's</b> face, which is why
+     * it is a separate sink from the mode one - the cell the player is looking at is part of the address here and
+     * is not in the face alone.
+     * <p>
+     * The cell is read from the open picker rather than captured, exactly like {@link #send}, so the button
+     * always addresses the cell-face whose panel is actually on screen.
+     */
+    private static TransferFaceModal.FilterOpener openFilter(AddonPageContext context) {
+        return face -> {
+            var cell = TransferPickerState.openCell();
+            if (cell == null) return;
+
+            FilterNetworking.sendOpenFilter(context.menu().transferPluginPos(), FaceFilterMenu.MODEL_CELL, face, cell);
+        };
+    }
+
+    /** Clears one cell-face without opening the modal: the page's right click on a configured face. */    private static void clear(BlockPos blockPos, BlockPos machine, Vec3i cell, Direction face) {
         ClientPacketDistributor.sendToServer(new TransferNetworking.SetCellFaceMode(blockPos, machine,
                 CellFaceModes.pack(cell, face, TransferFaceModes.pack(TransferMode.NONE, false))));
     }

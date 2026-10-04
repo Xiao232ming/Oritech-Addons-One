@@ -7,6 +7,7 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.Vec3i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 
@@ -23,6 +24,8 @@ import io.github.xiao232ming.oritechaddonsone.block.entity.TransferFaceModes;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferMode;
 import io.github.xiao232ming.oritechaddonsone.client.AddonPanelStyle;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonMenu;
+import io.github.xiao232ming.oritechaddonsone.menu.FaceFilterMenu;
+import io.github.xiao232ming.oritechaddonsone.network.FilterNetworking;
 import io.github.xiao232ming.oritechaddonsone.network.ProxyNetworking;
 import io.github.xiao232ming.oritechaddonsone.network.TransferNetworking;
 
@@ -54,6 +57,10 @@ public final class TransferFaceModal {
     private static final int AUTOMATION_BOX = 10;
     private static final int AUTOMATION_GAP = 4;
     private static final int AUTOMATION_Y = 60;
+    /** The 过滤 row: one button under the automation row and above the prompt line, which is all the room there is. */
+    private static final int FILTER_WIDTH = 60;
+    private static final int FILTER_HEIGHT = 12;
+    private static final int FILTER_Y = 72;
     /** Frame drawn around Oritech's panel, as on the other configuration pages. */
     private static final int PANEL_FRAME = 2;
 
@@ -61,6 +68,7 @@ public final class TransferFaceModal {
     private static final String PROMPT_KEY = "gui.oritechaddonsone.transfer.prompt";
     private static final String OCCUPIED_KEY = "gui.oritechaddonsone.transfer.occupied";
     private static final String AUTOMATION_KEY = "gui.oritechaddonsone.transfer.automation";
+    private static final String FILTER_KEY = "gui.oritechaddonsone.transfer.filter";
 
     /** Colour of the green tick, as on the cube net page's checkbox. */
     private static final int GOOD = 0xFF2ECC71;
@@ -87,6 +95,17 @@ public final class TransferFaceModal {
      */
     public static void render(AddonPageContext context, GuiGraphicsExtractor graphics, Direction face, Current current,
             boolean occupied, double mouseX, double mouseY) {
+        render(context, graphics, face, current, occupied, mouseX, mouseY, (f) -> {
+        });
+    }
+
+    /**
+     * Draws the configuration page of one face, with the way to open that face's 过滤 page.
+     *
+     * @see #render(AddonPageContext, GuiGraphicsExtractor, Direction, Current, boolean, double, double)
+     */
+    public static void render(AddonPageContext context, GuiGraphicsExtractor graphics, Direction face, Current current,
+            boolean occupied, double mouseX, double mouseY, FilterOpener filter) {
         var font = Minecraft.getInstance().font;
         var placed = AddonPickerPanel.place(context);
         var open = !occupied;
@@ -101,6 +120,7 @@ public final class TransferFaceModal {
         drawPanel(graphics);
         drawPlates(graphics, font, face, current, placed, open, mouseX, mouseY);
         drawAutomation(graphics, font, current, placed, open, mouseX, mouseY);
+        drawFilter(graphics, font, current, placed, open, mouseX, mouseY);
         prompt(graphics, font, occupied);
         header(graphics, context, placed);
 
@@ -115,6 +135,17 @@ public final class TransferFaceModal {
      */
     public static boolean mouseClicked(AddonPageContext context, Direction face, Current current, Sink sink,
             boolean occupied, double mouseX, double mouseY, int button) {
+        return mouseClicked(context, face, current, sink, occupied, mouseX, mouseY, button, (f) -> {
+        });
+    }
+
+    /**
+     * A click while the configuration page is open, with the way to open that face's 过滤 page.
+     *
+     * @see #mouseClicked(AddonPageContext, Direction, Current, Sink, boolean, double, double, int)
+     */
+    public static boolean mouseClicked(AddonPageContext context, Direction face, Current current, Sink sink,
+            boolean occupied, double mouseX, double mouseY, int button, FilterOpener filter) {
         if (button == 1) {
             TransferPickerState.close();
             return true;
@@ -150,6 +181,16 @@ public final class TransferFaceModal {
                 sink.send(face, current.mode(), !current.automation());
                 return true;
             }
+
+            // The 过滤 button: it opens a page of its own, so the click is taken and the modal is left open -
+            // the server replaces this screen with the filter page, and a click that misses it closes the modal
+            // like any other click outside a control.
+            if (isOverFilter(placed, mouseX, mouseY)) {
+                OritechAddonsOne.LOGGER.debug("[transfer] filter row hit for face {} (mode {})",
+                        face, current.mode());
+                filter.open(face);
+                return true;
+            }
         }
 
         // anything else - the panel's own background, the prompt, the icon, or the page outside the modal -
@@ -171,6 +212,31 @@ public final class TransferFaceModal {
     /** Where a change the player makes in the modal is sent. */
     public interface Sink {
         void send(Direction face, TransferMode mode, boolean automation);
+    }
+
+    /**
+     * Where the 过滤 button of the modal sends its click, i.e. how a page asks the server to open the filter
+     * page of one face.
+     * <p>
+     * It is its own single-method interface and not a second method on {@link Sink} so that every {@code Sink}
+     * stays a lambda: the two pages build those as one expression each, and a second abstract method would
+     * turn every one of them into an anonymous class. What each page has to add is exactly what its own model
+     * needs - the cube net page sends a face, the 传输插件 page a face <b>and the cell it belongs to</b> - which
+     * is the whole reason this is told apart from the mode sink.
+     */
+    @FunctionalInterface
+    public interface FilterOpener {
+        void open(Direction face);
+    }
+
+    /**
+     * The {@link FilterOpener} of a page that keys its settings by direction alone - the cube net page, whose
+     * model is one block's six faces. The face is the whole address there, and the cell of the machine's
+     * controller is the block's own, which is exactly what the two models have in common.
+     */
+    public static FilterOpener opener(BlockPos pos) {
+        return face -> ClientPacketDistributor.sendToServer(new FilterNetworking.OpenFilter(
+                new FilterNetworking.Target(pos, FaceFilterMenu.MODEL_FACE, face, Vec3i.ZERO)));
     }
 
     /**
@@ -254,6 +320,41 @@ public final class TransferFaceModal {
 
         graphics.text(font, label, boxX + AUTOMATION_BOX + AUTOMATION_GAP, y + 1,
                 enabled ? AddonPanelStyle.PANEL_TEXT : AddonPanelStyle.PANEL_TEXT_DIM, false);
+    }
+
+    /**
+     * The 过滤 row: the one button that opens the item filter page of this face, centred between the automation
+     * row and the prompt line - the only strip of the panel that is free.
+     * <p>
+     * <b>It is dimmed while the face has no direction yet</b>, for the same reason the automation switch is: a
+     * face that transfers nothing has nothing to filter, and a page the player can only look at is worse than a
+     * button that explains itself.
+     * <p>
+     * <b>It does not show whether this face is already filtered.</b> The client is not told the filters - they
+     * live in the machine's shared map and are read straight from the server when the page opens - and a wrong
+     * marker here would be worse than none. What the button does instead is open the page, and the page shows
+     * the real contents.
+     */
+    private static void drawFilter(GuiGraphicsExtractor graphics, Font font, Current current,
+            AddonPickerPanel.Placed placed, boolean open, double mouseX, double mouseY) {
+        var enabled = open && current.mode() != TransferMode.NONE;
+        var label = Component.translatable(FILTER_KEY).getString();
+
+        int x = (AddonPickerPanel.WIDTH - FILTER_WIDTH) / 2;
+        int y = FILTER_Y;
+
+        var surface = enabled && isOverFilter(placed, mouseX, mouseY) ? OritechSurface.PANEL_DARK_HOVER
+                : OritechSurface.PANEL_DARK;
+        surface.render(graphics, x, y, FILTER_WIDTH, FILTER_HEIGHT);
+        graphics.text(font, label, x + (FILTER_WIDTH - font.width(label)) / 2, y + (FILTER_HEIGHT - 8) / 2,
+                enabled ? AddonPanelStyle.PANEL_TEXT : AddonPanelStyle.PANEL_TEXT_DIM, false);
+    }
+
+    /** True while the given panel relative mouse position is on the 过滤 button. */
+    private static boolean isOverFilter(AddonPickerPanel.Placed placed, double mouseX, double mouseY) {
+        double x = placed.innerX() + (AddonPickerPanel.WIDTH - FILTER_WIDTH) / 2;
+        double y = placed.innerY() + FILTER_Y;
+        return mouseX >= x && mouseX < x + FILTER_WIDTH && mouseY >= y && mouseY < y + FILTER_HEIGHT;
     }
 
     /**

@@ -263,9 +263,37 @@ public class FacePluginStorage extends DelegatingInventoryStorage {
      * a slot Oritech reserved for its results. The roles are asked of the machine this face reaches into, which
      * is resolved from the host exactly like the inventory itself.
      */
+    /**
+     * The face's item filter for one direction of the movement, or {@code null} while this face is not filtered
+     * in that direction - which is what every face without a 过滤 configuration answers.
+     * <p>
+     * The filter is taken from the machine the plugin on this host works on, exactly like the inventory and the
+     * slot roles above, so the three can never be read from three different machines.
+     */
+    @Nullable
+    private ItemFilterData filter(TransferMode flow) {
+        var current = host();
+        if (current == null) return null;
+
+        var level = current.getLevel();
+        if (level == null) return null;
+
+        var pos = machine.machinePos(current);
+        if (pos == null) return null;
+
+        return MachineFaceConfigs.faceFilters(level, pos).of(face, flow);
+    }
+
+    /** True while the face's filter for that direction lets the given item through. */
+    private boolean allows(TransferMode flow, ItemResource resource) {
+        var filter = filter(flow);
+        return filter == null || filter.allows(resource);
+    }
+
     @Override
     public int insert(int index, ItemResource resource, int amount, TransactionContext transaction) {
         if (!allowsInsert() || !covers(index)) return 0;
+        if (!allows(TransferMode.INPUT, resource)) return 0;
         if (!MachineSlotRoles.allowsInsertAt(machineEntity(), index)) return 0;
         return super.insert(index, resource, amount, transaction);
     }
@@ -295,6 +323,7 @@ public class FacePluginStorage extends DelegatingInventoryStorage {
     @Override
     public int extract(int index, ItemResource resource, int amount, TransactionContext transaction) {
         if (!allowsExtract() || !covers(index)) return 0;
+        if (!allows(TransferMode.OUTPUT, resource)) return 0;
         if (!MachineSlotRoles.allowsExtractAt(machineEntity(), index)) return 0;
         return super.extract(index, resource, amount, transaction);
     }
