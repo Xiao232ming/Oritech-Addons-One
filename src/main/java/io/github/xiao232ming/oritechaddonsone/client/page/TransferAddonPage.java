@@ -473,7 +473,10 @@ public final class TransferAddonPage implements AddonPage {
         if (pending != null && TransferPickerState.isOpen(context.menu().position(), cell, face)) {
             return pending.mode();
         }
-        return TransferFaceState.modeOf(context.menu().position(), cell, face);
+        // the map is keyed by the plugin, not by the menu: an addon's screen shows a plugin standing in its
+        // slots, and the server sends that plugin's map under the plugin's own position
+        // (see ExtensionAddonMenu#transferPluginPos)
+        return TransferFaceState.modeOf(context.menu().transferPluginPos(), cell, face);
     }
 
     /** True while a cell-face moves its items by itself, with the open modal's pending value first. */
@@ -482,7 +485,7 @@ public final class TransferAddonPage implements AddonPage {
         if (pending != null && TransferPickerState.isOpen(context.menu().position(), cell, face)) {
             return pending.automation();
         }
-        return TransferFaceState.automationOf(context.menu().position(), cell, face);
+        return TransferFaceState.automationOf(context.menu().transferPluginPos(), cell, face);
     }
 
     /** What the face the modal is configuring does, as the modal is told it. */
@@ -513,7 +516,9 @@ public final class TransferAddonPage implements AddonPage {
 
             TransferPickerState.select(mode, automation);
             // no limit and no denominator on the answer either: only the cell, the face and the packed value travel
-            var pluginPos = context.menu().position();
+            // the position is the plugin's, not the menu's: a page inside an addon has to address the plugin
+            // standing in its slots, which is the block the server knows as the transfer plugin
+            var pluginPos = context.menu().transferPluginPos();
             PacketDistributor.sendToServer(new TransferNetworking.SetCellFaceMode(pluginPos,
                     CellFaceModes.pack(cell, face, TransferFaceModes.pack(mode, automation))));
         };
