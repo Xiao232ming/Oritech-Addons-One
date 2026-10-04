@@ -462,6 +462,9 @@ public final class TransferAddonPage implements AddonPage {
         return machinePos(menu);
     }
 
+    /** Machines whose missing map was already reported, so the diagnostics cannot flood the log. */
+    private static final java.util.Set<BlockPos> reportedMissing = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
     /** The preview currently built for this menu, or {@code null} while there is none to draw. */
     @Nullable
     private static TransferAddonState.Preview currentPreview(AddonPageContext context) {
@@ -502,9 +505,10 @@ public final class TransferAddonPage implements AddonPage {
         // by several transfer plugins, and all of them draw the same settings
         var key = context.menu().transferMachinePos();
         var known = TransferFaceState.modes(key);
-        if (known == null) {
-            // INFO while "the config disappears when the UI closes" is being chased: it names the key the page
-            // looks under and every key the client actually holds, which is what tells a wrong key from a lost map
+        if (known == null && reportedMissing.add(key)) {
+            // INFO while "the config disappears when the UI closes" is being chased, and only once per key: it
+            // names the key the page looks under and every key the client holds, which is what tells a map that
+            // never arrived from one that arrived under another key
             OritechAddonsOne.LOGGER.info("[transfer] page looks up machine {} (client holds {}) - menu {}",
                     key, TransferFaceState.keys(), context.menu().position());
         }
