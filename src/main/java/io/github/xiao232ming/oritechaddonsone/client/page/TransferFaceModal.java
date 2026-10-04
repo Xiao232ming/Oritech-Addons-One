@@ -110,11 +110,20 @@ public final class TransferFaceModal {
         var placed = AddonPickerPanel.place(context);
         var open = !occupied;
 
+        // The whole modal is drawn in front of the model, not just after it: the 3D page's model is real 3D geometry
+        // with the depth test on, so a later draw at z = 0 is behind it and would lose every pixel - see
+        // FacePreviewWidget#OVER_MODEL_Z for the derivation. The cube net page has no model, and the same z is
+        // simply in front of its panels as well.
+        //
+        // The backdrop has to be inside this pose too, and not only the panel it draws: it covers the whole panel the
+        // modal sits on, the model's panel included, so leaving it at z = 0 is what let the machine show through.
+        graphics.pose().pushPose();
+        graphics.pose().translate(0f, 0f, FacePreviewWidget.OVER_MODEL_Z);
+
         // a dark backdrop over the whole panel, so the modal reads as a step of its own and nothing of the page
         // behind it shows through
         graphics.fill(context.left(), context.top(), context.panelRight(), context.panelBottom(), 0xD0000000);
 
-        graphics.pose().pushPose();
         graphics.pose().translate(context.screenX(placed.innerX()), context.screenY(placed.innerY()), 0f);
 
         drawPanel(graphics);

@@ -129,6 +129,28 @@ public final class FacePreviewWidget extends UIComponent {
     private static final float PLANE_Z = 400.0F;
 
     /**
+     * The z that flat GUI has to be drawn at to <b>cover</b> this model, i.e. the configuration page a click on a
+     * face opens.
+     * <p>
+     * <b>Why a z at all, and not just "drawn later".</b> On 1.21.1 the model is the one piece of this GUI that is
+     * really three dimensional, and it is drawn straight into the GUI's own buffer: drawing real blocks turns the
+     * depth test on, and {@code RenderType.gui()} leaves it on with {@code LEQUAL} for everything flat that follows.
+     * So draw order alone does not decide what lands on top - depth does, and in this projection a larger z is the
+     * nearer one. Every flat element of the page is drawn at z = 0, which is therefore <em>behind</em> the model at
+     * {@link #PLANE_Z}: the modal lost every pixel it covers and the machine was drawn straight through it. 26.1.2
+     * does not have this problem because its model leaves as a submitted picture-in-picture render state, which the
+     * GUI is laid over afterwards.
+     * <p>
+     * <b>Why this number and not some larger one.</b> It has to clear the model, and the model's own extent is not a
+     * guess: {@link #scale} is fitted to the panel, so {@code scale * radius} is at most half the panel's smaller
+     * side, times Oritech's 0.98 margin, times the largest zoom the page allows - {@code 48 * 0.98 * 2}, i.e. about
+     * {@code 94} for this widget's 140x96 panel and the 0.5..2.0 range {@code TransferAddonState.Preview#zoomBy}
+     * clamps to. The model therefore never reaches past roughly {@code 495}. 700 clears that with room to spare and
+     * stays well inside the depth range the GUI itself draws in, the same range Oritech's own 400 lives in.
+     */
+    public static final float OVER_MODEL_Z = 700.0F;
+
+    /**
      * Translucent white of the hover marking: the whole face under the mouse, at an alpha low enough to lighten what
      * the face already carries rather than to cover it.
      * <p>
