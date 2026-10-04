@@ -53,10 +53,25 @@ public record ExtensionAddonLayout(int slots, int columns, int rows, int firstSl
      * 161}, inside {@link #WIDTH}.
      */
     public static final int TYPE_3_COLUMNS = ExtensionAddonType.StatCategory.values().length;
-    /** Internal storage size: one column per stat category, up to 12 tiers each. */
-    public static final int MAX_SLOTS = 12 * TYPE_3_COLUMNS;
+    /**
+     * Largest slot count a player may configure, and therefore the largest grid any addon type can show:
+     * the type III grid at its widest and tallest, i.e. {@link #TYPE_3_COLUMNS} columns of
+     * {@link #TYPE_3_MAX_ROWS} tier rows - Oritech's own tier 1 plus the tiers 2 to 9 that Oritech Things
+     * adds.
+     */
+    public static final int MAX_SLOTS = 72;
     /** Highest number of tier rows the type III grid can show. */
     public static final int TYPE_3_MAX_ROWS = MAX_SLOTS / TYPE_3_COLUMNS;
+    /**
+     * Size the plugin container of an extension addon is allocated with, and the index of the reserved
+     * slot of the wireless page behind it - twelve tier rows plus that one slot.
+     * <p>
+     * <b>It is deliberately larger than {@link #MAX_SLOTS}.</b> The container is what a saved block holds,
+     * so lowering it together with the config would drop the slots an older world already used - the
+     * reserved slot of every existing addon included. Only the container size and that slot index read
+     * this value; every grid is sized from the configured slot count.
+     */
+    public static final int STORAGE_SLOTS = 12 * TYPE_3_COLUMNS;
 
     // ------------------------------------------------------------------ item proxy page
 

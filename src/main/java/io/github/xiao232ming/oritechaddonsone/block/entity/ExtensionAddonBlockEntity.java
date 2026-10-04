@@ -61,7 +61,8 @@ import io.github.xiao232ming.oritechaddonsone.wireless.WirelessLinks;
 /**
  * Block entity of the Extension Addons (shared by type I, type II and type III).
  * <p>
- * It stores up to {@link ExtensionAddonLayout#MAX_SLOTS} stacks of Oritech plugin items and forwards
+ * It stores up to {@link ExtensionAddonLayout#STORAGE_SLOTS} stacks of Oritech plugin items - the config
+ * decides how many of them are usable - and forwards
  * their combined stats to the machine this block is connected to. The forwarding works by letting the
  * machine run its normal addon scan (this block reports neutral stats, so it does not change anything
  * by itself) and then merging the combined plugin stats into the machine's addon data.
@@ -90,14 +91,16 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
      * plugin slots keep their indices {@code 0 .. getContainerSize() - 1}, and the reserved item rides
      * along in the normal container and save format, so nothing about the plugin storage changes.
      */
-    public static final int RESERVED_SLOT = ExtensionAddonLayout.MAX_SLOTS;
+    public static final int RESERVED_SLOT = ExtensionAddonLayout.STORAGE_SLOTS;
     /** Size of the backing storage: the plugin storage plus the reserved single item slot. */
     public static final int STORAGE_SIZE = RESERVED_SLOT + 1;
 
     /**
-     * Storage is always {@link ExtensionAddonLayout#MAX_SLOTS} plugin slots (plus
+     * Storage is always {@link ExtensionAddonLayout#STORAGE_SLOTS} plugin slots (plus
      * {@linkplain #RESERVED_SLOT one} for the wireless page), the config only decides how many of these
-     * slots are usable. That way lowering the configured amount never destroys stored plugins.
+     * slots are usable. That way lowering the configured amount never destroys stored plugins - and the
+     * storage stays at its old size even though the config may ask for fewer slots than before, so a world
+     * saved by an older version of this mod keeps everything it holds.
      */
     private final NonNullList<ItemStack> items = NonNullList.withSize(STORAGE_SIZE, ItemStack.EMPTY);
 
