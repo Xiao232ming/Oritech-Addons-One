@@ -42,7 +42,7 @@ import io.github.xiao232ming.oritechaddonsone.network.TransferNetworking;
  * What makes this plugin different from {@link ExtensionTransferAddonBlock} is only its page: instead of unfolding the host
  * into a cube net, the page renders the machine it serves as a rotatable 3D model and the player picks the faces on
  * that model (see {@code TransferAddonPage}). Everything the page does with a picked face - the mode, the
- * automation switch, the occupied-face refusal - is the same code the transfer page uses.
+ * automation switch - is the same code the transfer page uses.
  * <p>
  * The plugin block itself is a normal Oritech addon that needs support, so it can also be put in a machine's addon
  * slot, where it is one of Oritech's plugins and this class stays out of the way.
@@ -64,9 +64,9 @@ public class TransferAddonBlock extends PluginAddonBlock {
     }
 
     /**
-     * The face of the host this plugin hangs on - the face of the machine or of the extender - and therefore the face
-     * the page marks in gold and refuses. It is the opposite of {@link #attachedTowards(BlockState)}, because that
-     * one points from the plugin to the host.
+     * The face of the host this plugin hangs on - the face of the machine or of the extender. It is the opposite of
+     * {@link #attachedTowards(BlockState)}, because that one points from the plugin to the host, and it is only a
+     * geometric fact about the placement, not a statement about what the page does with that face.
      */
     public static Direction attachedFace(BlockState state) {
         return FaceAttachedHorizontalDirectionalBlock.getConnectedDirection(state);

@@ -31,8 +31,10 @@ import io.github.xiao232ming.oritechaddonsone.network.TransferNetworking;
  * its <b>cell-faces</b> in the modal page a click on that face opens.
  * <p>
  * What the page <b>does</b> is exactly what the Extension Transfer page does - one {@link TransferMode} plus the
- * automation flag per face, the same occupied-face refusal, the same modal, the same look for a configured face (see
- * {@link TransferFaceStyle} and {@link TransferFaceModal}) - and what differs is <b>what a "face" is</b>. The cube net
+ * automation flag per face, the same modal, the same look for a configured face (see {@link TransferFaceStyle} and
+ * {@link TransferFaceModal}) - and what differs is <b>what a "face" is</b>, and that this page refuses none of them:
+ * the cell-face the plugin block itself stands in while it hangs on the machine is configured, shown and saved like
+ * every other cell-face of the structure. The cube net
  * page unfolds one block, so a setting there is one of the six world directions of the host. This page draws the whole
  * assembled structure, and its settings are per <b>cell and direction</b> (see {@link CellFaceModes}): the north face
  * of the top-left cell and the north face of the top-right cell are two faces and two settings. This branch has no
@@ -64,8 +66,8 @@ import io.github.xiao232ming.oritechaddonsone.network.TransferNetworking;
  * <p>
  * <b>The page is the same one in both screens.</b> It is the only page of 传输插件 while the plugin is placed in
  * the world, and it is one of the pages of an Extension Addon while the plugin is stored in its slots. Which
- * block entity it configures never depends on that: everything it reads (the modes, the automation flags, the
- * occupied faces) and everything it writes comes from the menu it was handed (see
+ * block entity it configures never depends on that: everything it reads (the modes, the automation flags) and
+ * everything it writes comes from the menu it was handed (see
  * {@link ExtensionAddonMenu#transferMachinePos()}), and that menu is the block the screen was opened for -
  * the placed plugin, or the addon.
  */
@@ -78,8 +80,6 @@ public final class TransferAddonPage implements AddonPage {
     /** Instruction line below the title, telling the player what a click does. */
     private static final String HINT_KEY = "gui.oritechaddonsone.transfer.hint";
     private static final String NO_MACHINE_KEY = "gui.oritechaddonsone.transfer.no_machine";
-    /** Tooltip of the face the plugin itself occupies, i.e. the face a click cannot configure. */
-    private static final String OCCUPIED_KEY = "gui.oritechaddonsone.transfer.occupied";
 
     /** Icon of the tab: the orange arrow ({@code oritechaddonsone:textures/gui/transfer_tab.png}, 16x16). */
     private static final ResourceLocation ICON =
@@ -168,8 +168,6 @@ public final class TransferAddonPage implements AddonPage {
     @Override
     public void render(AddonPageContext context, GuiGraphics graphics, float partialTick,
             double mouseX, double mouseY) {
-        var menu = context.menu();
-
         drawHint(context, graphics);
 
         var preview = currentPreview(context);
@@ -188,7 +186,7 @@ public final class TransferAddonPage implements AddonPage {
         var widget = preview.widget();
         widget.withRotation(preview.pitch(), preview.yaw());
         widget.setZoom(preview.zoom());
-        widget.setFaceOverlays(configuredModes(context), menu.attachedTransferFaces());
+        widget.setFaceOverlays(configuredModes(context));
         widget.tick();
         widget.render(graphics, screenX(context, mouseX), screenY(context, mouseY), partialTick);
 
@@ -200,8 +198,10 @@ public final class TransferAddonPage implements AddonPage {
         if (openFace != null) {
             var openCell = TransferPickerState.openCell();
             preview.select(openFace);
+            // every cell-face of this model is configurable - the plugin's own host face included - so the modal is
+            // never opened in its "occupied" form here; only the cube net page still uses that form
             TransferFaceModal.render(context, graphics, openFace, current(context, openCell, openFace),
-                    isOccupied(menu, openCell, openFace), mouseX, mouseY);
+                    false, mouseX, mouseY);
         }
     }
 
@@ -276,10 +276,11 @@ public final class TransferAddonPage implements AddonPage {
 
     /**
      * A click on the model picks the <b>cell-face</b> under it. With no modal open, a left click opens that
-     * cell-face's configuration page (or, on a face the plugin itself stands in, does nothing but select it - it can
-     * never be configured) and a right click clears what a configured cell-face does without opening anything. While
-     * the modal is open every click belongs to it: a plate or the switch is applied and the modal stays open, and
-     * anything else closes it.
+     * cell-face's configuration page - on <b>every</b> cell-face of the structure, the one the plugin block itself
+     * stands in included, because this page refuses none of them (see
+     * {@code TransferAddonBlockEntity#setCellFaceConfig}) - and a right click clears what a configured cell-face does
+     * without opening anything. While the modal is open every click belongs to it: a plate or the switch is applied
+     * and the modal stays open, and anything else closes it.
      * <p>
      * <b>The click configures exactly what was picked.</b> The widget's own picking answers the cell and the face
      * ({@link FacePreviewWidget#pickFace}), and both are remembered and sent - not just the direction, which on a
@@ -293,7 +294,7 @@ public final class TransferAddonPage implements AddonPage {
         if (openFace != null) {
             var openCell = TransferPickerState.openCell();
             return TransferFaceModal.mouseClicked(context, openFace, current(context, openCell, openFace),
-                    send(context), isOccupied(menu, openCell, openFace), mouseX, mouseY, button);
+                    send(context), false, mouseX, mouseY, button);
         }
 
         var preview = currentPreview(context);
@@ -307,7 +308,6 @@ public final class TransferAddonPage implements AddonPage {
         if (cell == null) return false;
 
         preview.select(picked);
-        if (isOccupied(menu, cell, picked)) return true;
 
         // a right click on a configured cell-face clears what it does, exactly like on the cube net page
         if (button == 1) {
@@ -395,9 +395,6 @@ public final class TransferAddonPage implements AddonPage {
      * not already show: whether that face is configured, and how. The direction names are still where they belong -
      * {@link TransferFaceStyle.MODES} and the cube net page name a side when a side is the thing being chosen, and the
      * {@code gui.oritechaddonsone.extension_transfer.side.*} keys stay in the language files for that.
-     * <p>
-     * An occupied face keeps its own sentence, because "why can I not configure this" is the answer the player needs
-     * there - and that sentence is about the plugin, not about a side.
      */
     @Override
     public List<Component> tooltipAt(AddonPageContext context, double mouseX, double mouseY) {
@@ -411,9 +408,6 @@ public final class TransferAddonPage implements AddonPage {
         var hovered = preview.widget().hoveredFace();
         var hoveredCell = preview.widget().hoveredOffset();
         if (hovered == null || hoveredCell == null) return List.of();
-
-        // the occupied cell-face explains why it cannot be configured instead of naming a mode it can never have
-        if (isOccupied(menu, hoveredCell, hovered)) return List.of(Component.translatable(OCCUPIED_KEY));
 
         return List.of(Component.translatable(TransferFaceStyle.modeKey(mode(context, hoveredCell, hovered))));
     }
@@ -538,23 +532,5 @@ public final class TransferAddonPage implements AddonPage {
     /** Left edge of the model's panel in panel space: centred in the page body. */
     private static int previewX(AddonPageContext context) {
         return (context.panelWidth() - PREVIEW_WIDTH) / 2;
-    }
-
-    /**
-     * True while the given face of the given cell is one the plugin refuses to configure, i.e. while it is in the mask
-     * the block entity published: the face the plugin itself occupies, and every face another plugin of this mod
-     * stands on.
-     * <p>
-     * <b>Only the controller's own cell can be occupied.</b> The mask is about the machine's own six directions, and
-     * the plugin's host block stands in exactly one face of exactly one cell - the cell the machine's controller is in,
-     * which is the origin of the frame the page's offsets are measured in. Every other cell of the structure is free,
-     * which is what makes a face of a cell the plugin does not touch configurable even while one of the controller's
-     * faces is taken.
-     */
-    private static boolean isOccupied(ExtensionAddonMenu menu, @Nullable Vec3i cell, @Nullable Direction face) {
-        if (cell == null || face == null) return false;
-        if (!cell.equals(Vec3i.ZERO)) return false;
-
-        return (menu.attachedTransferFaces() & 1 << face.ordinal()) != 0;
     }
 }

@@ -49,7 +49,7 @@ import io.github.xiao232ming.oritechaddonsone.block.TransferAddonBlock;
  * 3D model and lets the player pick the faces on that model (see
  * {@code io.github.xiao232ming.oritechaddonsone.client.page.TransferAddonPage}).
  * <p>
- * The plugin is therefore an {@link ExtensionAddonBlockEntity} with four differences:
+ * The plugin is therefore an {@link ExtensionAddonBlockEntity} with three differences:
  * <ul>
  *     <li>the machine it works on is {@link #servedMachinePos()}: the machine behind its host extender, or the
  *     machine it is attached to itself. Every inherited user of {@code connectedMachinePos()} - the machine name in
@@ -57,28 +57,15 @@ import io.github.xiao232ming.oritechaddonsone.block.TransferAddonBlock;
  *     <li>its own faces answer with an <b>empty</b> inventory ({@link #getInventoryStorage(Direction)}), so no pipe,
  *     hopper or other mod can reach the machine through the plugin,</li>
  *     <li>the page it shows is its own ({@code ExtensionAddonMenu#previewOnly()}), and that page draws the
- *     machine it serves,</li>
- *     <li>an <b>occupied</b> face - the face of the machine the plugin block stands in when the plugin hangs directly
- *     on that machine - is refused and marked, so no mode can describe a connection that is physically blocked. Hung
- *     on an extender the plugin occupies no face of the machine at all: the extender is not part of it, so all six
- *     machine faces stay configurable.</li>
+ *     machine it serves and treats <b>every</b> cell-face of it alike - including the one the plugin block itself
+ *     stands in while it hangs directly on that machine. No face is refused, marked or hidden there; the only thing
+ *     that differs about the host's own cell-face is that the automation finds no container in that direction and
+ *     therefore trades nothing through it (see {@link #serverTickTransfer()}).</li>
  * </ul>
  * Placed on a wall - i.e. on anything that is neither an Oritech machine nor an extender - it keeps Oritech's
  * ordinary addon behaviour: no GUI, no movement, an empty answer on every face.
  */
 public class TransferAddonBlockEntity extends ExtensionAddonBlockEntity {
-
-    /**
-     * Faces of the <b>machine</b> this plugin refuses to configure, as a bitmask over {@link Direction#values()}: the
-     * one face of the machine the plugin block stands in while the plugin hangs directly on that machine, and
-     * {@code 0} for the extender placement, whose plugin occupies a face of the extender rather than one of the
-     * machine.
-     * <p>
-     * The base class recomputes it from {@link #scanAttachedTransferFaces()} on the server and publishes it through
-     * the menu's container data; on the client this field is the synced copy the menu writes, because the page has
-     * to mark those faces there as well.
-     */
-    private int occupiedFaces;
 
     /**
      * What each <b>cell-face</b> of the served machine's structure does - the setting this page configures, one entry
@@ -259,46 +246,29 @@ public class TransferAddonBlockEntity extends ExtensionAddonBlockEntity {
         return getBlockState();
     }
 
-    // ------------------------------------------------------------------ the faces the plugin refuses
+    // ------------------------------------------------------------------ moving the machine's items
 
     /**
-     * The faces of the <b>machine</b> this plugin refuses to configure, as the bitmask the page draws its gold border
-     * from: the one face of the machine the plugin itself stands on while it hangs directly on that machine.
+     * True while this plugin may move the served machine's items at all, which is exactly while it serves one.
      * <p>
-     * <b>The mask is about the machine's surface, not about the plugin's own faces.</b> What it has to answer is
-     * "which of the six doors of the machine is physically blocked by this plugin", because that is what the page
-     * shows and what a mode on such a face could not describe. The mask is therefore read on the machine's own
-     * directions:
-     * <ul>
-     *     <li>hung on an <b>extender</b> it is <b>empty</b>: the plugin occupies a face of the extender, and the
-     *     extender is not part of the machine - the machine's six faces are all free, so all six stay
-     *     configurable (the plugin's own faces only drive that automation, see {@link #serverTickTransfer()}),</li>
-     *     <li>hung <b>directly on the machine</b> it is the single face of the machine the plugin block stands in,
-     *     i.e. the machine's face the plugin was placed against. That face is the one the machine and the plugin share
-     *     and the one no pipe can ever be in, so it is the one face that has to be marked and refused.</li>
-     * </ul>
-     * Another plugin of this mod on a neighbouring face never marks a machine face: such a plugin stands on a face of
-     * the machine only when it hangs on the machine itself, and then it is the case above, from <em>its</em> point of
-     * view.
+     * <b>The inherited answer does not fit a placed plugin.</b> The base class asks whether the block holds or hosts a
+     * transfer plugin of either kind ({@link ExtensionAddonBlockEntity#canTransferItems()}:
+     * {@code hasExtensionTransferAddon() || hasTransferAddon()}), and both halves are about plugins that are stored
+     * <em>in</em> the block or hang <em>on</em> it: a placed preview plugin stores neither kind, and it hosts none
+     * either - it is a leaf, so nothing hangs on it and it never publishes a face of its own as taken. What really
+     * decides whether this plugin can transfer is therefore the one thing its page configures and its automation
+     * moves: the machine it serves ({@link #servedMachinePos()}), which is not {@code null} for any placement that
+     * has a machine behind it.
      * <p>
-     * Nothing is reported while the plugin serves no machine: a plugin standing on a wall keeps Oritech's ordinary
-     * addon behaviour, where every face is free and no face describes a connection to a machine.
-     * <p>
-     * On the server the mask is recomputed from the world every tick; on the client it is the copy the base class's
-     * container data wrote into {@link #occupiedFaces}, because the page has to draw the same borders there.
+     * This also repairs the <b>extender</b> placement, where the inherited answer is wrong for a placed plugin: the
+     * plugin hangs on an extender rather than on the machine, so the mask of faces a plugin occupies is empty and
+     * {@code hasExtensionTransferAddon()} answers {@code false} - the base class would refuse every real mode and the
+     * page would not work at all, although the plugin serves a machine perfectly well.
      */
     @Override
-    protected int scanAttachedTransferFaces() {
-        if (level == null) return 0;
-        if (level.isClientSide()) return occupiedFaces;
-
-        if (hangsOnExtender()) return 0;
-        if (!hangsOnMachine()) return 0;
-
-        return 1 << TransferAddonBlock.attachedFace(getBlockState()).ordinal();
+    public boolean canTransferItems() {
+        return servedMachinePos() != null;
     }
-
-    // ------------------------------------------------------------------ moving the machine's items
 
     /**
      * Moves items through the <b>individual faces of the machine's cells</b> for every cell-face whose automation is
@@ -309,7 +279,7 @@ public class TransferAddonBlockEntity extends ExtensionAddonBlockEntity {
      * cell at offset {@code o}, INPUT pulls from the container north of {@code machinePos.offset(o)} into the machine,
      * OUTPUT pushes the machine's items into it, and BOTH does both. A face of a cell that no other cell of the
      * structure covers is a face of the machine's outer surface, which is the only kind the page can configure (the
-     * server re-checks that too, see {@link #setTransferConfig}), so an entry always names a real outside face.
+     * server re-checks that too, see {@link #setCellFaceConfig}), so an entry always names a real outside face.
      * <p>
      * The trade happens between the machine's inventory and that container, with up to
      * {@link MachineFaceStorage#ITEMS_PER_TICK} items per <b>entry</b> and tick, in the order the two directions run in
@@ -325,11 +295,15 @@ public class TransferAddonBlockEntity extends ExtensionAddonBlockEntity {
      * starves the rest of the entries instead of the loop doing more work than the items allow. The loop itself is one
      * pass over the configured entries, and the common case is none.
      * <p>
-     * The one machine face that is skipped is the one the plugin's own host block stands in
-     * ({@link #hostFaceOfMachine()}): a plugin hung directly on the machine occupies exactly that face of the
-     * controller's cell, so a container can never be there and trading would shuffle the machine's items through its
-     * own cell. The extender placement skips that cell-face too - the extender is not a container, and the plugin is
-     * the block standing on the machine there.
+     * <b>One cell-face is skipped, and that is an automation detail rather than a rule about the face.</b> While one
+     * of the six faces of the machine's controller cell is the cell the plugin's own host block stands in
+     * ({@link #hostFaceOfMachine()}), the neighbour outside that cell-face is a block of this mod - the plugin
+     * itself, or the extender it hangs on - and a block of this mod is not a container: nothing can be traded with in
+     * that direction, and a move would only shuffle the machine's items through a face it shares with a block of this
+     * mod. <b>The page configures that cell-face like any other and the mode is stored normally</b> (see
+     * {@link #setCellFaceConfig}); only this loop has nothing to trade with there. Nothing else distinguishes the
+     * face: it is shown, configured and saved like every other cell-face of the structure, and no face is refused or
+     * marked anywhere.
      * <p>
      * Cheap while nothing is configured, and it does nothing at all while the plugin serves no machine, so a plugin
      * that stands on a wall keeps Oritech's plain addon behaviour.
@@ -339,8 +313,10 @@ public class TransferAddonBlockEntity extends ExtensionAddonBlockEntity {
      */
     @Override
     public void serverTickTransfer() {
-        // keeps the refused faces and the very existence of the page in step with the world; the base class's own
-        // movement must not run here - the faces and the machine are resolved by this plugin
+        // Keeps the inherited mask of attached plugin faces in step with the world. This plugin hosts no placed
+        // plugin, so the mask is the base class's "nothing" and this call only ever confirms it; it is kept because it
+        // is the hook the base class expects a subclass to refresh that state in, and the base class's own movement
+        // must not run here - the faces and the machine are resolved by this plugin.
         refreshAttachedTransferFaces();
 
         if (level == null || level.isClientSide()) return;
@@ -356,14 +332,16 @@ public class TransferAddonBlockEntity extends ExtensionAddonBlockEntity {
         // MachineSlotRoles). A storage alone does not carry that knowledge.
         var machineEntity = level.isLoaded(machinePos) ? level.getBlockEntity(machinePos) : null;
         // the face of the controller's own cell the plugin's host block stands in, or null while it stands somewhere
-        // else entirely (the extender placement): only that one cell-face can ever be blocked
+        // else entirely (the extender placement): that is the one cell-face whose neighbour is a block of this mod
+        // rather than a possible container, so it is the one the loop has nothing to trade with
         var hostFace = hostFaceOfMachine();
 
         for (var entry : cellFaces.packedEntries()) {
             var mode = entry.mode();
             if (mode == TransferMode.NONE || !entry.automation()) continue;
 
-            // the plugin's own block is no container: no container can be outside that face of that cell
+            // the plugin's own block is no container, so nothing stands outside that face of that cell to trade with;
+            // the mode itself stays configured there like on any other cell-face
             if (entry.cell().equals(Vec3i.ZERO) && entry.face() == hostFace) continue;
 
             var neighbour = MachineFaceStorage.storageAt(level, machinePos.offset(entry.cell()), entry.face());
@@ -385,18 +363,15 @@ public class TransferAddonBlockEntity extends ExtensionAddonBlockEntity {
      * of the structure nor make the plugin trade with something arbitrarily far away. The offset arrives exactly as
      * the client measured it, i.e. relative to the machine the page draws.
      * <p>
-     * A cell-face the plugin's own host block stands in is <b>occupied</b> and refused: while the plugin hangs
-     * directly on the machine, the machine block is in one of the controller cell's faces and the plugin itself stands
-     * in it, so no container can ever be there and a mode on it could not describe a connection. The page marks that
-     * face and does not offer it either; refusing it here as well is what keeps a mode written by an older version, by
-     * a modified client or by a half-rolled-back page from leaving a face configured that nothing can ever use.
-     * <p>
-     * Hung on an <b>extender</b> nothing is refused: the plugin occupies a face of the extender, which is not part of
-     * the machine, so every face of every cell of the structure is configurable (see
-     * {@link #scanAttachedTransferFaces()}).
+     * <b>Every cell-face is accepted, the host's own one included.</b> The cell-face the plugin's own host block
+     * stands in - while it hangs directly on the machine - is not special here: the page configures it like any other
+     * and the mode is stored like any other, so a player may describe a connection on it just as on the five remaining
+     * faces of the controller cell. What differs is only that the automation finds no container in that direction and
+     * therefore trades nothing there (see {@link #serverTickTransfer()}), which is a fact about the neighbour and
+     * nothing this method has to enforce.
      * <p>
      * Called from the preview page's packet, on the server, on this very block entity - which is what makes the plugin
-     * the right place to do it: it knows the machine it serves and the face that is physically blocked. No capability
+     * the right place to do it: it knows the machine it serves and the cells that machine is made of. No capability
      * cache has to be told anything: this plugin answers no item capability at all (see
      * {@link #getItemLookup(Direction)}).
      *
@@ -409,7 +384,6 @@ public class TransferAddonBlockEntity extends ExtensionAddonBlockEntity {
         if (mode != TransferMode.NONE && servedMachinePos() == null) return false;
         if (!CellFaceModes.isCellOffsetInRange(cell)) return false;
         if (mode != TransferMode.NONE && !machineCellOffsets().contains(cell)) return false;
-        if (mode != TransferMode.NONE && isOccupied(cell, face)) return false;
 
         if (!cellFaces.set(cell, face, mode, automation)) return true;
 
@@ -420,21 +394,6 @@ public class TransferAddonBlockEntity extends ExtensionAddonBlockEntity {
     /** The cell-face settings of this plugin; never {@code null}, empty while nothing is configured. */
     public CellFaceModes cellFaceModes() {
         return cellFaces;
-    }
-
-    /**
-     * True while the given face of the given cell is one the plugin refuses: the machine face its own host block
-     * stands in.
-     * <p>
-     * Only the controller's own cell can be occupied - the host block stands in exactly one face of exactly one cell -
-     * so the mask {@link #scanAttachedTransferFaces()} publishes (which is about the machine's own six directions) is
-     * consulted for that cell, and every other cell of the structure is free.
-     */
-    public boolean isOccupied(Vec3i cell, @Nullable Direction face) {
-        if (face == null) return false;
-        if (!cell.equals(Vec3i.ZERO)) return false;
-
-        return isOccupied(face);
     }
 
     /**
@@ -471,10 +430,11 @@ public class TransferAddonBlockEntity extends ExtensionAddonBlockEntity {
      * The face of the machine the block this plugin hangs on stands in, or {@code null} while that block is not next
      * to the machine's core block at all.
      * <p>
-     * It is the one machine face that must not be traded with: hung directly on the machine it is the face the plugin
-     * itself occupies, and hung on an extender it is the face the extender sits in. In both cases the machine has no
-     * neighbour there to trade with - a block of this mod stands in it - and the automation is about the machine's own
-     * six faces.
+     * It answers a question about the <b>neighbour</b> rather than about the face: hung directly on the machine this
+     * is the face the plugin block is the neighbour of, and hung on an extender it is the face the extender sits in.
+     * In both cases a block of this mod stands there instead of a possible container, which is why the automation has
+     * nothing to trade with in that direction (see {@link #serverTickTransfer()}). The face itself is nothing special:
+     * the page configures it like any other and its mode is saved like any other (see {@link #setCellFaceConfig}).
      * <p>
      * The host is resolved on the server only, like every user of {@link #attachedHostPos()}: the client has neither
      * the plugin's controller offset nor the extender's, and it runs no automation anyway.
@@ -490,33 +450,6 @@ public class TransferAddonBlockEntity extends ExtensionAddonBlockEntity {
         }
         return null;
     }
-
-    /**
-     * Sets what one face of the machine does, i.e. which container outside that face of the machine this plugin
-     * trades with on its own (see {@link #serverTickTransfer()}).
-     * <p>
-     * A face that is <b>occupied</b> is refused: while the plugin hangs directly on the machine, the machine block is
-     * in one of the machine's faces and the plugin itself stands in it, so no container can ever be there and a mode
-     * on it could not describe a connection. The page marks that face and does not offer it either; refusing it here
-     * as well is what keeps a mode written by an older version, by a modified client or by a half-rolled-back page
-     * from leaving a face configured that nothing can ever use.
-     * <p>
-     * Hung on an <b>extender</b> nothing is refused: the plugin occupies a face of the extender, which is not part of
-     * the machine, so all six of the machine's faces are configurable (see {@link #scanAttachedTransferFaces()}).
-     * <p>
-     * Called from the preview page's packet, on the server, on this very block entity - which is what makes the
-     * plugin the right place to do it: it knows the machine it serves and the face that is physically blocked. No
-     * capability cache has to be told anything: this plugin answers no item capability at all (see
-     * {@link #getInventoryStorage(Direction)}).
-     */
-    /** True while the given face of the controller's cell is one {@link #scanAttachedTransferFaces()} refuses. */
-    private boolean isOccupied(@Nullable Direction face) {
-        if (face == null) return false;
-
-        return (scanAttachedTransferFaces() & 1 << face.ordinal()) != 0;
-    }
-
-    // ------------------------------------------------------------------ the plugin's own faces
 
     // ------------------------------------------------------------------ the plugin's own faces
 

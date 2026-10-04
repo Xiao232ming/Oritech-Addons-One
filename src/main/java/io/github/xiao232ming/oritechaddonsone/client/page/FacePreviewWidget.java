@@ -35,8 +35,8 @@ import io.github.xiao232ming.oritechaddonsone.block.entity.TransferMode;
 /**
  * The 3D model of the page of 传输插件: <b>one</b> machine, drawn inside the page's panel with the same recipe
  * Oritech's own {@code BlockPreviewWidget} uses on this branch, plus the things that page needs and Oritech's widget
- * does not offer - the markings of its faces (their mode, and the face a plugin occupies) and face picking with a
- * highlight on the face under the mouse.
+ * does not offer - the markings of its configured faces (their mode) and face picking with a highlight on the face
+ * under the mouse.
  * <p>
  * <b>Why this is not Oritech's widget.</b> On 1.21.1 there is no picture in picture GUI rendering at all, so a widget
  * has to draw its blocks straight into the GUI's own pose stack - which is exactly what Oritech's
@@ -103,10 +103,9 @@ import io.github.xiao232ming.oritechaddonsone.block.entity.TransferMode;
  * drawn, what a click answers and where a marking lands cannot drift apart.
  * <p>
  * <b>The faces are marked in the model's own space, on the part each belongs to.</b> {@link #renderContent} draws, in
- * the very pose the machine was drawn in: each configured face's mode wash, the gold outline of a face a plugin
- * occupies, and - last, on top - the white outline of the face under the mouse. That is what a screen space rectangle
- * - all the GUI's own fill can draw - cannot do: only a quad in the model's pose follows the model's rotation and lies
- * on the face the player is about to click.
+ * the very pose the machine was drawn in: each configured face's mode wash and - last, on top - the white fill of the
+ * face under the mouse. That is what a screen space rectangle - all the GUI's own fill can draw - cannot do: only a
+ * quad in the model's pose follows the model's rotation and lies on the face the player is about to click.
  * <p>
  * <b>It is asked in absolute screen coordinates.</b> A page of this mod draws inside
  * {@code AbstractContainerScreen#renderBg}, which is called with the plain screen pose - unlike Oritech's own widget
@@ -146,8 +145,7 @@ public final class FacePreviewWidget extends UIComponent {
 
     /**
      * Distance the hover fill floats off the face, so it never trades depth with the block face behind it. It is
-     * above {@link #MARKING_LIFT} + {@link #MARKING_STEP}, i.e. above a mode wash and above the gold outline of an
-     * occupied face, so the hover is the topmost marking of the three.
+     * above {@link #MARKING_LIFT}, i.e. above a mode wash, so the hover is the topmost of the two markings.
      */
     private static final float HIGHLIGHT_LIFT = 0.004F;
 
@@ -161,15 +159,8 @@ public final class FacePreviewWidget extends UIComponent {
     /** How far a wash's edges stay inside the face, in model units, so it reads as a marking and not as a lid. */
     private static final float WASH_INSET = 0.03F;
 
-    /**
-     * Distance a face's markings float off that face, and the step between two markings on the same face, so the wash
-     * and the gold outline of one face never trade depth with each other.
-     */
+    /** Distance a face's mode wash floats off that face, so it never trades depth with the block face behind it. */
     private static final float MARKING_LIFT = 0.001F;
-    private static final float MARKING_STEP = 0.001F;
-
-    /** Thickness of the gold outline of an occupied face, in model units. */
-    private static final float OUTLINE_THICKNESS = 0.05F;
 
     /**
      * One axis of the coordinate frame the markings and the hover outline are built in, per face: {@code [0]} is the
@@ -251,12 +242,6 @@ public final class FacePreviewWidget extends UIComponent {
     public record CellFace(Vec3i cell, Direction face) {
     }
 
-    /**
-     * Faces of the machine a plugin of this mod occupies, as the bitmask the page's menu reports. {@code 0} while
-     * none is, which is the case for the extender placement by the rule the page and the server share.
-     */
-    private int occupiedFaces;
-
     /** The 3D preview of one machine: 140x96 pixels, the size the page's panel reserves for it. */
     public FacePreviewWidget(int x, int y, int width, int height) {
         super(x, y, width, height);
@@ -270,17 +255,19 @@ public final class FacePreviewWidget extends UIComponent {
     }
 
     /**
-     * Sets what the frame after this one marks on the model: the mode of every configured cell-face, and which faces
-     * a plugin occupies. The page calls this once per frame, before it renders this widget, so the model always shows
-     * what the server last reported (and the pending value the page has just sent) rather than a copy of its own.
+     * Sets what the frame after this one marks on the model: the mode of every configured cell-face. The page calls
+     * this once per frame, before it renders this widget, so the model always shows what the server last reported (and
+     * the pending value the page has just sent) rather than a copy of its own.
+     * <p>
+     * A configured cell-face is the only thing that is marked: the page configures <b>every</b> cell-face of the
+     * machine, the one the plugin block itself stands in included (see
+     * {@code TransferAddonBlockEntity#setCellFaceConfig}), so there is no second kind of marking - no face this model
+     * would have to show as one that cannot be configured.
      *
-     * @param modes    the mode of every <b>configured</b> cell-face; a cell-face that is absent transfers nothing
-     * @param occupied bitmask over {@link Direction#ordinal()} of the faces of the controller's own cell a plugin
-     *                 occupies - the only cell that can be occupied, because a plugin is one block
+     * @param modes the mode of every <b>configured</b> cell-face; a cell-face that is absent transfers nothing
      */
-    public void setFaceOverlays(Map<CellFace, TransferMode> modes, int occupied) {
+    public void setFaceOverlays(Map<CellFace, TransferMode> modes) {
         this.faceModes = Map.copyOf(modes);
-        this.occupiedFaces = occupied;
     }
 
     /**
@@ -393,11 +380,11 @@ public final class FacePreviewWidget extends UIComponent {
     /**
      * Draws every drawn part of the machine inside the panel with Oritech's own recipe for this branch - see the class
      * comment for the exact transform and why the Y scale is negative - and then, in that same pose, the markings of
-     * the machine's faces and the hover outline of the face the mouse is over.
+     * the machine's configured faces and the hover fill of the face the mouse is over.
      * <p>
      * The order is the whole layering of the page: the machine's blocks first, then the mode wash of every configured
-     * face, then the gold outline of an occupied face (over that wash, which is what makes it readable on a coloured
-     * face), and the white hover outline last, on top of both.
+     * face, and the white hover fill last, on top of it - which is what keeps the mode's colour readable while the
+     * face is hovered.
      * <p>
      * The transform it applies is the one {@link PreviewTransform} describes and
      * {@link PreviewTransform#modelToScreen()} builds: the widget never writes that chain out a second time, so the
@@ -468,9 +455,9 @@ public final class FacePreviewWidget extends UIComponent {
     }
 
     /**
-     * Draws the markings of the machine's <b>cell-faces</b>, in the pose that is still active from the machine above:
-     * each marking names the cell and the face it belongs to, so its quads land on that cell's face whatever the model
-     * is rotated to.
+     * Draws the markings of the machine's <b>configured cell-faces</b>, in the pose that is still active from the
+     * machine above: each marking names the cell and the face it belongs to, so its quads land on that cell's face
+     * whatever the model is rotated to.
      * <p>
      * <b>One marking per configured cell-face, on the cell it was configured on.</b> That is not the same as one
      * marking per direction: the old model had a setting per world direction and this method had to work out a
@@ -478,21 +465,11 @@ public final class FacePreviewWidget extends UIComponent {
      * two cells of the same side could never be marked differently. A cell-face setting names its cell outright, so
      * the marking is drawn exactly where the player clicked.
      * <p>
-     * <b>Two kinds of marking, and a face can carry both:</b>
-     * <ul>
-     *     <li>the <b>mode wash</b> - the translucent blue of an input face, the orange of an output face, and both
-     *     halves side by side on a face that does both, taken from {@link TransferFaceStyle#wash} so the model and the
-     *     cube net page colour a face the same way. The wash covers the inner part of the face and leaves a rim free
-     *     for the outline.</li>
-     *     <li>the <b>gold outline</b> of a face a plugin of this mod occupies, in {@link TransferFaceStyle#GOLD} -
-     *     the same gold the cube net page draws around that face. It is an outline rather than a fill, so a wash
-     *     underneath it stays visible and the two meanings can be read at once.</li>
-     * </ul>
-     * Only the controller's own cell can be occupied, so the gold outline is only ever added there - and only for a
-     * face that carries no mode of its own, because a configured cell-face was already drawn with its wash (and, when
-     * it is occupied too, with both). A cell-face that is neither configured nor occupied gets no marking at all. Both
-     * kinds are lifted off the face by {@link #MARKING_LIFT} / {@link #MARKING_STEP}, so they never trade depth with
-     * the block face or with each other.
+     * <b>There is one kind of marking: the mode wash</b> - the translucent blue of an input face, the orange of an
+     * output face, and both halves side by side on a face that does both, taken from {@link TransferFaceStyle#wash} so
+     * the model and the cube net page colour a face the same way. The wash covers the inner part of the face and
+     * leaves a rim free, and it is lifted off the face by {@link #MARKING_LIFT}, so it never trades depth with the
+     * block face behind it. A cell-face that transfers nothing gets no marking at all.
      */
     private void drawOverlays(PoseStack poseStack) {
         var modes = faceModes;
@@ -508,27 +485,8 @@ public final class FacePreviewWidget extends UIComponent {
             poseStack.pushPose();
             poseStack.translate(cell.getX(), cell.getY(), cell.getZ());
             drawWash(poseStack, face, mode);
-            if (isOccupied(entry.getKey())) {
-                drawOutline(poseStack, face, MARKING_LIFT + MARKING_STEP, OUTLINE_THICKNESS, TransferFaceStyle.GOLD);
-            }
             poseStack.popPose();
         }
-
-        // the occupied faces of the controller's own cell that carry no mode: a cell-face with a mode was drawn above
-        for (var face : Direction.values()) {
-            if ((occupiedFaces & 1 << face.ordinal()) == 0) continue;
-            if (modes.containsKey(new CellFace(Vec3i.ZERO, face))) continue;
-
-            poseStack.pushPose();
-            drawOutline(poseStack, face, MARKING_LIFT + MARKING_STEP, OUTLINE_THICKNESS, TransferFaceStyle.GOLD);
-            poseStack.popPose();
-        }
-    }
-
-    /** True while the given cell-face is one a plugin of this mod occupies, i.e. a face of the controller's cell. */
-    private boolean isOccupied(CellFace cellFace) {
-        if (!cellFace.cell().equals(Vec3i.ZERO)) return false;
-        return (occupiedFaces & 1 << cellFace.face().ordinal()) != 0;
     }
 
     /**
@@ -554,21 +512,6 @@ public final class FacePreviewWidget extends UIComponent {
         float middle = 0.0F;
         drawQuad(poseStack, face, near, middle, near, far, MARKING_LIFT, TransferFaceStyle.INPUT_FILL);
         drawQuad(poseStack, face, middle, far, near, far, MARKING_LIFT, TransferFaceStyle.OUTPUT_FILL);
-    }
-
-    /**
-     * The outline of one face: a frame {@link #OUTLINE_THICKNESS} wide inside the face's own edge, built from the four
-     * strips between the outer and the inner rectangle, all in model units of the cell the pose is translated to.
-     */
-    private void drawOutline(PoseStack poseStack, Direction face, float lift, float thickness, int color) {
-        float outer = FACE_HALF_EXTENT;
-        float inner = FACE_HALF_EXTENT - thickness;
-
-        // the two strips across the face and the two down its sides; the corners are covered by both
-        drawQuad(poseStack, face, -outer, outer, inner, outer, lift, color);
-        drawQuad(poseStack, face, -outer, outer, -outer, -inner, lift, color);
-        drawQuad(poseStack, face, -outer, -inner, -inner, inner, lift, color);
-        drawQuad(poseStack, face, inner, outer, -inner, inner, lift, color);
     }
 
     /**
@@ -638,9 +581,9 @@ public final class FacePreviewWidget extends UIComponent {
      * {@code 0x55669DF8} and the orange of an output face to {@code 0x55F7B341}, both lighter than the unmarked face
      * and both still their own colour, while a face with no mode reads as lit rather than as painted.
      * <p>
-     * The gold outline of an occupied face is drawn before this (see {@link #drawOverlays}), so the "a plugin stands
-     * here" reading survives being hovered, and {@link #HIGHLIGHT_LIFT} is raised above that outline's own lift so the
-     * white is never hidden by it.
+     * The mode wash of a face is drawn before this (see {@link #drawOverlays} running first) and lies under the fill,
+     * which is the point of the low alpha: the colour the face already carried stays readable while it is hovered, and
+     * {@link #HIGHLIGHT_LIFT} is raised above the wash's own lift so the white is never hidden by it.
      * <p>
      * Nothing is drawn while no face is hovered, i.e. while the mouse is not on the model - the page's picking keeps
      * working unchanged, because this only ever adds geometry to the frame and never touches the mouse.
