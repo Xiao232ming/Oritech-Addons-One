@@ -211,6 +211,12 @@ public final class TransferNetworking {
      * open: only this mod's own addon menu ({@code ExtensionAddonMenu}) can be showing this page, and that menu knows
      * the block it belongs to, so a player who is merely standing nearby is not sent anything.
      * <p>
+     * <b>The menu can belong to the plugin itself or to the block that holds it</b>, and both have to be recognised:
+     * a plugin that hangs on an extender is the block whose screen shows the page, so its own menu is opened on
+     * {@code pos}, while a plugin stored in an Extension Addon's slots is drawn by that addon's menu, which is opened
+     * on the addon's position instead. Asking only for the first kind silently skipped the second - which is the very
+     * case of a stored plugin, and the reason its page drew an empty map.
+     * <p>
      * Does nothing on the client and nothing while the block entity is not a transfer plugin.
      */
     public static void sendFaceModes(Level level, BlockPos pos) {
@@ -220,7 +226,7 @@ public final class TransferNetworking {
 
         for (var player : serverLevel.getServer().getPlayerList().getPlayers()) {
             if (!(player.containerMenu instanceof ExtensionAddonMenu menu)) continue;
-            if (!menu.position().equals(pos)) continue;
+            if (!menu.position().equals(pos) && !menu.holdsTransferPlugin(pos)) continue;
 
             sendFaceModes(player, pos, plugin);
         }

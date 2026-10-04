@@ -24,6 +24,7 @@ import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionTransferAddo
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferFaceModes;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferMode;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferAddonBlockEntity;
+import io.github.xiao232ming.oritechaddonsone.network.TransferNetworking;
 import io.github.xiao232ming.oritechaddonsone.block.entity.WirelessExtensionAddonBlockEntity;
 
 /**
@@ -713,5 +714,70 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
     @Override
     public boolean stillValid(Player player) {
         return container.stillValid(player);
+    }
+
+    // ------------------------------------------------------------------ the map of a transfer plugin stored inside
+
+    /**
+     * Position of the 传输插件 whose cell-face map this menu already sent to its player, or {@code null} while
+     * none was sent yet.
+     * <p>
+     * Server side only - {@link #broadcastChanges()} returns on the client before it is read - and per menu,
+     * i.e. per player, which is what the map's second source needs: {@code TransferNetworking#sendFaceModes(Level,
+     * BlockPos)} sends to every player whose open menu belongs to that block, so one flag per menu sends one
+     * packet per player instead of one per player per tick.
+     */
+    @Nullable
+    private BlockPos sentTransferMap;
+
+    /**
+     * Sends the cell-face map of a 传输插件 stored in this addon's slots to this player, once per plugin.
+     * <p>
+     * <b>Why this is needed at all.</b> The map - what every cell-face of the machine is configured to do - is
+     * the server's, and it cannot travel with the menu: the container data is a fixed set of slots, while a
+     * structure has one setting per face of every cell of it (see {@code TransferNetworking.FaceModes}). The
+     * placed plugin's own screen therefore sends it right after opening the menu
+     * ({@code TransferAddonBlock#openPluginMenu}), and every accepted change is answered with the whole map
+     * again. An addon's screen had neither: opening it sent no map, so a player who configured a face saw
+     * nothing - no colour on the model, and no setting after reopening the GUI - although the server had
+     * written it and the automation moved items by it.
+     * <p>
+     * <b>Why it runs here.</b> {@link #broadcastChanges()} is the server's per tick hook of an open menu, which
+     * is exactly the moment the map has to be sent - and the moment a plugin can have appeared: the page only
+     * exists while 传输插件 is in the slots, and a plugin put in afterwards was not there when the menu was
+     * opened. It also covers the client, whose screen asks for the page list a moment after the map arrives.
+     * <p>
+     * Nothing is sent while the block does not hold a transfer plugin or holds one that serves no machine -
+     * {@code sendFaceModes} answers nothing for a plain block entity, and a map that is empty costs one packet
+     * that says so.
+     */
+    @Override
+    public void broadcastChanges() {
+        super.broadcastChanges();
+
+        var level = containerLevel();
+        if (level == null || level.isClientSide()) return;
+        if (!(blockEntity() instanceof TransferAddonBlockEntity plugin)) return;
+
+        var pluginPos = plugin.getBlockPos();
+        if (pluginPos.equals(sentTransferMap)) return;
+
+        sentTransferMap = pluginPos;
+        TransferNetworking.sendFaceModes(level, pluginPos);
+    }
+
+    /**
+     * True while this menu is the one showing the 传输插件 standing at {@code pluginPos}, i.e. while that
+     * plugin is stored in this addon's plugin slots.
+     * <p>
+     * It is what lets the map of a <b>stored</b> plugin find its way to the right players
+     * ({@code TransferNetworking#sendFaceModes(Level, BlockPos)}): such a plugin is drawn by this addon's menu
+     * rather than by a menu of its own, so the map's recipient cannot be found by comparing the menu's position
+     * with the plugin's.
+     */
+    public boolean holdsTransferPlugin(BlockPos pluginPos) {
+        var level = containerLevel();
+        return level != null && level.getBlockEntity(pluginPos) instanceof TransferAddonBlockEntity plugin
+                && plugin.servedMachinePos() != null;
     }
 }
