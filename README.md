@@ -33,6 +33,7 @@ And a few extra features:
 - install addons on your **Refinery** through a wireless extension addon;
 - show the processing speed of the **Atomic Forge**;
 - let the **Atomic Forge** process in parallel by installing an **Auxiliary Processing Chamber Addon** on the **Enderic Lasers** that charge it.
+- Right-clicking air with the Target Designator clears the stored coordinates.
 
 ## ⚙️ Configuration
 
