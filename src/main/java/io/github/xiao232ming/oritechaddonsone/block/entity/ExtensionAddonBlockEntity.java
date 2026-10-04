@@ -650,14 +650,29 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         refreshAttachedTransferFaces();
 
         var faces = transferModes();
-        if (faces.isEmpty() || !canTransferItems()) return;
+        if (faces.isEmpty() || !canTransferItems()) {
+            // INFO on purpose, and only while the block holds a transfer plugin at all: this is the branch that
+            // makes every configured face do nothing, and an empty map here is indistinguishable from "the
+            // automation is broken" without this line.
+            if (canTransferItems()) {
+                OritechAddonsOne.LOGGER.info(
+                        "[transfer] {} holds a plugin but has no automated face configured (machine {})",
+                        worldPosition, servedMachinePos());
+            }
+            return;
+        }
 
         for (var face : Direction.values()) {
             var mode = faces.modeOf(face);
             if (mode == TransferMode.NONE || !faces.automationOf(face)) continue;
 
             var machine = MachineFaceStorage.machineStorage(this);
-            if (machine == null) continue;
+            if (machine == null) {
+                OritechAddonsOne.LOGGER.info(
+                        "[transfer] face {} of {} is {} and automated, but the machine's inventory is not resolvable (machine {})",
+                        face, worldPosition, mode, connectedMachinePos());
+                continue;
+            }
 
             // The face the machine itself sits on has no container to trade with: moving "machine to
             // neighbour" there would shuffle the machine's own items through its own inventory, so it is
@@ -665,7 +680,12 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
             if (worldPosition.relative(face).equals(connectedMachinePos())) continue;
 
             var neighbour = MachineFaceStorage.storageAt(level, worldPosition, face);
-            if (neighbour == null) continue;
+            if (neighbour == null) {
+                OritechAddonsOne.LOGGER.info(
+                        "[transfer] face {} of {} is {} and automated, but {} holds no item handler",
+                        face, worldPosition, mode, worldPosition.relative(face));
+                continue;
+            }
 
             // The machine's own block entity, exactly as the cell-face loop resolves it: the roles of the
             // machine's slots - which of them are inputs and which are outputs - are read from the block entity
