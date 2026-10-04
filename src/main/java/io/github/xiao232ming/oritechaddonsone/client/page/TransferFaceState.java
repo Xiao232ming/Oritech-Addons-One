@@ -10,6 +10,7 @@ import net.minecraft.core.Vec3i;
 
 import org.jetbrains.annotations.Nullable;
 
+import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 import io.github.xiao232ming.oritechaddonsone.block.entity.CellFaceModes;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferMode;
 
@@ -44,6 +45,11 @@ public final class TransferFaceState {
         var modes = new CellFaceModes();
         modes.setAll(entries);
         MODES.put(pluginPos.immutable(), modes);
+
+        // INFO while "the config disappears when the UI closes" is being chased: every arrival says under which
+        // key and with how many faces it came, which separates a lost packet from a map stored under another key
+        OritechAddonsOne.LOGGER.info("[transfer] client received {} face(s) for key {} (holds {})",
+                entries.size(), pluginPos, MODES.keySet());
     }
 
     /** Drops what the client knows about one plugin, called when its GUI closes. */

@@ -206,10 +206,18 @@ public final class TransferNetworking {
 
         public static void handle(FaceModes packet, IPayloadContext context) {
             var entries = new ArrayList<CellFaceModes.Entry>(packet.entries().size());
+            var unreadable = 0;
             for (var packed : packet.entries()) {
                 var entry = CellFaceModes.unpack(packed);
-                if (entry != null) entries.add(entry);
+                if (entry == null) {
+                    unreadable++;
+                    continue;
+                }
+                entries.add(entry);
             }
+
+            OritechAddonsOne.LOGGER.info("[transfer] map packet for {} carried {} entry(ies), {} unreadable",
+                    packet.pos(), packet.entries().size(), unreadable);
 
             // Client side hook, behind a no-op holder so a dedicated server never touches a client class
             ClientHandler.deliver(packet.pos(), entries);
