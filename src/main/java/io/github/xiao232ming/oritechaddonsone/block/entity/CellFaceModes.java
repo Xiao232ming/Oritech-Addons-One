@@ -148,6 +148,33 @@ public final class CellFaceModes {
         faces.clear();
     }
 
+    /**
+     * Sets one face of one cell only while nothing is configured there yet, and reports whether it did.
+     * <p>
+     * It is what the shared, per-machine settings are merged with ({@code MachineFaceConfigs#contribute}): a
+     * block that is loaded into a machine which already has settings must not overwrite what another plugin of
+     * that machine configured, so the existing entry wins. A face that is configured with {@link TransferMode#NONE}
+     * is not a setting and is therefore ignored here - removing one is an explicit edit, not a merge
+     * (see {@link #set}).
+     *
+     * @return true while this call was the one that configured the face
+     */
+    public boolean setIfAbsent(Vec3i cell, Direction face, TransferMode mode, boolean automation) {
+        if (cell == null || face == null || mode == null || mode == TransferMode.NONE) return false;
+        if (isConfigured(cell, face)) return false;
+
+        return set(cell, face, mode, automation);
+    }
+
+    /** The cells this map names, in the order the entries were added. */
+    public List<Vec3i> cells() {
+        var cells = new ArrayList<Vec3i>();
+        for (var key : faces.keySet()) {
+            if (!cells.contains(key.cell())) cells.add(key.cell());
+        }
+        return List.copyOf(cells);
+    }
+
     /** The configured cell-faces and their packed values, for diagnostics. */
     public Map<Key, Integer> entries() {
         return Collections.unmodifiableMap(faces);

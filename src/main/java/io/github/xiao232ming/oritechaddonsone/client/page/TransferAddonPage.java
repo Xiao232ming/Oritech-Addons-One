@@ -331,7 +331,7 @@ public final class TransferAddonPage implements AddonPage {
         if (button == 1) {
             if (mode(context, cell, picked) != TransferMode.NONE) {
                 TransferPickerState.close();
-                clear(menu.transferPluginPos(), cell, picked);
+                clear(menu.transferPluginPos(), sharedKey(menu), cell, picked);
             }
             return true;
         }
@@ -449,6 +449,19 @@ public final class TransferAddonPage implements AddonPage {
         return menu.transferMachinePos();
     }
 
+    /**
+     * The key the cell-face map is held under: the <b>served machine</b>, not the block the page was opened on.
+     * <p>
+     * The settings describe the machine, and one machine can be served by several transfer plugins at once, so
+     * the server keeps and sends <b>one</b> map per machine and every plugin's page draws that same one
+     * ({@code MachineFaceConfigs}). The machine position is exactly what the menu already carries for the 3D
+     * model, so the model and its markings belong to the same machine by construction.
+     */
+    @Nullable
+    private static BlockPos sharedKey(ExtensionAddonMenu menu) {
+        return machinePos(menu);
+    }
+
     /** The preview currently built for this menu, or {@code null} while there is none to draw. */
     @Nullable
     private static TransferAddonState.Preview currentPreview(AddonPageContext context) {
@@ -485,10 +498,9 @@ public final class TransferAddonPage implements AddonPage {
         if (pending != null && TransferPickerState.isOpen(context.menu().position(), cell, face)) {
             return pending.mode();
         }
-        // the map is keyed by the plugin, not by the menu: an addon's screen shows a plugin standing in its
-        // slots, and the server sends that plugin's map under the plugin's own position
-        // (see ExtensionAddonMenu#transferPluginPos)
-        return TransferFaceState.modeOf(context.menu().transferPluginPos(), cell, face);
+        // the map is keyed by the machine, not by the block the page was opened on: one machine can be served
+        // by several transfer plugins, and all of them draw the same settings
+        return TransferFaceState.modeOf(context.menu().transferMachinePos(), cell, face);
     }
 
     /** True while a cell-face moves its items by itself, with the open modal's pending value first. */
@@ -497,7 +509,7 @@ public final class TransferAddonPage implements AddonPage {
         if (pending != null && TransferPickerState.isOpen(context.menu().position(), cell, face)) {
             return pending.automation();
         }
-        return TransferFaceState.automationOf(context.menu().transferPluginPos(), cell, face);
+        return TransferFaceState.automationOf(context.menu().transferMachinePos(), cell, face);
     }
 
     /** What the face the modal is configuring does, as the modal is told it. */
@@ -527,37 +539,19 @@ public final class TransferAddonPage implements AddonPage {
             if (cell == null) return;
 
             TransferPickerState.select(mode, automation);
-            // no limit and no denominator on the answer either: only the cell, the face and the packed value travel
-            // the position is the plugin's, not the menu's: a page inside an addon has to address the plugin
-            // standing in its slots, which is the block the server knows as the transfer plugin
-            var pluginPos = context.menu().transferPluginPos();
-            // INFO while the addressing of a stored plugin is being chased: it names the menu the page belongs
-            // to, what the menu resolved, and every neighbour it had to choose from
-            var level = Minecraft.getInstance().level;
-            var at = level == null ? null : level.getBlockEntity(pluginPos);
-            var neighbours = new StringBuilder();
-            if (level != null) {
-                for (var side : Direction.values()) {
-                    var candidate = context.menu().position().relative(side);
-                    var entity = level.getBlockEntity(candidate);
-                    if (entity != null) {
-                        neighbours.append(side).append('=').append(entity.getClass().getSimpleName()).append(' ');
-                    }
-                }
-            }
-            OritechAddonsOne.LOGGER.info(
-                    "[transfer] sending from menu {} -> plugin {} (entity there: {}, serves {}; neighbours: {})",
-                    context.menu().position(), pluginPos, at == null ? "none" : at.getClass().getSimpleName(),
-                    at instanceof TransferAddonBlockEntity stored ? stored.servedMachinePos() : "n/a",
-                    neighbours.length() == 0 ? "none" : neighbours.toString().trim());
-            ClientPacketDistributor.sendToServer(new TransferNetworking.SetCellFaceMode(pluginPos,
+            // two positions travel: the block the page was opened on - the block that has to carry the setting,
+            // which is the addon for a stored plugin - and the machine, which is what the setting describes and
+            // the key the server keeps and broadcasts the map under
+            var blockPos = context.menu().transferPluginPos();
+            var machine = sharedKey(context.menu());
+            ClientPacketDistributor.sendToServer(new TransferNetworking.SetCellFaceMode(blockPos, machine,
                     CellFaceModes.pack(cell, face, TransferFaceModes.pack(mode, automation))));
         };
     }
 
     /** Clears one cell-face without opening the modal: the page's right click on a configured face. */
-    private static void clear(BlockPos pluginPos, Vec3i cell, Direction face) {
-        ClientPacketDistributor.sendToServer(new TransferNetworking.SetCellFaceMode(pluginPos,
+    private static void clear(BlockPos blockPos, BlockPos machine, Vec3i cell, Direction face) {
+        ClientPacketDistributor.sendToServer(new TransferNetworking.SetCellFaceMode(blockPos, machine,
                 CellFaceModes.pack(cell, face, TransferFaceModes.pack(TransferMode.NONE, false))));
     }
 

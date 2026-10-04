@@ -757,13 +757,14 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
 
         var level = containerLevel();
         if (level == null || level.isClientSide()) return;
-        if (!(blockEntity() instanceof TransferAddonBlockEntity plugin)) return;
 
-        var pluginPos = plugin.getBlockPos();
-        if (pluginPos.equals(sentTransferMap)) return;
+        // the machine of whichever transfer plugin this menu's block holds or hosts: the settings belong to the
+        // machine and a block that serves none has no map to send
+        var machine = blockEntity() == null ? null : blockEntity().servedMachinePos();
+        if (machine == null || machine.equals(sentTransferMap)) return;
 
-        sentTransferMap = pluginPos;
-        TransferNetworking.sendFaceModes(level, pluginPos);
+        sentTransferMap = machine;
+        TransferNetworking.sendFaceModes(level, machine);
     }
 
     /**
