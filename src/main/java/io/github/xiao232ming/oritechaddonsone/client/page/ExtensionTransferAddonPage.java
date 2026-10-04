@@ -115,9 +115,14 @@ public final class ExtensionTransferAddonPage implements AddonPage {
         return ICON;
     }
 
+    /**
+     * The tab's tooltip is its label and nothing else, which is the interface's default: the one line this page
+     * used to add explained the net, and the net explains itself - a face is clicked, the three modes are named,
+     * and the counter counts. The tab is a way in, not a place to read instructions.
+     */
     @Override
     public List<Component> tooltip() {
-        return List.of(label(), Component.translatable(LABEL_KEY + ".tooltip"));
+        return List.of(label());
     }
 
     // ------------------------------------------------------------------ drawing

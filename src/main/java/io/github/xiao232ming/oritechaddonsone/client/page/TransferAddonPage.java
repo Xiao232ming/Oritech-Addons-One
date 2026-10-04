@@ -130,9 +130,15 @@ public final class TransferAddonPage implements AddonPage {
         return ICON;
     }
 
+    /**
+     * The tab's tooltip is its label and nothing else, which is the interface's default: the one line this page
+     * used to add explained the model, and the page already carries that explanation as its own hint line under
+     * the panel (see {@link #drawHint}). Repeating it on the tab only made the reader hover to learn what the
+     * hint says anyway.
+     */
     @Override
     public List<Component> tooltip() {
-        return List.of(label(), Component.translatable(LABEL_KEY + ".tooltip"));
+        return List.of(label());
     }
 
     /**
