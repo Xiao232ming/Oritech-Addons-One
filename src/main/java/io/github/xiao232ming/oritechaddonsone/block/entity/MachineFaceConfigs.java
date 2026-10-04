@@ -131,7 +131,7 @@ public final class MachineFaceConfigs {
         var dropped = SHARED.remove(machine);
         // INFO while "the config disappears" is being chased: this is the only place shared settings are
         // dropped, so a lost configuration either passes through here or was never in the map at all
-        OritechAddonsOne.LOGGER.info("[transfer] forget({}) dropped {} face(s)", machine,
+        OritechAddonsOne.LOGGER.debug("[transfer] forget({}) dropped {} face(s)", machine,
                 dropped == null ? 0 : dropped.cells.configuredFaces());
     }
 
@@ -168,7 +168,7 @@ public final class MachineFaceConfigs {
     public static void load(ExtensionAddonBlockEntity block, CompoundTag nbt) {
         var machine = block.servedMachinePos();
         if (machine == null) {
-            OritechAddonsOne.LOGGER.info("[transfer] load: {} has no machine, {} face(s) in its save data ignored",
+            OritechAddonsOne.LOGGER.debug("[transfer] load: {} has no machine, {} face(s) in its save data ignored",
                     block.getBlockPos(), nbt.getIntArray(CELL_TAG).length);
             return;
         }
@@ -198,7 +198,7 @@ public final class MachineFaceConfigs {
             shared.cells.setIfAbsent(entry.cell(), entry.face(), entry.mode(), entry.automation());
         }
 
-        OritechAddonsOne.LOGGER.info("[transfer] load: {} brought {} face(s) for machine {}, shared now {}",
+        OritechAddonsOne.LOGGER.debug("[transfer] load: {} brought {} face(s) for machine {}, shared now {}",
                 block.getBlockPos(), values.length, machine, shared.cells.configuredFaces());
     }
 

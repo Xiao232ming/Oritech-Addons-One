@@ -129,21 +129,21 @@ public final class TransferFaceModal {
                 // the plate of the mode this face already has is disabled: clicking it again does nothing, so
                 // the page neither closes nor repeats a mode the server already has
                 if (mode == current.mode()) {
-                    OritechAddonsOne.LOGGER.info("[transfer] plate {} ignored: that is what face {} already has",
+                    OritechAddonsOne.LOGGER.debug("[transfer] plate {} ignored: that is what face {} already has",
                             mode, face);
                     return true;
                 }
 
                 // picking a direction keeps the automation switch of the face as it is
                 var automation = current.automation();
-                OritechAddonsOne.LOGGER.info("[transfer] plate {} hit for face {} (automation {}) - sending",
+                OritechAddonsOne.LOGGER.debug("[transfer] plate {} hit for face {} (automation {}) - sending",
                         mode, face, automation);
                 sink.send(face, mode, automation);
                 return true;
             }
 
             if (isOverAutomation(placed, mouseX, mouseY)) {
-                OritechAddonsOne.LOGGER.info("[transfer] automation row hit for face {} (mode {}, at {}/{})",
+                OritechAddonsOne.LOGGER.debug("[transfer] automation row hit for face {} (mode {}, at {}/{})",
                         face, current.mode(), (int) mouseX, (int) mouseY);
                 if (current.mode() == TransferMode.NONE) return true;
 

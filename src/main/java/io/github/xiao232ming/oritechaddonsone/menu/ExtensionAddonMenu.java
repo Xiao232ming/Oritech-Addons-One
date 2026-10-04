@@ -764,7 +764,7 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
         if (machine == null) {
             // INFO while "the config disappears when the UI closes" is being chased: a menu whose block names no
             // machine sends no map, so the page comes back empty although the server still has the settings
-            OritechAddonsOne.LOGGER.info("[transfer] menu {} has no machine to send a map for", position);
+            OritechAddonsOne.LOGGER.debug("[transfer] menu {} has no machine to send a map for", position);
             return;
         }
         if (machine.equals(sentTransferMap)) return;
