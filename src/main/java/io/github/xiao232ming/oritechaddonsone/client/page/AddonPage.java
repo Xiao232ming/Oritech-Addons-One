@@ -29,7 +29,13 @@ public interface AddonPage {
     /** 16x16 GUI texture of the tab icon. */
     ResourceLocation icon();
 
-    /** Tooltip lines of the tab: at least the label, more to explain what the page is for. */
+    /**
+     * Tooltip lines of the tab: at least the label, and by default nothing else.
+     * <p>
+     * A page may add a line that explains what it is for, but most do not need to: the tab names the page and the
+     * page explains itself, so a second line is only worth it when the label alone would not say what the page
+     * does. What is never useful is repeating the page's own on-screen hint here.
+     */
     default List<Component> tooltip() {
         return List.of(label());
     }
