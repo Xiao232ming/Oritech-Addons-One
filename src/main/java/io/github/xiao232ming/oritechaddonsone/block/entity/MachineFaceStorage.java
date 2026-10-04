@@ -142,7 +142,14 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
         var neighbourPos = pos.relative(face);
         if (!level.isLoaded(neighbourPos)) return null;
 
-        return ItemApi.BLOCK.find(level, neighbourPos, face.getOpposite());
+        // The side that points back at us is asked first, exactly as a pipe would - and only first, because not
+        // every block offers its inventory per side: a block that registers its handler without sides answers
+        // null to a directional query, and refusing that block would mean the automation finds no container
+        // although there is one right behind the face.
+        var side = ItemApi.BLOCK.find(level, neighbourPos, face.getOpposite());
+        if (side != null) return side;
+
+        return ItemApi.BLOCK.find(level, neighbourPos, null);
     }
 
     /**
