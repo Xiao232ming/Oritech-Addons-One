@@ -200,9 +200,10 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
      *
      * @param amount total number of items this call may move, i.e. the cap of one dose
      */
-    public static void move(ItemApi.InventoryStorage from, @Nullable BlockEntity fromOwner,
+    public static int move(ItemApi.InventoryStorage from, @Nullable BlockEntity fromOwner,
             ItemApi.InventoryStorage to, @Nullable BlockEntity toOwner, int amount) {
         var budget = Math.max(1, Math.min(amount, itemsPerTick()));
+        var total = 0;
 
         while (budget > 0) {
             var moved = moveDose(from, fromOwner, to, toOwner, budget, true);
@@ -215,11 +216,14 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
                 // the worst case is the behaviour this mod had before the roles existed, and the best case is
                 // that the items travel after all.
                 moved = moveDose(from, fromOwner, to, toOwner, budget, false);
-                if (moved <= 0) return;
+                if (moved <= 0) return total;
             }
 
             budget -= moved;
+            total += moved;
         }
+
+        return total;
     }
 
     /**

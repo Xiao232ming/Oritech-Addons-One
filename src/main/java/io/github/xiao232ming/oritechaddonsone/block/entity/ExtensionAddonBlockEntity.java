@@ -682,11 +682,19 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
             // inputs and which are outputs (see MachineSlotRoles) instead of moving anything anywhere.
             // The budget is passed so the step keeps filling while the machine's input slots have room and
             // keeps emptying while its output slots hold something, instead of stopping after one stack.
+            var out = 0;
+            var in = 0;
             if (mode.allowsExtract()) {
-                MachineFaceStorage.move(machine, machineEntity, neighbour, null, MachineFaceStorage.itemsPerTick());
+                out = MachineFaceStorage.move(machine, machineEntity, neighbour, null, MachineFaceStorage.itemsPerTick());
             }
             if (mode.allowsInsert()) {
-                MachineFaceStorage.move(neighbour, null, machine, machineEntity, MachineFaceStorage.itemsPerTick());
+                in = MachineFaceStorage.move(neighbour, null, machine, machineEntity, MachineFaceStorage.itemsPerTick());
+            }
+
+            if (out + in <= 0) {
+                OritechAddonsOne.LOGGER.info(
+                        "[transfer] face {} mode {} of {} moved nothing: neighbour {}, out {}, in {}",
+                        face, mode, worldPosition, neighbour.getClass().getSimpleName(), out, in);
             }
         }
 
@@ -741,11 +749,20 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
             var neighbour = MachineFaceStorage.storageAt(level, machinePos.offset(entry.cell()), entry.face());
             if (neighbour == null) continue;
 
+            var out = 0;
+            var in = 0;
             if (mode.allowsExtract()) {
-                MachineFaceStorage.move(machine, machineEntity, neighbour, null, MachineFaceStorage.itemsPerTick());
+                out = MachineFaceStorage.move(machine, machineEntity, neighbour, null, MachineFaceStorage.itemsPerTick());
             }
             if (mode.allowsInsert()) {
-                MachineFaceStorage.move(neighbour, null, machine, machineEntity, MachineFaceStorage.itemsPerTick());
+                in = MachineFaceStorage.move(neighbour, null, machine, machineEntity, MachineFaceStorage.itemsPerTick());
+            }
+
+            if (out + in <= 0) {
+                OritechAddonsOne.LOGGER.info(
+                        "[transfer] cell {} face {} mode {} of {} moved nothing: neighbour {}, out {}, in {}",
+                        entry.cell(), entry.face(), mode, worldPosition,
+                        neighbour.getClass().getSimpleName(), out, in);
             }
         }
     }
