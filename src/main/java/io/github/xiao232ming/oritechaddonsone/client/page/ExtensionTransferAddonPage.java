@@ -325,8 +325,12 @@ public final class ExtensionTransferAddonPage implements AddonPage {
         int x = (AddonPickerPanel.WIDTH - FILTER_WIDTH) / 2;
         int y = FILTER_Y;
 
-        var surface = enabled && isOverFilter(placed, mouseX, mouseY) ? OritechSurface.PANEL_DARK_HOVER
-                : OritechSurface.PANEL_DARK;
+        // the light bedrock panel, not the dark one the mode plates and the automation switch use: this button
+        // is the page's one way onward to a second page, and a dark plate in the middle of the dark panel did not
+        // read as a button - nor did Oritech's dark grey text read on top of it. PANEL/PANEL_HOVER is the light
+        // pair, and PANEL_TEXT is the dark text that goes with it
+        var surface = enabled && isOverFilter(placed, mouseX, mouseY) ? OritechSurface.PANEL_HOVER
+                : OritechSurface.PANEL;
         surface.render(graphics, x, y, FILTER_WIDTH, FILTER_HEIGHT);
         graphics.text(font, label, x + (FILTER_WIDTH - font.width(label)) / 2, y + (FILTER_HEIGHT - 8) / 2,
                 enabled ? AddonPanelStyle.PANEL_TEXT : AddonPanelStyle.PANEL_TEXT_DIM, false);

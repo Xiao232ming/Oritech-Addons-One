@@ -112,6 +112,27 @@ public final class FilterNetworking {
         return ordinal >= 0 && ordinal < directions.length ? directions[ordinal] : Direction.NORTH;
     }
 
+    /**
+     * The filter one address names, out of the map that actually holds it.
+     * <p>
+     * <b>The model decides which map, and it has to be asked.</b> A filter of a block's six faces lives in
+     * {@code MachineFaceConfigs.faceFilters} and is found by its face alone, while a filter of one face of one
+     * cell of the structure lives in {@code cellFilters} and is found by that cell too. Reading a cell-face
+     * filter as if it were a block-face one answers {@code null} every time - the cell address names a face of
+     * the controller block that nobody filtered - so the page opened showing an empty filter, and the answer sent
+     * back after each edit was silently dropped, while the filter itself worked: it was stored under the cell it
+     * belongs to, as {@code SetFilter} correctly did. Every read of a filter by address goes through here so the
+     * two cannot drift apart again.
+     *
+     * @return the filter, or {@code null} while this face of this model was never filtered
+     */
+    @Nullable
+    private static ItemFilterData filterOf(ExtensionAddonBlockEntity owner, Target target, TransferMode flow) {
+        return target.model() == FaceFilterMenu.MODEL_CELL
+                ? owner.cellFilter(target.cell(), target.face(), flow)
+                : owner.faceFilter(target.face(), flow);
+    }
+
     // ------------------------------------------------------------------ client -> server
 
     /**
@@ -138,8 +159,8 @@ public final class FilterNetworking {
             var owner = owner(player.level(), target);
             if (owner == null) return;
 
-            var input = owner.faceFilter(target.face(), TransferMode.INPUT);
-            var output = owner.faceFilter(target.face(), TransferMode.OUTPUT);
+            var input = filterOf(owner, target, TransferMode.INPUT);
+            var output = filterOf(owner, target, TransferMode.OUTPUT);
 
             // a face nobody filtered opens with the default one, which is a whitelist listing nothing - the page
             // shows that, and writing it back stores nothing, so opening and closing costs no configuration
@@ -203,8 +224,10 @@ public final class FilterNetworking {
                         target.pos(), target.model(), target.face(), direction);
             }
 
-            // whatever the server holds now is what the page has to show, whether the write went through or not
-            var authoritative = owner.faceFilter(target.face(), direction);
+            // whatever the server holds now is what the page has to show, whether the write went through or not.
+            // It is looked up through the same address-aware reader as the open, so a face of the structure
+            // gets its own filter back rather than the block's
+            var authoritative = filterOf(owner, target, direction);
             if (authoritative != null) {
                 player.connection.send(new FilterState(target, direction.ordinal(), authoritative));
             }
