@@ -938,6 +938,10 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         var machine = MachineFaceStorage.machineStorageAt(level, machinePos);
         if (machine == null) return;
 
+        // Nothing automated means nothing to tick, and - just as important - nothing that could report the
+        // "moved nothing" diagnosis below, so the loop is skipped before it can do either.
+        if (!hasAutomatedFace(settings)) return;
+
         // The machine's own block entity, so that its slot roles can be respected - an INPUT face fills the
         // input slots only and an OUTPUT face empties the output slots only (see MachineSlotRoles). A handler
         // alone does not carry that knowledge.
@@ -966,16 +970,33 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
                         cellFilter(entry.cell(), entry.face(), TransferMode.INPUT));
             }
 
-            if (diagnosticsDue()) {
-                // INFO while "the items do not move" is being chased: a cell-face that moved something is the
-                // one thing that proves the settings, the machine and both handlers all worked - and it names
-                // the count and the direction, so "nothing moved" and "moved the wrong way" differ at a glance.
+            if (out + in <= 0 && diagnosticsDue()) {
+                // INFO on purpose, and only while a configured, automated cell-face has moved nothing at all:
+                // this is the case that looks exactly like "the automation is dead", and the line names the
+                // cell, the face, both handlers and both counts, so the dead end can be found instead of
+                // guessed at. A face that does its job logs nothing - otherwise every working automation
+                // would write one line per second per face for as long as the server runs (see the same
+                // "moved nothing" gate on the six-face loop in #serverTickTransfer).
                 OritechAddonsOne.LOGGER.info(
-                        "[transfer] cell {} face {} mode {} of {}: neighbour {}, out {}, in {}",
+                        "[transfer] cell {} face {} mode {} of {} moved nothing: neighbour {}, out {}, in {}",
                         entry.cell(), entry.face(), mode, worldPosition,
                         neighbour.getClass().getSimpleName(), out, in);
             }
         }
+    }
+
+    /**
+     * True while at least one cell-face of the given settings is switched to automate - i.e. while
+     * {@link #tickCellFaces()} has anything to do. The loop skips the entries that are not automated
+     * anyway, so this is not a correctness gate: it keeps the tick cheap for the common case of a machine
+     * whose faces are configured but left on manual, which is also the case in which the loop would
+     * otherwise walk every entry once per tick just to skip all of them.
+     */
+    private static boolean hasAutomatedFace(CellFaceModes settings) {
+        for (var entry : settings.packedEntries()) {
+            if (entry.mode() != TransferMode.NONE && entry.automation()) return true;
+        }
+        return false;
     }
 
     // ------------------------------------------------------------------ the cell-faces of the 传输插件 page
