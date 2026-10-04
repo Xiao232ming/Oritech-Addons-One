@@ -11,7 +11,6 @@ import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 import io.github.xiao232ming.oritechaddonsone.client.page.AddonPageRegistry;
 import io.github.xiao232ming.oritechaddonsone.client.page.AddonTabStrip;
 import io.github.xiao232ming.oritechaddonsone.client.page.ProxyPickerState;
-import io.github.xiao232ming.oritechaddonsone.client.page.TransferFaceState;
 import io.github.xiao232ming.oritechaddonsone.client.page.ExtensionTransferPickerState;
 import io.github.xiao232ming.oritechaddonsone.client.page.TransferPickerState;
 import io.github.xiao232ming.oritechaddonsone.client.page.TransferAddonState;
@@ -169,23 +168,17 @@ public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddon
         TransferPickerState.clear();
         // only this GUI's own model: another addon screen can be open at the same time
         TransferAddonState.clear(this.menu.position());
-        // and the cell-face map the server sent for this block, for the same reason - the next time this GUI is
-        // opened the server sends it again with the menu. It is dropped under the position it is held under, which
-        // is the plugin's and not this menu's: an addon's screen shows a transfer plugin standing in its slots
-        // (see ExtensionAddonMenu#transferPluginPos), and one that was taken out meanwhile has no position of its
-        // own to drop - its map then simply stays until the client's next GUI is closed, which clears every map.
-        var transferPluginPos = this.menu.transferPluginPos();
-        if (transferPluginPos.equals(this.menu.position())) {
-            TransferFaceState.clear();
-        } else {
-            TransferFaceState.clear(transferPluginPos);
-        }
-
-        // INFO while "the config disappears when the UI closes" is being chased: the page draws from
-        // TransferFaceState, which is keyed by the machine now, so this line shows whether the drop below uses
-        // the key the map was stored under
-        OritechAddonsOne.LOGGER.info("[transfer] screen closed: cleared the map of {} (machine {})",
-                transferPluginPos, this.menu.transferMachinePos());
+        // The cell-face map the server sends (TransferFaceState) is deliberately NOT dropped here.
+        //
+        // It used to be, under the position of the block this GUI belongs to, and that is wrong twice over now:
+        // the map is keyed by the *machine* (one machine can be served by several transfer plugins, and all of
+        // their pages draw the same settings - see MachineFaceConfigs), so dropping it by a block position either
+        // misses the entry or, when the two happen to be equal, wipes the whole client-side cache. What the player
+        // then sees is a page whose settings are gone although the server still has them, and the only cure is a
+        // round trip that may not happen again: the server sends its map when a menu opens and after every change,
+        // and a stale cache entry for a machine that is no longer served costs one small map and nothing else.
+        OritechAddonsOne.LOGGER.info("[transfer] screen closed for menu {} (machine {}) - the map stays",
+                this.menu.position(), this.menu.transferMachinePos());
     }
 
     /**
