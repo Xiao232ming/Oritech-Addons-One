@@ -36,7 +36,7 @@ import io.github.xiao232ming.oritechaddonsone.forge.LaserAimIndex;
  * this mixin also has to send the forge's GUI update: Oritech's forge does not send one itself.
  */
 @Mixin(AtomicForgeBlockEntity.class)
-public abstract class AtomicForgeBlockEntityMixin implements ForgeLaserSpeedupHost {
+public abstract class AtomicForgeBlockEntityMixin implements ForgeLaserSpeedupHost, MachineBaseInvokers {
 
     /** Speed relative to one plain laser; refreshed on the server right before the GUI data is sent. */
     @Unique
@@ -70,6 +70,10 @@ public abstract class AtomicForgeBlockEntityMixin implements ForgeLaserSpeedupHo
      * to the recipe's whole cost, so unlike every other machine it never multiplies that by an efficiency
      * value - without this the extra items the chambers process would be free.
      * <p>
+     * Charged is what the operation will really produce, not what the chambers could produce: with
+     * ingredients for two items the forge crafts two, so it pays for two even when its lasers carry 96
+     * chambers.
+     * <p>
      * The forge re-sets the buffer from the recipe on every call, so scaling it here cannot compound.
      */
     @Inject(method = "getRecipe", at = @At("RETURN"))
@@ -82,7 +86,13 @@ public abstract class AtomicForgeBlockEntityMixin implements ForgeLaserSpeedupHo
         // Without a recipe the buffer is set to 1, which is not a charge requirement to scale.
         if (storage == null || storage.capacity <= 10L) return;
 
-        float factor = ForgeLaserChambers.efficiencyFactor(serverLevel, forge.getBlockPos());
+        int chambers = ForgeLaserChambers.chambersOf(serverLevel, forge.getBlockPos());
+        if (chambers <= 0) return;
+
+        var recipe = callback.getReturnValue().map(RecipeHolder::value).orElse(null);
+        int crafts = ForgeLaserChambers.craftsFromInput(recipe, oritechaddonsone$inputView(), 1 + chambers);
+
+        float factor = ForgeLaserChambers.efficiencyFactor(chambers, crafts);
         if (factor != 1.0F) {
             storage.setCapacity(Math.round(storage.capacity * factor));
         }
