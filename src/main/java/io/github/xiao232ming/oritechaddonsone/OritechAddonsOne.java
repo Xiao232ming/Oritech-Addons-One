@@ -428,11 +428,32 @@ public class OritechAddonsOne {
         return new AddonBlockEntity(PLUGIN_ADDON_ENTITY.get(), pos, state);
     }
 
+    /**
+     * Block properties of every addon of this mod: the very same ones Oritech gives its own addons.
+     * <p>
+     * Oritech's reference plugin - the synergy matrix addon ({@code oritech:synergy_matrix_addon},
+     * "协同矩阵插件") - is registered in Oritech's {@code BlockContent} as
+     * {@code Properties.ofFullCopy(Blocks.IRON_BLOCK).noOcclusion()}, so it is hardness 5 /
+     * blast resistance 6, metal map colour, iron sound and {@code requiresCorrectToolForDrops}.
+     * This method and {@link #wirelessBlockProperties()} are deliberately the same expression, which
+     * keeps the two mods' plugin blocks indistinguishable in mining behaviour.
+     * <p>
+     * The wire flag matters: {@code requiresCorrectToolForDrops} means a block only drops when the
+     * tool in hand is a correct one for it, and a pickaxe counts as correct exactly for the blocks in
+     * {@code minecraft:mineable/pickaxe}. Oritech lists every one of its addons in that tag; this mod
+     * has to do the same for its own blocks, see
+     * {@code data/minecraft/tags/block/mineable/pickaxe.json}. Without that tag the blocks would
+     * break but drop nothing.
+     */
     private static BlockBehaviour.Properties blockProperties() {
         return BlockBehaviour.Properties.ofFullCopy(Blocks.IRON_BLOCK).noOcclusion();
     }
 
-    /** The wireless addons are ordinary full blocks, so they keep the normal occluding properties. */
+    /**
+     * The wireless addons are ordinary full blocks, so they keep the normal occluding properties.
+     * See {@link #blockProperties()} for why the copy of {@link Blocks#IRON_BLOCK} has to be paired with
+     * the {@code mineable/pickaxe} tag.
+     */
     private static BlockBehaviour.Properties wirelessBlockProperties() {
         return BlockBehaviour.Properties.ofFullCopy(Blocks.IRON_BLOCK);
     }
