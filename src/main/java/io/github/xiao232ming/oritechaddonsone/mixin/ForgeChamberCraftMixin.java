@@ -14,6 +14,7 @@ import rearth.oritech.block.base.entity.UpgradableMachineBlockEntity;
 import rearth.oritech.block.entity.processing.AtomicForgeBlockEntity;
 import rearth.oritech.init.recipes.OritechRecipe;
 
+import io.github.xiao232ming.oritechaddonsone.forge.ForgeCraftBudget;
 import io.github.xiao232ming.oritechaddonsone.forge.ForgeLaserChambers;
 
 /**
@@ -40,6 +41,24 @@ import io.github.xiao232ming.oritechaddonsone.forge.ForgeLaserChambers;
 @Mixin(UpgradableMachineBlockEntity.class)
 public abstract class ForgeChamberCraftMixin implements ForgeBaseInvokers, MachineBaseInvokers {
 
+    /**
+     * Runs the extra crafts the lasers' processing chambers pay for.
+     * <p>
+     * Oritech already repeats a craft once per chamber
+     * ({@code UpgradableMachineBlockEntity#craftItem}), but that loop bails out of every repetition on the
+     * forge, because it asks {@code canProceed} again and the forge answers that with
+     * {@code hasEnoughEnergy()}: its buffer must be completely <b>full</b>, and the craft that just ran
+     * drained it to zero. The forge is the only machine that works that way - every other machine spends a
+     * little per tick - so the leftover items of the chambers were simply never produced here.
+     * <p>
+     * This repeats the base craft directly instead, which is what Oritech's 26.x forge does for its
+     * chambers as well ({@code UpgradableMachineBlockEntity#craftChamberResults} skips the energy check
+     * for the same reason). The energy side of the chambers is not lost:
+     * {@code AtomicForgeBlockEntityMixin} makes the single charge the forge already paid cover them.
+     * <p>
+     * Every repetition is counted against the tick's allowance by {@code ForgeCraftBudgetMixin}, so the base
+     * craft and these repeats together cannot exceed {@code 1 + chambers}.
+     */
     @Inject(method = "craftItem", at = @At("RETURN"))
     private void oritechaddonsone$repeatForgeCrafts(OritechRecipe activeRecipe, List<ItemStack> outputInventory,
                                                     List<ItemStack> inputInventory, CallbackInfo callback) {
@@ -49,6 +68,9 @@ public abstract class ForgeChamberCraftMixin implements ForgeBaseInvokers, Machi
 
         int chambers = ForgeLaserChambers.chambersOf(serverLevel, forge.getBlockPos());
         for (int i = 0; i < chambers; i++) {
+            // One repetition per chamber; the tick's allowance is opened by ForgeCraftBudgetMixin.
+            if (!ForgeCraftBudget.takeRepeat(forge, serverLevel.getGameTime())) break;
+
             var recipe = oritechaddonsone$baseRecipe();
             if (recipe.isEmpty()
                     || !recipe.get().value().equals(activeRecipe)
