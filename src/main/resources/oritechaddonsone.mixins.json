@@ -5,6 +5,9 @@
   "compatibilityLevel": "JAVA_21",
   "mixins": [
     "AtomicForgeBlockEntityMixin",
+    "ForgeBaseInvokers",
+    "ForgeChamberCraftMixin",
+    "MachineBaseInvokers",
     "ItemUseMixin",
     "MachineAddonControllerMixin",
     "MachineBlockEntityOutputLimitMixin",
