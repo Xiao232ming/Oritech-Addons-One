@@ -1,12 +1,17 @@
 package io.github.xiao232ming.oritechaddonsone.forge;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 
 import rearth.oritech.block.entity.interaction.EndericLaserBlockEntity;
 import rearth.oritech.block.entity.processing.AtomicForgeBlockEntity;
 import rearth.oritech.config.OritechConfig;
 import rearth.oritech.config.OritechStartupConfig;
+import rearth.oritech.init.recipes.OritechRecipe;
 import rearth.oritech.util.MachineAddonController;
 
 /**
@@ -58,19 +63,29 @@ public final class ForgeLaserChambers {
      * per tick energy use. The forge has to pay it as extra charge, because its per tick energy use already
      * is the recipe's whole cost.
      * <p>
+     * What a chamber costs is decided by how many items it <b>really</b> produces, not by how many chambers
+     * are installed: a laser with 96 chambers lets the forge craft 96 extra items per operation, but with
+     * ingredients for 2 it produces 2 and may only be charged for those. {@code actualItems} therefore
+     * carries the number of items this operation will really produce - see {@link #itemsFromInput} - and the
+     * installed chambers are only the <b>limit</b> that number can reach. Without ingredients to spare the
+     * two are the same and nothing changes.
+     * <p>
      * Oritech's own chamber addon is the only one in the game, and it always contributes exactly one chamber
-     * with the configured multiplier, so counting the chambers is enough.
+     * with the configured multiplier, so counting the items is enough.
+     *
+     * @param chambers    chambers the lasers report, i.e. the operation's parallel limit
+     * @param actualItems items this operation will really produce, already capped at {@code chambers}
      */
-    public static float efficiencyFactor(Level level, BlockPos forgePos) {
-        int chambers = chambersOf(level, forgePos);
-        if (chambers <= 0) return 1.0F;
+    public static float efficiencyFactor(int chambers, int actualItems) {
+        int paid = effectiveItems(chambers, actualItems);
+        if (paid <= 0) return 1.0F;
 
         float multiplier = OritechStartupConfig.chamberAddonEfficiency.get().floatValue();
         boolean additive = OritechConfig.additiveAddons.get();
 
         float efficiency = additive
-                ? 1.0F + chambers * (1.0F - multiplier)
-                : (float) Math.pow(multiplier, chambers);
+                ? 1.0F + paid * (1.0F - multiplier)
+                : (float) Math.pow(multiplier, paid);
 
         if (additive) {
             // Oritech's additive mode converts the accumulated value back the same way for every machine.
@@ -79,5 +94,62 @@ public final class ForgeLaserChambers {
             if (change < 0.0F) efficiency = 1.0F + Math.abs(change);
         }
         return efficiency;
+    }
+
+    /**
+     * Items the forge may be charged for: the extra items it will really produce, never more than the
+     * chambers it has.
+     * <p>
+     * A chamber only costs its efficiency multiplier when it really produces an item. With ingredients for
+     * two extra items and 96 chambers, the forge crafts two and is charged for two - charging all 96 would
+     * make it pay for items that were never made.
+     */
+    private static int effectiveItems(int chambers, int actualItems) {
+        if (chambers <= 0) return 0;
+        return Math.min(chambers, Math.max(0, actualItems));
+    }
+
+    /**
+     * Extra items the forge will really produce from these inputs: how often the recipe can still be crafted,
+     * times its result count, minus the base craft that every operation gets anyway - so exactly the part the
+     * chambers pay for.
+     * <p>
+     * Every craft consumes one item per ingredient, so the ingredients are consumed in a copy of the input
+     * slots until one of them runs out, the same way {@code MachineBlockEntity#removeCraftingInputs} takes
+     * them. Oritech's own {@link OritechRecipe#findMatchingInputSlots} decides which slots a craft needs.
+     */
+    public static int itemsFromInput(OritechRecipe recipe, List<ItemStack> inputs, int chambers) {
+        if (recipe == null || inputs == null || inputs.isEmpty() || chambers <= 0) return 0;
+
+        var remaining = new ArrayList<ItemStack>(inputs.size());
+        for (var stack : inputs) {
+            remaining.add(stack.copy());
+        }
+
+        int resultsPerCraft = Math.max(1, recipe.itemResults().size());
+        int crafts = 0;
+        // one base craft plus one per chamber is the most this operation can ever produce
+        int maxCrafts = 1 + chambers;
+        while (crafts < maxCrafts && consumeOneCraft(recipe, remaining)) {
+            crafts++;
+        }
+
+        // the base craft is not what the chambers cost; only the items on top of it are
+        int baseItems = Math.min(crafts, 1) * resultsPerCraft;
+        return Math.max(0, crafts * resultsPerCraft - baseItems);
+    }
+
+    /** Takes one of every ingredient from the copy, or reports that the recipe cannot be crafted again. */
+    private static boolean consumeOneCraft(OritechRecipe recipe, List<ItemStack> remaining) {
+        int[] slots = OritechRecipe.findMatchingInputSlots(recipe.itemInputs(), remaining);
+        if (slots == null) return false;
+
+        for (int slot : slots) {
+            if (slot < 0 || slot >= remaining.size()) return false;
+            var stack = remaining.get(slot);
+            if (stack.isEmpty()) return false;
+            stack.shrink(1);
+        }
+        return true;
     }
 }
