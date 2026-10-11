@@ -51,7 +51,7 @@ public class AddonsPlatformNeoForge implements AddonsPlatform {
     }
 
     @Override
-    public void registerFaceItemProvider(BlockEntityType<?> type, FaceItemSource source) {
+    public void registerFaceItemProvider(java.util.function.Supplier<BlockEntityType<?>> type, FaceItemSource source) {
         // NeoForge 的能力只能在 RegisterCapabilitiesEvent 里注册，所以先排队（与 Oritech 的
         // PENDING_S2C_INITS 是同一个套路）。
         PENDING.add(new PendingFaceItemProvider(type, source));
@@ -64,7 +64,8 @@ public class AddonsPlatformNeoForge implements AddonsPlatform {
     @SuppressWarnings("unchecked")
     static void applyPendingCapabilities(RegisterCapabilitiesEvent event) {
         for (var pending : PENDING) {
-            var type = (BlockEntityType<BlockEntity>) pending.type();
+            // 到这里 Oritech 的注册表容器已经初始化过了（它的注册发生在 RegisterEvent 阶段），取值是安全的
+            var type = (BlockEntityType<BlockEntity>) pending.type().get();
             event.registerBlockEntity(Capabilities.ItemHandler.BLOCK, type, (blockEntity, side) -> {
                 var storage = pending.source().storageFor(blockEntity, side);
                 return storage == null ? null : new NeoForgeInventoryStorageHandler(storage);
@@ -107,6 +108,6 @@ public class AddonsPlatformNeoForge implements AddonsPlatform {
         return FMLEnvironment.dist.isClient();
     }
 
-    private record PendingFaceItemProvider(BlockEntityType<?> type, FaceItemSource source) {
+    private record PendingFaceItemProvider(java.util.function.Supplier<BlockEntityType<?>> type, FaceItemSource source) {
     }
 }

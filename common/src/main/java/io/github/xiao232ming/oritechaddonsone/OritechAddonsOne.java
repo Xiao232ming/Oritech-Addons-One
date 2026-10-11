@@ -484,7 +484,7 @@ public class OritechAddonsOne {
         // （加载器中立），把它包成加载器自己的存储接口由平台实现负责：
         //   NeoForge → Capabilities.ItemHandler.BLOCK 的 IItemHandler
         //   Fabric   → ItemStorage.SIDED 的 Storage<ItemVariant>
-        AddonsPlatform.INSTANCE.registerFaceItemProvider(BlockEntitiesContent.ADDON_ENTITY,
+        AddonsPlatform.INSTANCE.registerFaceItemProvider(() -> BlockEntitiesContent.ADDON_ENTITY,
                 (blockEntity, side) -> blockEntity instanceof AddonBlockEntity extender
                         ? ExtenderFaceStorage.handlerAt(extender, side)
                         : null);
@@ -504,8 +504,6 @@ public class OritechAddonsOne {
         ItemApi.BLOCK.registerBlockEntity(() -> (BlockEntityType<?>) WIRELESS_EXTENSION_ADDON_ENTITY.get());
         ItemApi.BLOCK.registerBlockEntity(() -> (BlockEntityType<?>) EXTENSION_TRANSFER_ADDON_ENTITY.get());
 
-        logSetup();
-
         LOGGER.info("Oritech Addons One loaded: {}, {}, {} and the wireless variants {} registered",
                 EXTENSION_ADDON_1.getId(), EXTENSION_ADDON_2.getId(), EXTENSION_ADDON_3.getId(),
                 WIRELESS_EXTENSION_ADDON_1.getId());
@@ -513,10 +511,13 @@ public class OritechAddonsOne {
 
     /**
      * Resolves the plugin sets once after registration and logs them, which makes it easy to check
-     * which plugins each type accepts. (原本是 NeoForge 的 {@code FMLCommonSetupEvent#enqueueWork}；方法体只写
-     * debug 日志，所以直接在 {@link #init()} 末尾执行。)
+     * which plugins each type accepts.
+     * <p>
+     * <b>不能在 {@link #init()} 里调用</b>：它会读 Oritech 的 {@code BlockContent}（见 {@code ExtensionAddonType}），
+     * 而 mod 构造阶段方块注册表已冻结。所以回到原本的时机 —— NeoForge 走
+     * {@code FMLCommonSetupEvent#enqueueWork}，Fabric 在初始化末尾（那边注册表是开放的）。
      */
-    private static void logSetup() {
+    public static void logSetup() {
         var type1 = ExtensionAddonType.type1Plugins().stream()
                 .map(block -> BuiltInRegistries.BLOCK.getKey(block).toString())
                 .sorted()

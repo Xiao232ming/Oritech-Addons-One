@@ -4,6 +4,7 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
+import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 
 import io.github.xiao232ming.oritechaddonsone.Config;
 import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
@@ -27,5 +28,8 @@ public final class OritechAddonsOneNeoForge {
 
         // 共用的注册 + 初始化（注册表 flush、网络、tick、能力桥排队）
         OritechAddonsOne.init();
+
+        // 注册完成后再解析插件集合（那里会读 Oritech 的 BlockContent，构造阶段注册表已冻结，不能提前）
+        modEventBus.addListener(FMLCommonSetupEvent.class, event -> event.enqueueWork(OritechAddonsOne::logSetup));
     }
 }

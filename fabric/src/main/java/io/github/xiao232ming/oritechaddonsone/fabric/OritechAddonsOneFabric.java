@@ -22,5 +22,8 @@ public class OritechAddonsOneFabric implements ModInitializer {
 
         // 共用的注册 + 初始化（注册表 flush、网络、tick、能力桥）
         OritechAddonsOne.init();
+
+        // Fabric 的注册表在 mod 初始化期间是开放的，所以这里可以直接解析插件集合并打日志
+        OritechAddonsOne.logSetup();
     }
 }

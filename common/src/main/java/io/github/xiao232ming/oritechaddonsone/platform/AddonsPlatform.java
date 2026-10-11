@@ -3,6 +3,7 @@ package io.github.xiao232ming.oritechaddonsone.platform;
 import net.minecraft.world.level.Level;
 import net.minecraft.core.BlockPos;
 import java.util.ServiceLoader;
+import java.util.function.Supplier;
 
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -47,10 +48,13 @@ public interface AddonsPlatform {
      * <p>
      * 注意接口实现类的 {@code @AutoService} 已经在加载器模块里，所以这里的调用时机由加载器入口点决定。
      *
-     * @param type   要暴露的方块实体类型
+     * @param type   <b>延迟</b>给出要暴露的方块实体类型。传供应商而不是实例，是因为在 NeoForge 的 mod 构造器里
+     *               去读 Oritech 的注册表容器（例如 {@code BlockEntitiesContent.ADDON_ENTITY}）会触发它的静态初始化，
+     *               而那一刻方块注册表已经冻结（{@code IllegalStateException: Registry is already frozen}）。
+     *               加载器实现各自在合法时机取值：NeoForge 在 {@code RegisterCapabilitiesEvent}，Fabric 在本模组初始化时。
      * @param source 回答"这个实体的这个面是什么物品存储"的回调；返回 {@code null} 表示该面不是连接
      */
-    void registerFaceItemProvider(BlockEntityType<?> type, FaceItemSource source);
+    void registerFaceItemProvider(Supplier<BlockEntityType<?>> type, FaceItemSource source);
 
     /**
      * 该区块当前是否被<b>模组</b>强制保持加载。

@@ -41,13 +41,16 @@ public class AddonsPlatformFabric implements AddonsPlatform {
      * {@code Storage<ItemVariant>}；Oritech 自己的 {@code FabricItemApi} 也是同样的做法。
      */
     @Override
-    public void registerFaceItemProvider(BlockEntityType<?> type, FaceItemSource source) {
+    public void registerFaceItemProvider(java.util.function.Supplier<BlockEntityType<?>> type, FaceItemSource source) {
+        // Fabric 的查询注册需要真实类型；Fabric 的注册表在 mod 初始化期间是开放的，所以这里直接取值
+        //（NeoForge 侧相反：那边的实现把取值推迟到 RegisterCapabilitiesEvent）。
+        var resolvedType = type.get();
         ItemStorage.SIDED.registerForBlockEntity(
                 (blockEntity, side) -> {
                     var storage = source.storageFor(blockEntity, side);
                     return storage == null ? null : new FabricInventoryStorage(storage);
                 },
-                type);
+                resolvedType);
     }
 
     /**
