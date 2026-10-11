@@ -1,0 +1,60 @@
+plugins {
+    id 'net.neoforged.moddev'
+}
+
+neoForge {
+    // 照抄 Oritech：只用 NeoForm（vanilla 模式），common 编译期完全看不到 loader API。
+    // 这正是"common 代码必须保持 loader 无关"的强制保证。
+    neoFormVersion = "${minecraft_version}-${neoform_version}"
+
+    parchment {
+        minecraftVersion = parchment_minecraft_version
+        mappingsVersion = parchment_mappings_version
+    }
+}
+
+// 把源码目录与资源目录作为"可消费产物"暴露给 loader 模块（照抄 Oritech）
+configurations {
+    commonJava {
+        canBeResolved = false
+        canBeConsumed = true
+    }
+    commonResources {
+        canBeResolved = false
+        canBeConsumed = true
+    }
+}
+
+artifacts {
+    commonJava sourceSets.main.java.sourceDirectories.singleFile
+    sourceSets.main.resources.sourceDirectories.each { dir ->
+        commonResources dir
+    }
+}
+
+dependencies {
+    // Architectury API：common 里的注册/菜单/流体/事件抽象都用它（照抄 Oritech 用 neoforge 变体做 compileOnly）
+    compileOnly "dev.architectury:architectury-neoforge:${architectury_version}"
+
+    // Oritech 的 common 模块（Mojmap 版，正是为 moddev vanilla 模式发布的）
+    compileOnly "rearth.oritech:oritech-common-${minecraft_version}:${oritech_version}"
+
+    // GeckoLib：Oritech 的机器方块实体实现了 GeoBlockEntity，引用其类型时编译期需要
+    compileOnly "software.bernie.geckolib:geckolib-neoforge-${minecraft_version}:${geckolib_version}"
+
+    // Forge Config API Port：common 里的 ModConfigSpec 由它提供（NeoForge 侧则由 NeoForge 自己提供）。
+    // 它只发布在作者自己的 maven（https://raw.githubusercontent.com/Fuzss/modresources/main/maven/）上，
+    // 有些网络拿不到（会解析失败或长时间挂住）。这种情况下把
+    //   forgeconfigapiport-common-neoforgeapi-<version>.jar
+    // 放进仓库根的 libs/ 即可（libs/*.jar 不入库），下面的分支会自动改用它。
+    def localForgeConfigApiPort = file("${rootDir}/libs/forgeconfigapiport-common-neoforgeapi-${forge_config_api_port_version}.jar")
+    if (localForgeConfigApiPort.exists()) {
+        compileOnly files(localForgeConfigApiPort)
+    } else {
+        compileOnly "fuzs.forgeconfigapiport:forgeconfigapiport-common-neoforgeapi:${forge_config_api_port_version}"
+    }
+
+    // Mixin 注解与 ASM
+    compileOnly 'org.spongepowered:mixin:0.8.5'
+    compileOnly 'org.ow2.asm:asm-tree:9.8'
+}

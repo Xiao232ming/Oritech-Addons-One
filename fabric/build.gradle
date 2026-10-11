@@ -1,0 +1,61 @@
+plugins {
+    id 'fabric-loom'
+}
+
+loom {
+    // 与 common 的 access transformer 一一对应（Fabric 用 access widener）
+    accessWidenerPath.set(file("src/main/resources/${mod_id}.accesswidener"))
+
+    runs {
+        client {
+            client()
+            ideConfigGenerated(true)
+            name = 'fabric - Client'
+        }
+        server {
+            server()
+            ideConfigGenerated(true)
+            name = 'fabric - Server'
+        }
+    }
+
+    mixin {
+        // common 的 oritechaddonsone.mixins.json 里声明的 refmap 名，必须与此一致（照抄 Oritech）
+        defaultRefmapName.set("${mod_id}.refmap.json")
+    }
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${minecraft_version}"
+    mappings loom.layered {
+        officialMojangMappings()
+        parchment("org.parchmentmc.data:parchment-${minecraft_version}:${parchment_mappings_version}@zip")
+    }
+
+    modImplementation "net.fabricmc:fabric-loader:${fabric_loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}"
+
+    // Oritech 的 Fabric 模块（intermediary 发布物，loom 负责 remap 到 named）
+    // 它的 POM 把 owo-lib 列为 compile 依赖，但 Oritech 的代码里没有任何 wispforest 引用（只是历史遗留的声明），
+    // 而 owo 的 maven（https://maven.wispforest.io/releases/）在部分网络下不可达。本模组也不引用 owo 的类型，
+    // 所以这里把它从依赖图里排除，避免一个用不到的包卡住整次构建。
+    // 若将来确实需要它：删掉 exclude，并确认该 maven 可访问。
+    modImplementation("rearth.oritech:oritech-fabric-${minecraft_version}:${oritech_version}") {
+        exclude group: 'io.wispforest'
+    }
+
+    // Oritech 的前置（版本与它的 POM 一致）
+    modImplementation "dev.architectury:architectury-fabric:${architectury_version}"
+    modImplementation "software.bernie.geckolib:geckolib-fabric-${minecraft_version}:${geckolib_version}"
+    modImplementation "fuzs.forgeconfigapiport:forgeconfigapiport-fabric:${forge_config_api_port_version}"
+
+    // 配置界面：Fabric 侧用 Mod Menu 替代 NeoForge 的 ConfigurationScreen
+    modCompileOnly "com.terraformersmc:modmenu:${modmenu_version}"
+
+    // 开发运行期
+    modLocalRuntime "com.terraformersmc:modmenu:${modmenu_version}"
+    modLocalRuntime "earth.terrarium.athena:athena-fabric-1.21:${athena_version}"
+    // Oritech 在 Fabric 上运行时需要 owo-lib，但它的 maven 在部分网络下不可达；
+    // 若 runClient 报缺 owo，请先确认 https://maven.wispforest.io/releases/ 可访问再启用这一行。
+    // modLocalRuntime "io.wispforest:owo-lib:${owo_version}"
+}

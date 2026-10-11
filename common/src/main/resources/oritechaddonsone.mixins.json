@@ -1,0 +1,38 @@
+{
+  "required": true,
+  "minVersion": "0.8.5",
+  "package": "io.github.xiao232ming.oritechaddonsone.mixin",
+  "refmap": "oritechaddonsone.refmap.json",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "AtomicForgeBlockEntityMixin",
+    "ForgeBaseInvokers",
+    "ForgeChamberCraftMixin",
+    "ForgeCraftBudgetMixin",
+    "MachineBaseInvokers",
+    "ItemUseMixin",
+    "MachineAddonControllerMixin",
+    "MachineBlockEntityOutputLimitMixin",
+    "LaserAimIndexMixin",
+    "LaserTargetDesignatorMixin",
+    "NetworkedBlockEntityStorageBonusMixin",
+    "ShrinkerBlockEntityMixin",
+    "SimpleFluidStorageMixin",
+    "SimpleInOutFluidStorageInputMixin",
+    "SimpleInOutFluidStorageMixin",
+    "SimpleInOutFluidStorageOutputMixin",
+    "SimpleInventoryStorageMixin",
+    "SlotMixin"
+  ],
+  "client": [
+    "ContainerScreenAccessor",
+    "OritechMachineScreenMixin",
+    "OritechScreenHandlerMixin",
+    "OritechWidgetScreenMixin",
+    "UpgradableOritechScreenHandlerMixin",
+    "UpgradableOritechScreenMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

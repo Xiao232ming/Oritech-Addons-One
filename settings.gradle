@@ -1,9 +1,22 @@
 pluginManagement {
     repositories {
         gradlePluginPortal()
+        mavenCentral()
+        // fabric-loom
+        maven { url = "https://maven.fabricmc.net/" }
+        // net.neoforged.moddev
+        maven { url = "https://maven.neoforged.net/releases" }
     }
 }
 
 plugins {
     id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
 }
+
+rootProject.name = 'oritechaddonsone'
+
+// 与 Oritech 相同的三模块布局：common 用 NeoForm vanilla 模式编译（看不到任何 loader API），
+// 两个 loader 模块把 common 的源码与资源"吃进来"，各自编一遍。
+include 'common'
+include 'fabric'
+include 'neoforge'

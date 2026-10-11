@@ -1,0 +1,5 @@
+accessWidener v2 named
+
+# 与 common 的 META-INF/accesstransformer.cfg 一一对应（Fabric 侧用 AW 达到同样效果）。
+# 客户端成员故意不放宽：改成客户端 mixin 的 @Accessor（见 ContainerScreenAccessor）。
+accessible class net/minecraft/world/level/block/entity/BlockEntityType$BlockEntitySupplier

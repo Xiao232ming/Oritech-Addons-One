@@ -10,8 +10,9 @@ permissions:
 
 jobs:
   build:
-    name: Build (MC 1.21.1 / NeoForge 21.1.250)
+    name: Build (MC 1.21.1 / Fabric + NeoForge)
     runs-on: ubuntu-latest
+    timeout-minutes: 40
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -25,13 +26,35 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      # Oritech / Architectury / Athena / GeckoLib come from the Modrinth Maven, so no manual setup is needed.
-      - name: Build
-        run: ./gradlew build
+      # 仓库是在 Windows 上维护的，Linux runner 上先归一化一下 wrapper 的行尾与可执行位（幂等）
+      - name: Normalise the Gradle wrapper
+        run: |
+          sed -i 's/\r$//' gradlew
+          chmod +x gradlew
 
-      - name: Upload the mod jar
+      # 三模块布局（common / fabric / neoforge）：
+      #   common 用 NeoForm vanilla 模式编译（看不到任何 loader API），
+      #   两个 loader 模块把 common 的源码与资源编进各自的 jar。
+      # Oritech 本体来自 BlameJared maven（oritech-common / oritech-fabric / oritech-neoforge），
+      # 其余前置来自 Architectury / GeckoLib / TeamResourceful / Fuzss 等公开 maven，无需手工准备。
+      - name: Build
+        run: ./gradlew build --stacktrace
+
+      - name: Upload the Fabric jar
         uses: actions/upload-artifact@v4
         with:
-          name: oritechaddonsone-mc1.21.1
-          path: build/libs/*.jar
+          name: oritechaddonsone-fabric-mc1.21.1
+          path: |
+            fabric/build/libs/*.jar
+            !fabric/build/libs/*-dev.jar
+            !fabric/build/libs/*-sources.jar
+          if-no-files-found: error
+
+      - name: Upload the NeoForge jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: oritechaddonsone-neoforge-mc1.21.1
+          path: |
+            neoforge/build/libs/*.jar
+            !neoforge/build/libs/*-sources.jar
           if-no-files-found: error

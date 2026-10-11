@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "id": "oritechaddonsone",
+  "version": "${version}",
+  "name": "Oritech Addons One",
+  "description": "Oritech Addons One adds the Extension Addons (Type I / II / III) for Oritech: machine addon blocks that hold other plugins in configurable slots and apply their combined effects to the machine they are attached to.",
+  "authors": [
+    "Xiao232ming"
+  ],
+  "contact": {
+    "sources": "https://github.com/Xiao232ming/Oritech-Addons-One",
+    "issues": "https://github.com/Xiao232ming/oritech-addons-one/issues"
+  },
+  "license": "MIT",
+  "icon": "oritechaddonsone.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "io.github.xiao232ming.oritechaddonsone.fabric.OritechAddonsOneFabric"
+    ],
+    "client": [
+      "io.github.xiao232ming.oritechaddonsone.fabric.client.OritechAddonsOneFabricClient"
+    ],
+    "modmenu": [
+      "io.github.xiao232ming.oritechaddonsone.fabric.client.OritechAddonsOneModMenu"
+    ]
+  },
+  "accessWidener": "oritechaddonsone.accesswidener",
+  "mixins": [
+    "oritechaddonsone.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.15.11",
+    "minecraft": "~1.21.1",
+    "java": ">=21",
+    "fabric-api": "*",
+    "oritech": ">=1.2.12",
+    "architectury": "*",
+    "geckolib": "*",
+    "athena": "*",
+    "forgeconfigapiport": "*"
+  },
+  "suggests": {
+    "modmenu": "*"
+  }
+}
