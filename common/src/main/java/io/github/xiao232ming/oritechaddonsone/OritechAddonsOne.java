@@ -342,16 +342,29 @@ public class OritechAddonsOne {
      * 扩展插件的菜单类型。用 Architectury 的 {@code MenuRegistry.ofExtended}（Oritech 自己的 {@code ModScreens}
      * 就是这么写的）：它把"菜单额外数据"这件事映射到两个加载器各自的机制上。
      */
+    /**
+     * 菜单类型实例本身。先建实例、注册时返回同一个实例，是因为客户端入口点要在注册窗口**之前**
+     * 就用它去登记屏幕工厂（Oritech 的 {@code ModScreens} 正是这个写法：静态字段持有实例，
+     * 屏幕工厂直接引用实例而不是 {@code RegistrySupplier#get()}）。在 NeoForge 上，
+     * mod 构造阶段 {@code RegistrySupplier#get()} 还会抛 "Registry Object not present"。
+     */
+    public static final MenuType<ExtensionAddonMenu> EXTENSION_ADDON_MENU_TYPE =
+            MenuRegistry.ofExtended(ExtensionAddonMenu::new);
+
     public static final RegistrySupplier<MenuType<ExtensionAddonMenu>> EXTENSION_ADDON_MENU =
-            MENUS.register("extension_addon", () -> MenuRegistry.ofExtended(ExtensionAddonMenu::new));
+            MENUS.register("extension_addon", () -> EXTENSION_ADDON_MENU_TYPE);
 
     /**
      * The container behind the 过滤 page of a transfer face. Its own type because the filter is a dozen items and
      * three switches rather than a page of settings, and because it is opened for <em>one filter</em> instead of
      * for a whole block - see {@code FaceFilterMenu}.
      */
+    /** 见 {@link #EXTENSION_ADDON_MENU_TYPE}：实例先建好，注册时返回它。 */
+    public static final MenuType<FaceFilterMenu> FACE_FILTER_MENU_TYPE =
+            MenuRegistry.ofExtended(FaceFilterMenu::new);
+
     public static final RegistrySupplier<MenuType<FaceFilterMenu>> FACE_FILTER_MENU =
-            MENUS.register("face_filter", () -> MenuRegistry.ofExtended(FaceFilterMenu::new));
+            MENUS.register("face_filter", () -> FACE_FILTER_MENU_TYPE);
 
     /** Own creative tab, so the blocks are always reachable even if Oritech changes its own tabs. */
     public static final RegistrySupplier<CreativeModeTab> TAB = TABS.register("extension_addons",

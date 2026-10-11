@@ -33,9 +33,9 @@ public final class OritechAddonsOneClient {
      */
     public static void init() {
         // the one screen of this mod's GUI, for every block that opens EXTENSION_ADDON_MENU
-        MenuRegistry.registerScreenFactory(OritechAddonsOne.EXTENSION_ADDON_MENU.get(), ExtensionAddonScreen::new);
+        MenuRegistry.registerScreenFactory(OritechAddonsOne.EXTENSION_ADDON_MENU_TYPE, ExtensionAddonScreen::new);
         // the 过滤 page, whose menu the server opens for one face at a time (see FilterNetworking.OpenFilter)
-        MenuRegistry.registerScreenFactory(OritechAddonsOne.FACE_FILTER_MENU.get(), FaceFilterScreen::new);
+        MenuRegistry.registerScreenFactory(OritechAddonsOne.FACE_FILTER_MENU_TYPE, FaceFilterScreen::new);
 
         // the Item Proxy page asks the server for the machine's slot layout; the answer is routed here, so
         // that no client class is ever touched on a dedicated server (see ProxyNetworking.ClientHandler)
