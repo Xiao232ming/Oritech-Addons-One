@@ -97,12 +97,12 @@ public final class ForgeLaserChambers {
     }
 
     /**
-     * Items the forge may be charged for: the extra items it will really produce, never more than the
-     * chambers it has.
+     * Items the forge may be charged for: the items it will really produce, never more than the chambers it
+     * has.
      * <p>
      * A chamber only costs its efficiency multiplier when it really produces an item. With ingredients for
-     * two extra items and 96 chambers, the forge crafts two and is charged for two - charging all 96 would
-     * make it pay for items that were never made.
+     * two items and 96 chambers, the forge crafts two and is charged for two - charging all 96 would make it
+     * pay for items that were never made.
      */
     private static int effectiveItems(int chambers, int actualItems) {
         if (chambers <= 0) return 0;
@@ -110,9 +110,9 @@ public final class ForgeLaserChambers {
     }
 
     /**
-     * Extra items the forge will really produce from these inputs: how often the recipe can still be crafted,
-     * times its result count, minus the base craft that every operation gets anyway - so exactly the part the
-     * chambers pay for.
+     * Items the forge will really produce from these inputs: how often the recipe can still be crafted, times
+     * its result count. The same count the 1.21.1 branch charges from, so both versions cost the same for the
+     * same operation.
      * <p>
      * Every craft consumes one item per ingredient, so the ingredients are consumed in a copy of the input
      * slots until one of them runs out, the same way {@code MachineBlockEntity#removeCraftingInputs} takes
@@ -134,9 +134,7 @@ public final class ForgeLaserChambers {
             crafts++;
         }
 
-        // the base craft is not what the chambers cost; only the items on top of it are
-        int baseItems = Math.min(crafts, 1) * resultsPerCraft;
-        return Math.max(0, crafts * resultsPerCraft - baseItems);
+        return crafts * resultsPerCraft;
     }
 
     /** Takes one of every ingredient from the copy, or reports that the recipe cannot be crafted again. */
