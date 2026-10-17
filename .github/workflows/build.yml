@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   build:
-    name: Build (MC 26.1.2 / NeoForge 26.1.2.107)
+    name: Build (MC 26.1.2 / NeoForge 26.1.2.109)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository

@@ -14,7 +14,7 @@ body:
       label: 版本分支 / Branch
       description: 用的是哪个版本的模组？（下载页 / 文件名里的 mc 版本号）
       options:
-        - 26.1.2（MC 26.1.2 + NeoForge 26.1.2.107，默认分支）
+        - 26.1.2（MC 26.1.2 + NeoForge 26.1.2.109，默认分支）
         - 1.21.1（MC 1.21.1 + NeoForge 21.1.250）
     validations:
       required: true
