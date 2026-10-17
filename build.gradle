@@ -137,6 +137,9 @@ dependencies {
     localRuntime "maven.modrinth:oritech:${oritech_version}"
     localRuntime "maven.modrinth:athena-ctm:${athena_version}"
     localRuntime "maven.modrinth:geckolib:${geckolib_version}"
+    // 开发期可选：验证其它附属（Oritech Things）的分级插件能否被 I/III 型识别。
+    // 只进 runClient 的运行期 classpath，不打进构建的 jar。
+    localRuntime "maven.modrinth:oritech-things:${oritechthings_version}"
 
     // Example optional mod dependency with JEI
     // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime
