@@ -6,7 +6,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Minecraft](https://img.shields.io/badge/Minecraft-1.21.1%20%7C%2026.1.2-brightgreen.svg)]()
-[![NeoForge/Fabric](https://img.shields.io/badge/NeoForge-Required-orange.svg)]()
+[![NeoForge](https://img.shields.io/badge/NeoForge-Required-orange.svg)]()
 
 ## 📖 About
 
