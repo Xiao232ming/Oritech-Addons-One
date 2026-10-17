@@ -15,7 +15,8 @@ import net.neoforged.neoforge.registries.DeferredRegister;
  * <p>
  * Forge's and old NeoForge's answer to that was {@code MissingMappingsEvent}, which let a mod rewrite the
  * entries of a saved registry snapshot as it was loaded. <b>NeoForge 26.1.2 has no such event.</b>
- * {@code MissingMappingsEvent} is not present in {@code neoforge-26.1.2.107} at all, and
+ * {@code MissingMappingsEvent} is not present in {@code neoforge-26.1.2.109} either (it is absent from both
+ * 26.1.2.107 and 26.1.2.109), and
  * {@code RegistryManager.applySnapshot} no longer fires any remapping event: it collects the entries it could
  * not resolve, logs one warning listing them, and leaves them to be dropped when the chunk is written again.
  * The supported replacement is a registry alias, which {@code DeferredRegister} applies to the live registry
