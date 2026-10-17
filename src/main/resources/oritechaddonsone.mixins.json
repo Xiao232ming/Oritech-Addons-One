@@ -13,6 +13,7 @@
     "LaserAimIndexMixin",
     "LaserTargetDesignatorMixin",
     "MachineBaseInvokers",
+    "MachineBlockEntitySyncMixin",
     "NetworkedBlockEntityStorageBonusMixin",
     "SimpleFluidStorageMixin"
   ],

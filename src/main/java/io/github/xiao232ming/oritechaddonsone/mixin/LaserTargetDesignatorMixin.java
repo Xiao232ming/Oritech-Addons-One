@@ -30,8 +30,9 @@ import io.github.xiao232ming.oritechaddonsone.block.entity.WirelessExtensionAddo
 /**
  * Teaches Oritech's target designator to link a wireless extension addon to a machine.
  * <p>
- * The designator stores the position of the clicked block in the {@code oritech:target_position} component,
- * so saving a dock needs no change. To store a position <b>into</b> a machine it only knows the enderic
+ * The designator stores the position of the clicked block in the {@code oritech:target_global_position}
+ * component (a {@link net.minecraft.core.GlobalPos}: dimension + position, since exp11), so saving a dock
+ * needs no change. To store a position <b>into</b> a machine it only knows the enderic
  * laser, the drone port and the energy transmission pole ({@code setTargetFromDesignator} /
  * {@code assignNewTarget}), so this injection adds the missing case: while the stored position is one of
  * our wireless docks and the clicked block belongs to an upgradable machine, the dock is linked to that
@@ -54,7 +55,10 @@ public class LaserTargetDesignatorMixin {
         if (level.isClientSide()) return;
 
         var stack = context.getItemInHand();
-        var dockPos = stack.get(ComponentContent.TARGET_POSITION.get());
+        // exp11 stores a GlobalPos: the same position in another dimension is not a dock of this level.
+        var storedTarget = stack.get(ComponentContent.TARGET_GLOBAL_POSITION.get());
+        if (storedTarget != null && !storedTarget.dimension().equals(level.dimension())) return;
+        var dockPos = storedTarget == null ? null : storedTarget.pos();
         var clickedPos = context.getClickedPos();
         var clickedState = level.getBlockState(clickedPos);
 

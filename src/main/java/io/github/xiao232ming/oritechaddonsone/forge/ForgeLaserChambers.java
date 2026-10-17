@@ -43,9 +43,24 @@ public final class ForgeLaserChambers {
         return chambers;
     }
 
+    /**
+     * Charge rate of every laser training on that forge, relative to one laser without speed plugins:
+     * a plain laser contributes 1, a laser whose speed plugin halved its shot cost contributes 2.
+     */
+    public static float laserSpeedup(Level level, BlockPos forgePos) {
+        float speedup = 0.0F;
+        for (var laserPos : LaserAimIndex.lasersOf(level, forgePos)) {
+            if (!(level.getBlockEntity(laserPos) instanceof EndericLaserBlockEntity laser)) continue;
+            // Only lasers that really aim here count: the index is a snapshot and a laser may have moved on.
+            if (!forgePos.equals(laser.getCurrentTarget())) continue;
+
+            speedup += 1.0F / Math.max(0.0001F, laser.getBaseAddonData().speed());
+        }
+        return speedup;
+    }
+
     /** Writes the current chamber count into the forge's addon data, if it changed. */
-    public static void refresh(Level level, BlockPos forgePos) {
-        if (level == null || level.isClientSide() || forgePos == null) return;
+    public static void refresh(Level level, BlockPos forgePos) {        if (level == null || level.isClientSide() || forgePos == null) return;
         if (!(level.getBlockEntity(forgePos) instanceof AtomicForgeBlockEntity forge)) return;
 
         int chambers = chambersOf(level, forgePos);

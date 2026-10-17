@@ -13,4 +13,10 @@ public interface ForgeLaserSpeedupHost {
      * 1 for one plain laser, 2 for one laser with a speed plugin, and so on.
      */
     float oritechaddonsone$laserSpeedup();
+
+    /**
+     * Stores the freshly measured speed-up. Called right before the forge's GUI data is written, from the
+     * injection on {@code MachineBlockEntity#writeClientSideData} (see {@code MachineBlockEntitySyncMixin}).
+     */
+    void oritechaddonsone$setLaserSpeedup(float speedup);
 }

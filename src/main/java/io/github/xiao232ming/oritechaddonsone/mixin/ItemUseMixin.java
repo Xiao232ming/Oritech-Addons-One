@@ -34,7 +34,8 @@ public abstract class ItemUseMixin {
         if (!((Object) this instanceof LaserTargetDesignator)) return;
 
         var stack = player.getItemInHand(hand);
-        var targetType = ComponentContent.TARGET_POSITION.get();
+        // exp11 changed the stored target from a bare BlockPos to a GlobalPos (dimension + position).
+        var targetType = ComponentContent.TARGET_GLOBAL_POSITION.get();
         if (stack.get(targetType) == null) return;
 
         if (!level.isClientSide()) {
