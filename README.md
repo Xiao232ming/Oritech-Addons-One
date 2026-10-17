@@ -49,7 +49,7 @@ And a few extra features:
 
 | Branch | Minecraft | NeoForge | Oritech | JDK |
 | --- | --- | --- | --- | --- |
-| **`26.1.2`** (default) | 26.1.2 | 26.1.2.107 | 2.0.0-exp6 | 25 |
+| **`26.1.2`** (default) | 26.1.2 | 26.1.2.109 | 2.0.0-exp11 | 25 |
 | **`1.21.1`** | 1.21.1 | 21.1.200 or newer | 1.2.12 | 21 |
 
 ### Required
