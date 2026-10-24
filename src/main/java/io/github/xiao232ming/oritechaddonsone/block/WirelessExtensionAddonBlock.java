@@ -38,6 +38,8 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
+import rearth.oritech.block.blocks.addons.MachineAddonBlock;
+
 import io.github.xiao232ming.oritechaddonsone.Config;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.WirelessExtensionAddonBlockEntity;
@@ -79,7 +81,8 @@ public class WirelessExtensionAddonBlock extends Block implements EntityBlock, T
         registerDefaultState(stateDefinition.any()
                 .setValue(FACING, Direction.NORTH)
                 .setValue(LINKED, false)
-                .setValue(HAS_CONTROL_UNIT, false));
+                .setValue(HAS_CONTROL_UNIT, false)
+                .setValue(MachineAddonBlock.ADDON_USED, false));
     }
 
     /** Which Extension Addon this block is (decides slot count, accepted plugins and GUI). */
@@ -92,6 +95,11 @@ public class WirelessExtensionAddonBlock extends Block implements EntityBlock, T
         builder.add(FACING);
         builder.add(LINKED);
         builder.add(HAS_CONTROL_UNIT);
+        // Oritech's MachineAddonBlock#setPlacedBy walks the six neighbours of a newly placed addon and reads
+        // ADDON_USED from every neighbouring AddonBlockEntity. This dock's block entity is one, so without the
+        // property here that read throws and every addon placed next to a dock fails on the server. The dock is
+        // never claimed by a machine, so the value stays false and is never written.
+        builder.add(MachineAddonBlock.ADDON_USED);
     }
 
     /** The clicked face becomes the port face, so the port can be aimed in all six directions. */
