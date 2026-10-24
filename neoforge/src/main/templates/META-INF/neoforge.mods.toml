@@ -45,9 +45,8 @@ logoFile="oritechaddonsone.png" #optional
 # The authors of the mod, displayed in the mod UI (optional)
 authors="Xiao232ming"
 
-# The mod shows no description in the mod list. The key cannot be omitted: NeoForge falls back to
-# the literal "MISSING DESCRIPTION" when it is missing, so it is kept empty on purpose.
-description=""
+# The description text for the mod, shown in the mod list.
+description="A useful addon mod for oritech."
 
 # The [[mixins]] block allows you to declare your mixin config to FML so that it gets loaded.
 [[mixins]]

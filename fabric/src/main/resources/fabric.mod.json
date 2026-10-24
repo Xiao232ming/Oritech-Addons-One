@@ -3,6 +3,7 @@
   "id": "oritechaddonsone",
   "version": "${version}",
   "name": "Oritech Addons One",
+  "description": "A useful addon mod for oritech.",
   "authors": [
     "Xiao232ming"
   ],
