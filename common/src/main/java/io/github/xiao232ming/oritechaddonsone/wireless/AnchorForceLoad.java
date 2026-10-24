@@ -1,9 +1,11 @@
 package io.github.xiao232ming.oritechaddonsone.wireless;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.WeakHashMap;
 
 import net.minecraft.core.BlockPos;
@@ -57,12 +59,13 @@ import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEn
  * ({@link Receipt#forcedByUs}). A receipt whose chunk was already forced is simply dropped on release and
  * {@code setChunkForced} is never called for it. Nothing else in the mod calls {@code setChunkForced}.
  *
- * <h2>No leaks</h2>
- * The receipts are deliberately <b>not</b> saved: a force load that is not backed by a live anchor is
- * worthless, so the server drops every one of them on restart and every anchor re-adds its own as soon as
- * its chunk ticks. Nothing can survive a restart half-released, and no bookkeeping can go stale. While the
- * server runs the receipts are reconciled every 5 ticks - not only from the sources themselves, so a block
- * entity that was destroyed or whose chunk was unloaded is noticed too:
+ * <h2>Surviving a restart</h2>
+ * The receipts themselves are saved per level ({@link AnchorReceiptsData}), because vanilla persists the
+ * forced chunk as well: without the saved receipts a restart would make the mod read its own leftover
+ * ticket as "somebody else forced this chunk", and it would never release that chunk again. On load every
+ * saved receipt is restored and its chunk re-forced; the regular reconcile then drops the ones whose anchor
+ * is really gone. While the server runs the receipts are re-checked every 5 ticks - not only from the
+ * sources themselves, so a block entity that was destroyed or whose chunk was unloaded is noticed too:
  * <ul>
  *     <li>anchor block removed, machine broken, machine replaced: the anchor block entity is gone or no
  *     longer claimed, see {@link #hasAnchorBlock};</li>
@@ -95,6 +98,9 @@ public final class AnchorForceLoad {
         /** True while this mod added the force load (false when it was already there). */
         private boolean forcedByUs;
 
+        /** True while the receipt came from the save file and has not been validated yet. */
+        private boolean restored;
+
         private Receipt(BlockPos source, long chunk, boolean placed, boolean forcedByUs) {
             this.source = source.immutable();
             this.chunk = chunk;
@@ -105,6 +111,12 @@ public final class AnchorForceLoad {
 
     /** Receipts per level, keyed weakly so an unloaded level does not stay in memory. */
     private static final Map<ServerLevel, Map<Long, List<Receipt>>> RECEIPTS = new WeakHashMap<>();
+
+    /** Levels whose saved receipts were already merged into {@link #RECEIPTS}. */
+    private static final Set<ServerLevel> RESTORED = Collections.newSetFromMap(new WeakHashMap<>());
+
+    /** Levels whose receipts changed and still have to be written back to {@link AnchorReceiptsData}. */
+    private static final Set<ServerLevel> DIRTY = Collections.newSetFromMap(new WeakHashMap<>());
 
     private AnchorForceLoad() {
     }
@@ -130,8 +142,10 @@ public final class AnchorForceLoad {
      * entity is removed, so the chunk is released at once rather than at the next reconcile.
      */
     public static void release(ServerLevel level, BlockPos source) {
+        ensureRestored(level);
         var dropped = remove(level, source);
         if (dropped > 0) {
+            markDirty(level);
             OritechAddonsOne.LOGGER.debug("[diag] anchor: {} receipt(s) dropped for {}", dropped, source);
         }
     }
@@ -207,10 +221,12 @@ public final class AnchorForceLoad {
      * stays public so existing references to it keep resolving.
      */
     public static void onServerTick(MinecraftServer server) {
-        if (server.getTickCount() % RECONCILE_INTERVAL != 0) return;
+        var reconcileNow = server.getTickCount() % RECONCILE_INTERVAL == 0;
 
         for (var level : server.getAllLevels()) {
-            reconcile(level);
+            ensureRestored(level);
+            if (reconcileNow) reconcile(level);
+            flush(level);
         }
     }
 
@@ -229,6 +245,18 @@ public final class AnchorForceLoad {
             var receipts = new ArrayList<>(entry.getValue());
 
             for (var receipt : receipts) {
+                if (receipt.restored) {
+                    // A receipt restored from the save file: make sure its chunk is forced before judging
+                    // it, otherwise the source cannot load and a valid receipt would be dropped.
+                    if (!level.getForcedChunks().contains(chunk)) {
+                        level.setChunkForced(ChunkPos.getX(chunk), ChunkPos.getZ(chunk), true);
+                        receipt.forcedByUs = true;
+                        markDirty(level);
+                    }
+                    receipt.restored = false;
+                    continue;
+                }
+
                 // Both cases look up the source, so a source whose chunk is not loaded any more (or whose
                 // level was unloaded) answers "nothing to do here" and the force load goes away.
                 var wanted = receipt.placed
@@ -244,11 +272,13 @@ public final class AnchorForceLoad {
                     // the stored list is not the snapshot, so this only touches what is still registered
                     var stored = perLevel.get(chunk);
                     if (stored != null) stored.remove(receipt);
+                    markDirty(level);
                     continue;
                 }
 
                 if (!level.getForcedChunks().contains(chunk)) {
                     level.setChunkForced(ChunkPos.getX(chunk), ChunkPos.getZ(chunk), true);
+                    markDirty(level);
                     OritechAddonsOne.LOGGER.debug("[diag] anchor: forced chunk {} for {} ({})",
                             new ChunkPos(chunk), receipt.source, receipt.placed ? "block" : "reserved slot");
                 }
@@ -277,6 +307,8 @@ public final class AnchorForceLoad {
     private static void refresh(@Nullable AddonBlockEntity addon) {
         if (addon == null || !(addon.getLevel() instanceof ServerLevel level)) return;
 
+        ensureRestored(level);
+
         var source = addon.getBlockPos();
 
         if (machinePosOf(addon) == null || !level.isLoaded(source)) {
@@ -297,6 +329,7 @@ public final class AnchorForceLoad {
             if (!alreadyForced) {
                 level.setChunkForced(ChunkPos.getX(chunk), ChunkPos.getZ(chunk), true);
                 existing.forcedByUs = true;
+                markDirty(level);
                 OritechAddonsOne.LOGGER.debug("[diag] anchor: re-forced chunk {} for {}", new ChunkPos(chunk), source);
             }
             return;
@@ -309,6 +342,7 @@ public final class AnchorForceLoad {
         RECEIPTS.computeIfAbsent(level, key -> new HashMap<>())
                 .computeIfAbsent(chunk, key -> new ArrayList<>())
                 .add(receipt);
+        markDirty(level);
 
         if (!alreadyForced) {
             level.setChunkForced(ChunkPos.getX(chunk), ChunkPos.getZ(chunk), true);
@@ -426,5 +460,58 @@ public final class AnchorForceLoad {
             if (receipt.source.equals(source)) return receipt;
         }
         return null;
+    }
+
+    // ------------------------------------------------------------------ saved receipts
+
+    /**
+     * Merges the level's saved receipts into {@link #RECEIPTS} once per server run.
+     * <p>
+     * The chunk is not forced here: every restored receipt is marked {@link Receipt#restored}, and the next
+     * reconcile forces its chunk before validating it - so an anchor whose chunk is simply not loaded yet is
+     * not mistaken for a removed one, while a receipt whose anchor is really gone is dropped one tick later.
+     */
+    private static void ensureRestored(ServerLevel level) {
+        if (!RESTORED.add(level)) return;
+
+        var data = level.getDataStorage().computeIfAbsent(AnchorReceiptsData.FACTORY, AnchorReceiptsData.NAME);
+        for (var entry : data.entries()) {
+            var existing = find(level, entry.source(), entry.chunk());
+            if (existing != null) {
+                // an anchor announced itself before the save was read: the saved ownership wins
+                existing.forcedByUs |= entry.forcedByUs();
+                continue;
+            }
+
+            var receipt = new Receipt(entry.source(), entry.chunk(), entry.placed(), entry.forcedByUs());
+            receipt.restored = true;
+            RECEIPTS.computeIfAbsent(level, key -> new HashMap<>())
+                    .computeIfAbsent(entry.chunk(), key -> new ArrayList<>())
+                    .add(receipt);
+        }
+    }
+
+    /** Marks a level's receipts as changed, so {@link #flush} writes them back on this tick. */
+    private static void markDirty(ServerLevel level) {
+        DIRTY.add(level);
+    }
+
+    /** Writes the level's receipts back to {@link AnchorReceiptsData} if they changed since the last flush. */
+    private static void flush(ServerLevel level) {
+        if (!DIRTY.remove(level)) return;
+
+        var entries = new ArrayList<AnchorReceiptsData.Entry>();
+        var perLevel = RECEIPTS.get(level);
+        if (perLevel != null) {
+            for (var receipts : perLevel.values()) {
+                for (var receipt : receipts) {
+                    entries.add(new AnchorReceiptsData.Entry(receipt.source, receipt.chunk, receipt.placed,
+                            receipt.forcedByUs));
+                }
+            }
+        }
+
+        level.getDataStorage().computeIfAbsent(AnchorReceiptsData.FACTORY, AnchorReceiptsData.NAME)
+                .setEntries(entries);
     }
 }

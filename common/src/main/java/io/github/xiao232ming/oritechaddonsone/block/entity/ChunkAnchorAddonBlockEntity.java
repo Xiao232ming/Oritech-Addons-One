@@ -73,10 +73,10 @@ public class ChunkAnchorAddonBlockEntity extends AddonBlockEntity implements Blo
     /**
      * Announces the saved anchor as soon as its chunk is loaded again.
      * <p>
-     * The forced chunks are runtime state (see {@link AnchorForceLoad}), so after a server start nothing is
-     * force loaded until a source announces itself. This hook is that announcement for the placed form, and
-     * it is also what repairs the state after a crash: an anchor whose machine is gone reports "no machine"
-     * and its old force load is released instead of carried over.
+     * The force loads are restored from the level's saved receipts when the server starts (see
+     * {@link AnchorForceLoad}), and this hook is what re-resolves the anchor's own state afterwards: it also
+     * repairs a stale claim after a crash, because an anchor whose machine is gone reports "no machine" and
+     * its old force load is released instead of carried over.
      * <p>
      * {@code loadAdditional} runs after the saved data was read (the controller offset is part of it), so the
      * machine really is known here. (It used to hang on NeoForge's {@code BlockEntity#onLoad}, which vanilla

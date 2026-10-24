@@ -1716,10 +1716,11 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         markMergePending();
         syncCellFaces();
 
-        // Announces a chunk anchor that was saved in the reserved slot: the force loads are runtime state, so
-        // after a server start the anchor has to report itself again. This used to hang on NeoForge's
-        // BlockEntity#onLoad (vanilla has no such hook); here the saved contents - and, for a wireless dock,
-        // the saved link - are already read.
+        // Announces a chunk anchor that was saved in the reserved slot: the force loads are restored from the
+        // level's saved receipts when the server starts, and this hook makes the addon re-resolve its own
+        // state as soon as its chunk is loaded. This used to hang on NeoForge's BlockEntity#onLoad (vanilla
+        // has no such hook); here the saved contents - and, for a wireless dock, the saved link - are already
+        // read.
         if (level != null && !level.isClientSide()) {
             AnchorForceLoad.register(this);
         }
