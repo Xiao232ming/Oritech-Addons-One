@@ -3,7 +3,6 @@ package io.github.xiao232ming.oritechaddonsone.block.entity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -452,9 +451,9 @@ public class ExtensionTransferAddonBlockEntity extends ExtensionAddonBlockEntity
 
     // ------------------------------------------------------------------ GUI and ticking
 
-    /** Name of the placed plugin's screen; the plugin has no addon type of its own to name it. */
+    /** Name of the placed plugin's screen - the transfer extension addon's own name, not the transfer plugin's. */
     @Override
     protected String displayNameKey() {
-        return "container.oritechaddonsone." + OritechAddonsOne.TRANSFER_ADDON.getId().getPath();
+        return "container.oritechaddonsone." + OritechAddonsOne.EXTENSION_TRANSFER_ADDON.getId().getPath();
     }
 }
