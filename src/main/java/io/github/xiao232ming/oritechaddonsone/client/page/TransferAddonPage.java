@@ -53,13 +53,12 @@ import io.github.xiao232ming.oritechaddonsone.network.TransferNetworking;
  * after every accepted change, and held here by {@link TransferFaceState}. A fixed set of menu data slots - what the
  * cube net page uses - cannot carry a map of unknown size, and a structure's surface has no natural maximum.
  * <p>
- * <b>The page itself shows only the model.</b> The counter, the instruction line and the 3D model with its hover
- * highlight are the whole page; everything that configures a cell-face - the three mode plates and the automation
- * switch - lives in the modal page a left click on a face opens, and a right click on a configured face clears it
- * without opening anything. That is the cube net page's interaction, applied to a model instead of a net: the
- * plates are only ever in front of the player while a face is really being configured, so the model - which is
- * what this page is for - stays visible the rest of the time. The counter reports how many cell-faces are configured
- * and <b>no maximum</b>, because there is none (see {@link #drawCounter}).
+ * <b>The page itself shows only the model.</b> The instruction line and the 3D model with its hover highlight are
+ * the whole page; everything that configures a cell-face - the three mode plates and the automation switch - lives
+ * in the modal page a left click on a face opens, and a right click on a configured face clears it without opening
+ * anything. That is the cube net page's interaction, applied to a model instead of a net: the plates are only ever
+ * in front of the player while a face is really being configured, so the model - which is what this page is for -
+ * stays visible the rest of the time.
  * <p>
  * <b>The widget lives in absolute screen space.</b> This page draws in panel space while the widget is rendered
  * at the pixel position it was given, which is what its own picking and its hit test assume; every coordinate the
@@ -98,16 +97,13 @@ public final class TransferAddonPage implements AddonPage {
     private static final int PREVIEW_HEIGHT = 96;
 
     /**
-     * Top edge of that panel, in panel space: below the two header rows - the screen draws the title label at
-     * Y 6, the page draws the counter at {@link #COUNTER_Y} - so the model starts where the header ends.
+     * Top edge of that panel, in panel space: the page's first row, because the panel's own title label is drawn by
+     * the screen in the band above it (Y 6, see {@code ExtensionAddonScreen#renderLabels}).
      * <p>
      * It is the same value the hint used to sit at: the hint moved <b>below</b> the model (see {@link #HINT_Y}), so the
      * model took the row the hint had rather than the page growing a row.
      */
-    private static final int PREVIEW_Y = 28;
-
-    /** Baseline of the counter, in panel space: its own row under the title label, which the screen draws at Y 6. */
-    private static final int COUNTER_Y = 16;
+    private static final int PREVIEW_Y = 18;
 
     /**
      * The instruction line's baseline, in panel space: <b>under</b> the model's panel, which is where a caption
@@ -177,10 +173,9 @@ public final class TransferAddonPage implements AddonPage {
     // ------------------------------------------------------------------ drawing
 
     /**
-     * One row per line of content, always inside the panel: the title label and the counter own the top band (the
-     * screen draws the title, {@link #drawCounter} the counter), then {@link #drawHint} and the model follow. The
-     * modal configuration page of an open face is drawn <b>over</b> all of it, so the page behind it never shows
-     * through a control the player is not using.
+     * One row per line of content, always inside the panel: the title label owns the top band (drawn by the screen),
+     * then {@link #drawHint} and the model follow. The modal configuration page of an open face is drawn <b>over</b>
+     * all of it, so the page behind it never shows through a control the player is not using.
      */
     @Override
     public void render(AddonPageContext context, GuiGraphicsExtractor graphics, float partialTick,
@@ -190,26 +185,21 @@ public final class TransferAddonPage implements AddonPage {
         var preview = currentPreview(context);
         drawPreviewPanel(context, graphics);
         if (preview == null) {
-            // no model, so nothing can be configured either; the counter is not drawn at all rather than as a zero,
-            // because there is no machine whose cell-faces it could be counting
+            // no model, so nothing can be configured either
             drawNoMachine(context, graphics);
             return;
         }
 
         // the widget is drawn at the absolute pixel position it was built for, and it is asked with the same
         // absolute mouse position for its own hover state. The markings it draws are what the page reads back for its
-        // counter and its modal - the server's own map, plus the pending value of a click that has just been sent -
-        // so a mode the player sets shows on the model in the same frame
+        // modal - the server's own map, plus the pending value of a click that has just been sent - so a mode the
+        // player sets shows on the model in the same frame
         var widget = preview.widget();
         widget.withRotation(preview.pitch(), preview.yaw());
         widget.setZoom(preview.zoom());
         widget.setFaceOverlays(configuredModes(context));
         widget.tick();
         widget.render(graphics, screenX(context, mouseX), screenY(context, mouseY), partialTick);
-
-        // the counter counts what the player configured, over as many cell-faces as the structure has: there is no
-        // maximum and the page shows none (see #drawCounter)
-        drawCounter(context, graphics, widget);
 
         var openFace = TransferPickerState.openFace();
         if (openFace != null) {
@@ -307,28 +297,6 @@ public final class TransferAddonPage implements AddonPage {
                     context.screenY(y), AddonPanelStyle.PANEL_TEXT_DIM, false);
             y += HINT_TEXT_HEIGHT;
         }
-    }
-
-    /**
-     * The counter on its own row under the title, right aligned: how many cell-faces the player has configured,
-     * and <b>nothing else</b>.
-     * <p>
-     * <b>There is no maximum, so none is shown.</b> The model this page configures has one setting per face of every
-     * cell of the machine's structure, which is a number the page cannot know before the structure is assembled and
-     * which Oritech's part lists do not bound - so a fraction like the cube net page's {@code x/6} would be a lie
-     * twice over: there is no denominator, and the "6" would be the wrong shape for this model even if there were.
-     * What the count <em>is</em> worth showing is that something is configured at all - a player who has just set a
-     * face wants to see the page acknowledge it - so the line stays and the denominator is gone, which is also why the
-     * count is taken from the model the frame actually drew: it is what the player can see.
-     */
-    private void drawCounter(AddonPageContext context, GuiGraphicsExtractor graphics, FacePreviewWidget widget) {
-        var font = Minecraft.getInstance().font;
-        var text = Component.translatable("gui.oritechaddonsone.transfer.counter",
-                widget.configuredFaces()).getString();
-        var layout = context.layout();
-
-        graphics.text(font, text, context.screenX(layout.counterRight() - font.width(text)),
-                context.screenY(COUNTER_Y), AddonPanelStyle.PANEL_TEXT, false);
     }
 
     // ------------------------------------------------------------------ clicks and drags
