@@ -325,9 +325,4 @@ public record ExtensionAddonLayout(int slots, int columns, int rows, int firstSl
     public static int tabIconX() {
         return WIDTH + (TAB_STRIP_WIDTH - TAB_ICON_SIZE) / 2;
     }
-
-    /** Y of the tab icon with the given index in GUI space: centred in its tab. */
-    public static int tabIconY(int index) {
-        return tabY(index) + (TAB_HEIGHT - TAB_ICON_SIZE) / 2;
-    }
 }

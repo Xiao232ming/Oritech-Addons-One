@@ -126,9 +126,4 @@ public final class AddonPageRegistry {
     public static AddonPage transferPage() {
         return TRANSFER;
     }
-
-    /** True while the given page is the Item Proxy page. */
-    public static boolean isProxyPage(AddonPage page) {
-        return page == PROXY;
-    }
 }

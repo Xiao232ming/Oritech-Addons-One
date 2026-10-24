@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
@@ -20,7 +19,6 @@ import rearth.oritech.block.blocks.processing.MachineCoreBlock;
 import rearth.oritech.util.Geometry;
 import rearth.oritech.util.MultiblockMachineController;
 
-import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferMode;
 
 /**
@@ -680,15 +678,6 @@ public final class FacePreviewWidget extends BlockPreviewWidget {
      */
     private List<BlockEntry> visibleBlocks() {
         return blocks().stream().filter(entry -> !isCore(entry)).toList();
-    }
-
-    /** One coordinate of a cell offset. */
-    private static float component(Vec3i offset, int axis) {
-        return switch (axis) {
-            case 0 -> offset.getX();
-            case 1 -> offset.getY();
-            default -> offset.getZ();
-        };
     }
 
     /**
