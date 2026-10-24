@@ -3,7 +3,6 @@
   "id": "oritechaddonsone",
   "version": "${version}",
   "name": "Oritech Addons One",
-  "description": "Oritech Addons One adds the Extension Addons (Type I / II / III) for Oritech: machine addon blocks that hold other plugins in configurable slots and apply their combined effects to the machine they are attached to.",
   "authors": [
     "Xiao232ming"
   ],
