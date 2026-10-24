@@ -304,21 +304,6 @@ public final class FacePreviewWidget extends UIComponent {
     }
 
     /**
-     * How many cell-faces carry a mode in the frame the page last handed over. It is what the page's counter reports:
-     * a count of what is configured, with no maximum anywhere near it (see the page's {@code drawCounter}).
-     */
-    public int configuredFaces() {
-        var modes = faceModes;
-        if (modes == null) return 0;
-
-        int count = 0;
-        for (var mode : modes.values()) {
-            if (mode != TransferMode.NONE) count++;
-        }
-        return count;
-    }
-
-    /**
      * Every cell-face of the machine's <b>outer surface</b>: the faces of the parts that no other part of the
      * structure covers, which are the ones a player can see and therefore the only ones the page lets configure.
      * <p>

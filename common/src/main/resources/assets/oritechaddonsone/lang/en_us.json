@@ -93,7 +93,6 @@
   "tooltip.oritechaddonsone.transfer_addon.desc": "Configure the input and output of the machine's faces",
   "gui.oritechaddonsone.page.transfer": "Transfer Addon",
   "gui.oritechaddonsone.page.transfer.tooltip": "A rotatable 3D model of the machine this plugin serves: drag to turn it, click a face to open its transfer settings",
-  "gui.oritechaddonsone.transfer.counter": "Configured faces: %s",
   "gui.oritechaddonsone.transfer.hint": "Drag to rotate - click a face to configure it",
   "gui.oritechaddonsone.transfer.no_machine": "The machine this plugin serves is not loaded",
   "gui.oritechaddonsone.transfer.prompt": "Choose what this face does",

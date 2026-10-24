@@ -93,7 +93,6 @@
   "tooltip.oritechaddonsone.transfer_addon.desc": "对机器面进行输入输出配置",
   "gui.oritechaddonsone.page.transfer": "传输",
   "gui.oritechaddonsone.page.transfer.tooltip": "所服务机器的可旋转 3D 模型：拖动可旋转，点击某个面打开它的传输设置",
-  "gui.oritechaddonsone.transfer.counter": "已配置面数：%s",
   "gui.oritechaddonsone.transfer.hint": "拖动旋转模型 —— 点击某个面进行配置",
   "gui.oritechaddonsone.transfer.no_machine": "该插件所服务的机器未加载",
   "gui.oritechaddonsone.transfer.prompt": "为该面选择传输模式",
