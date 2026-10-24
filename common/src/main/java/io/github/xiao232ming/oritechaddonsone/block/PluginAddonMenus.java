@@ -13,7 +13,6 @@ import org.jetbrains.annotations.Nullable;
 import dev.architectury.registry.menu.MenuRegistry;
 
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEntity;
-import io.github.xiao232ming.oritechaddonsone.block.entity.TransferAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.WirelessExtensionAddonBlockEntity;
 
 /**
@@ -92,10 +91,12 @@ public final class PluginAddonMenus {
     public static ItemInteractionResult openItemMenu(Level level, BlockPos pos, Player player,
             @Nullable BlockPos servedMachine) {
         if (level.isClientSide()) {
-            var blockEntity = level.getBlockEntity(pos);
-            if (blockEntity instanceof TransferAddonBlockEntity) return ItemInteractionResult.SUCCESS;
-
-            return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+            // Every block that owns this menu consumes the click on the client too. Answering PASS would let
+            // vanilla run the item in the hand - placing the held block locally - while the server only opens
+            // the screen, so the predicted block would appear and be corrected away again.
+            return level.getBlockEntity(pos) instanceof ExtensionAddonBlockEntity
+                    ? ItemInteractionResult.SUCCESS
+                    : ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         }
         if (!(player instanceof ServerPlayer serverPlayer)) {
             return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
@@ -180,8 +181,11 @@ public final class PluginAddonMenus {
      * {@code PASS_TO_DEFAULT_BLOCK_INTERACTION} when it did not (see {@code WirelessExtensionAddonBlock}).
      */
     public static InteractionResult openDockMenu(Level level, BlockPos pos, Player player) {
-        if (level.isClientSide() || !(player instanceof ServerPlayer serverPlayer)) return InteractionResult.PASS;
         if (!(level.getBlockEntity(pos) instanceof WirelessExtensionAddonBlockEntity dock)) return InteractionResult.PASS;
+        // The client consumes the click as well - see openItemMenu. SUCCESS (not SUCCESS_SERVER) because the
+        // dock's useItemOn maps exactly this value to ItemInteractionResult.SUCCESS.
+        if (level.isClientSide()) return InteractionResult.SUCCESS;
+        if (!(player instanceof ServerPlayer serverPlayer)) return InteractionResult.PASS;
 
         MenuRegistry.openExtendedMenu(serverPlayer, dock, buffer -> {
             buffer.writeBlockPos(pos);
