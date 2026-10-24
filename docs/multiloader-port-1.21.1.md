@@ -3,6 +3,9 @@
 本文件记录 `1.21.1` 分支上把项目从"NeoForge 单模块"改成"common / fabric / neoforge 三模块"的
 做法、依赖坐标、每处平台差异，以及仍然需要在能联网/能编译的机器上验证的清单。
 
+> 注：下文"102 个 java / 23 个 mixin / 112 个资源"等数字是 2026-10 移植当时的快照；当前为
+> 106 个 java、27 个 mixin、113 个资源（含后来加入的炼油厂流体修复）。
+
 改造的原则是 **能照抄 Oritech 的都照抄**：Oritech 自己就是 `common` + `fabric` + `neoforge` 三模块，
 `common` 用 NeoForm vanilla 模式编译（看不到任何 loader API），两个 loader 模块把 `common` 的源码与资源
 "吃进来"各自编一遍；跨端差异交给 Architectury API 和一份自研 SPI。

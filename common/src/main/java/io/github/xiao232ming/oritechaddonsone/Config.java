@@ -7,7 +7,7 @@ import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonLayout;
 
 /**
  * Common config of the mod. The inventory of the three plugin types can be adjusted here:
- * the slot count of type I and II (1-36) and the capacity of every slot of type III.
+ * the slot count of type I and II (1-72) and the capacity of every slot of type III.
  * The file is created at {@code config/oritechaddonsone-common.toml}.
  */
 public final class Config {
