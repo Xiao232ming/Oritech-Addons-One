@@ -270,10 +270,10 @@ public final class TransferNetworking {
         }
     }
 
-    /** Sends a machine's cell-face map to one player, if there is a block of this mod serving it at {@code pos}. */
+    /** Sends a machine's cell-face map to one player; an unknown machine answers an empty map. */
     public static void sendFaceModes(ServerPlayer player, BlockPos machine) {
-        if (!(player.level().getBlockEntity(machine) instanceof ExtensionAddonBlockEntity owner)) return;
-        sendFaceModes(player, machine, owner.cellFaceModes());
+        if (machine == null) return;
+        sendFaceModes(player, machine, MachineFaceConfigs.cellFaces(player.level(), machine));
     }
 
     /**
