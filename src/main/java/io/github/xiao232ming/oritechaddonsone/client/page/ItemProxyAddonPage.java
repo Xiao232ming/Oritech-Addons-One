@@ -129,11 +129,6 @@ public final class ItemProxyAddonPage implements AddonPage {
         return ICON;
     }
 
-    @Override
-    public List<Component> tooltip() {
-        return List.of(label(), Component.translatable(LABEL_KEY + ".tooltip"));
-    }
-
     // ------------------------------------------------------------------ drawing
 
     @Override

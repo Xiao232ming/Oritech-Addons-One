@@ -68,7 +68,6 @@
   "gui.oritechaddonsone.page.plugins": "Plugins",
   "gui.oritechaddonsone.page.wireless": "Wireless",
   "gui.oritechaddonsone.page.proxy": "Item Proxy",
-  "gui.oritechaddonsone.page.proxy.tooltip": "Unfolded faces of this block: click a face to make it proxy a slot of the machine's inventory, right click a configured face to stop proxying it",
   "gui.oritechaddonsone.proxy.counter": "Configurable: %s/%s",
   "gui.oritechaddonsone.proxy.face": "Face: %s",
   "gui.oritechaddonsone.proxy.face.configured": "Proxied",
