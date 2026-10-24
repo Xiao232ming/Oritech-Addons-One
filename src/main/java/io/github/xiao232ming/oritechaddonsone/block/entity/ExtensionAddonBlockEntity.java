@@ -1670,9 +1670,10 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
     }
 
     /**
-     * Announces a chunk anchor that was saved in the reserved slot. The force loads themselves are runtime
-     * state, so after a server start the anchor has to report itself again; the periodic reconcile and the
-     * addon's own tick cover the case where the saved link is only read after this hook.
+     * Announces a chunk anchor that was saved in the reserved slot. The force loads are restored from the
+     * level's saved receipts when the server starts (see {@link AnchorForceLoad}), and this hook makes the
+     * addon re-resolve its own state as soon as its chunk is loaded; the periodic reconcile and the addon's
+     * own tick cover the case where the saved link is only read after this hook.
      */
     @Override
     public void onLoad() {
