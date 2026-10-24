@@ -22,8 +22,8 @@ body:
     id: versions
     attributes:
       label: 版本号 / Versions
-      description: 模组 jar 文件名 + Oritech 版本（例：oritechaddonsone-1.0.0+mc26.1.2.jar，Oritech 2.0.0-exp6）
-      placeholder: oritechaddonsone-1.0.0+mc26.1.2.jar / Oritech 2.0.0-exp6
+      description: 模组 jar 文件名 + Oritech 版本（例：oritechaddonsone-1.0.0+mc26.1.2.jar，Oritech 2.0.0-exp11）
+      placeholder: oritechaddonsone-1.0.0+mc26.1.2.jar / Oritech 2.0.0-exp11
     validations:
       required: true
   - type: textarea
