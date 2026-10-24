@@ -16,17 +16,17 @@ public final class Config {
     private static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
 
     public static final ModConfigSpec.IntValue TYPE_1_SLOTS = BUILDER
-            .comment("Number of plugin slots of the Extension Addon Type I.",
+            .comment("Number of plugin slots of the Extension Addon I.",
                     "扩展插件Ⅰ型的物品栏格数。")
             .defineInRange("type1Slots", 5, ExtensionAddonLayout.MIN_SLOTS, ExtensionAddonLayout.MAX_SLOTS);
 
     public static final ModConfigSpec.IntValue TYPE_2_SLOTS = BUILDER
-            .comment("Number of plugin slots of the Extension Addon Type II.",
+            .comment("Number of plugin slots of the Extension Addon II.",
                     "扩展插件Ⅱ型的物品栏格数。")
             .defineInRange("type2Slots", 5, ExtensionAddonLayout.MIN_SLOTS, ExtensionAddonLayout.MAX_SLOTS);
 
     public static final ModConfigSpec.IntValue TYPE_3_SLOT_CAPACITY = BUILDER
-            .comment("Capacity of every plugin slot of the Extension Addon Type III (how many plugins fit per slot).",
+            .comment("Capacity of every plugin slot of the Extension Addon III (how many plugins fit per slot).",
                     "扩展插件Ⅲ型每个格子的容量（每格最多能放多少个插件）。")
             .defineInRange("type3SlotCapacity", 256, 1, Integer.MAX_VALUE);
 

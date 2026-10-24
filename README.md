@@ -20,8 +20,8 @@
 
 | Block | What it does |
 | --- | --- |
-| **Extension Addon Type I / II / III** | Hold Oritech's addons and forward their effects to the machine they are connected to |
-| **Wireless Extension Addon Type I / II / III** | The same three tiers, but linked to a machine with the Target Designator instead of attached to it |
+| **Extension Addon I / II / III** | Hold Oritech's addons and forward their effects to the machine they are connected to |
+| **Wireless Extension Addon I / II / III** | The same three tiers, but linked to a machine with the Target Designator instead of attached to it |
 | **Warehouse Addon** | +16 slots of capacity for every item slot of the machine |
 | **Tank Addon** | +8000 mB of capacity for every tank of the machine |
 | **Chunk Anchor Addon** | Force-loads the chunk it stands in (or the chunk of the addon / dock holding it) |
@@ -39,9 +39,9 @@ And a few extra features:
 
 | Option | Default | Range | Meaning |
 | --- | --- | --- | --- |
-| `type1Slots` | 5 | 1 – 72 | Usable addon slots of Extension Addon Type I |
-| `type2Slots` | 5 | as above | Usable addon slots of Extension Addon Type II |
-| `type3SlotCapacity` | 256 | ≥ 1 | How many addons one slot of Extension Addon Type III holds |
+| `type1Slots` | 5 | 1 – 72 | Usable addon slots of Extension Addon I |
+| `type2Slots` | 5 | as above | Usable addon slots of Extension Addon II |
+| `type3SlotCapacity` | 256 | ≥ 1 | How many addons one slot of Extension Addon III holds |
 | `transferItemsPerTick` | 64 | 1 – 6400 | Items one configured face moves per tick |
 | `showWirelessDocksInAddonPage` | true | – | List the machine's wireless addons in Oritech's own addon page (client-side display option) |
 
@@ -58,7 +58,7 @@ And a few extra features:
 
 ### Optional / Integrations
 
-- [Oritech Things](https://github.com/Rearth/Oritech-Things) — its tiered addons fit into Extension Addon Type I and III.
+- [Oritech Things](https://github.com/Rearth/Oritech-Things) — its tiered addons fit into Extension Addon I and III.
 
 ## 🚀 Installation
 
