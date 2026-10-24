@@ -68,7 +68,6 @@
   "gui.oritechaddonsone.page.plugins": "插件",
   "gui.oritechaddonsone.page.wireless": "无线",
   "gui.oritechaddonsone.page.proxy": "物品代理",
-  "gui.oritechaddonsone.page.proxy.tooltip": "本方块六个面的展开图：点击某个面，让该面代理机器库存中的一个槽位；右键已代理的面可取消",
   "gui.oritechaddonsone.proxy.counter": "可配置数：%s/%s",
   "gui.oritechaddonsone.proxy.face": "面：%s",
   "gui.oritechaddonsone.proxy.face.configured": "已代理",
