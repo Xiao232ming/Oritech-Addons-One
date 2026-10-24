@@ -231,7 +231,9 @@ public final class AnchorForceLoad {
 
         var chunks = new ArrayList<Long>();
 
-        for (var entry : perLevel.entrySet()) {
+        // A snapshot of the map as well: forcing a chunk below can load it, which lets an anchor announce
+        // itself and add to (or remove from) this very map from inside the loop.
+        for (var entry : new ArrayList<>(perLevel.entrySet())) {
             var chunk = entry.getKey();
             // a snapshot: the source can be released from inside the loop (a chunk that is unloaded while
             // this runs), which replaces the list of that chunk
