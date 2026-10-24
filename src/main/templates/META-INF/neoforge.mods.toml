@@ -38,13 +38,9 @@ logoFile="oritechaddonsone.png" #optional
 # The authors of the mod, displayed in the mod UI (optional)
 authors="Xiao232ming"
 
-# The description text for the mod (multi line!) (#mandatory)
-description='''
-Oritech Addons One adds the Extension Addons (Type I / II / III) for Oritech: machine addon
-blocks that hold other plugins in configurable slots and apply their combined effects to the
-machine they are attached to. Type I takes stat plugins, Type II forwards functional plugins
-and supports redstone control, Type III gives every stat category its own column of slots.
-'''
+# The mod shows no description in the mod list. The key cannot be omitted: NeoForge falls back to
+# the literal "MISSING DESCRIPTION" when it is missing, so it is kept empty on purpose.
+description=""
 
 # The [[mixins]] block allows you to declare your mixin config to FML so that it gets loaded.
 [[mixins]]
