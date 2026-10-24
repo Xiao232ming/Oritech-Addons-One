@@ -15,10 +15,10 @@ import io.github.xiao232ming.oritechaddonsone.block.entity.ChunkAnchorAddonBlock
  * 锚点插件 - the chunk anchor plugin.
  * <p>
  * It is a normal Oritech plugin that can be attached to any face of a machine and contributes nothing to
- * the machine's stats; its whole effect is that the chunk containing the machine it is attached to stays
- * loaded, see {@code AnchorForceLoad}. The same item can instead be put into the reserved slot of an
- * Extension Addon or a Wireless Extension Dock, where it force loads the chunk of the machine that addon
- * is connected to.
+ * the machine's stats; its whole effect is that the chunk it stands in stays loaded, see
+ * {@code AnchorForceLoad}. The machine it is attached to only makes it active. The same item can instead
+ * be put into the reserved slot of an Extension Addon or a Wireless Extension Dock, where it keeps the
+ * chunk of that addon / dock loaded.
  * <p>
  * Behaviour is identical to {@link PluginAddonBlock} (the warehouse and tank addons) - same base class,
  * same settings, same bounding shape - the only difference is the block entity, which is what learns which

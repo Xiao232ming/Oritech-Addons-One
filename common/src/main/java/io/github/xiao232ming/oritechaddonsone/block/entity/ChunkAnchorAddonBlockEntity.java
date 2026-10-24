@@ -22,14 +22,13 @@ import io.github.xiao232ming.oritechaddonsone.wireless.AnchorForceLoad;
  * Everything else is Oritech's ordinary {@link AddonBlockEntity}: the block is a regular
  * {@code MachineAddonBlock}, so the machine's addon scan finds it, claims it and writes its own position
  * into this block entity like it does for any other plugin. The scan reports that position through
- * {@link #setControllerPos(BlockPos)}, which is the moment this anchor learns which chunk it has to keep
- * loaded; the force load itself lives in {@link AnchorForceLoad}.
+ * {@link #setControllerPos(BlockPos)}, which is the moment this anchor becomes active; the force load
+ * itself lives in {@link AnchorForceLoad} and keeps this block's own chunk loaded.
  * <p>
  * This class only exists so the anchor has a block entity of its own type ({@code plugin_addon} lists all
  * three plugin blocks) and so the anchor can be told apart from the warehouse and tank addons, which use
- * the very same block entity type and class. It adds no state of its own: which chunk is force loaded
- * follows from the world, and {@link AnchorForceLoad} reconciles it every few ticks, so nothing here has to
- * be saved.
+ * the very same block entity type and class. It adds no state of its own: the forced chunk is the block's
+ * own, and {@link AnchorForceLoad} reconciles it every few ticks, so nothing here has to be saved.
  */
 public class ChunkAnchorAddonBlockEntity extends AddonBlockEntity implements BlockEntityTicker<BlockEntity> {
 

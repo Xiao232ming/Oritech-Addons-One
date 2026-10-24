@@ -24,7 +24,7 @@
 | **Wireless Extension Addon Type I / II / III** | The same three tiers, but linked to a machine with the Target Designator instead of attached to it |
 | **Warehouse Addon** | +16 slots of capacity for every item slot of the machine |
 | **Tank Addon** | +8000 mB of capacity for every tank of the machine |
-| **Chunk Anchor Addon** | Force-loads the chunk the machine it is connected to stands in |
+| **Chunk Anchor Addon** | Force-loads the chunk it stands in (or the chunk of the addon / dock holding it) |
 | **Transfer Extension Addon** | Makes the six faces of the block it sits in (an extension addon or a wireless one) feed and empty the machine |
 | **Transfer Addon** | The same transfer, but the faces are picked and configured on a 3D model of the machine |
 

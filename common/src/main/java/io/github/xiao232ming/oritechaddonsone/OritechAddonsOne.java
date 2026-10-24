@@ -148,13 +148,12 @@ public class OritechAddonsOne {
             () -> new PluginAddonBlock(blockProperties(), pluginAddonSettings()));
 
     /**
-     * 锚点插件 - the chunk anchor: while it is attached to a machine, the chunk containing that machine is
-     * force loaded, so the machine keeps working while no player is nearby.
+     * 锚点插件 - the chunk anchor: while it is attached to a machine, the chunk it stands in is force
+     * loaded, so that piece of the world keeps running while no player is nearby.
      * <p>
      * It has no stats at all (neutral like the other two plugins of this mod), the effect is applied by
      * {@code AnchorForceLoad}. The same item can also be put into the reserved slot of an Extension Addon
-     * or a Wireless Extension Dock, where it force loads the chunk of the machine that addon is connected
-     * to.
+     * or a Wireless Extension Dock, where it keeps the chunk of that addon / dock loaded.
      * <p>
      * Unlike the warehouse and tank addons this block uses its own block class and block entity
      * ({@link ChunkAnchorAddonBlock} / {@code ChunkAnchorAddonBlockEntity}), because the anchor has to learn which
