@@ -98,14 +98,16 @@ public final class TransferAddonPage implements AddonPage {
     private static final int PREVIEW_HEIGHT = 96;
 
     /**
-     * Top edge of that panel, in panel space: the page's first row, because the panel's own title label and the
-     * counter are drawn by the screen in the band above it (Y 6, see {@code ExtensionAddonScreen#renderLabels} and
-     * {@link ExtensionAddonLayout#counterY()}).
+     * Top edge of that panel, in panel space: below the two header rows - the screen draws the title label at
+     * Y 6, the page draws the counter at {@link #COUNTER_Y} - so the model starts where the header ends.
      * <p>
      * It is the same value the hint used to sit at: the hint moved <b>below</b> the model (see {@link #HINT_Y}), so the
      * model took the row the hint had rather than the page growing a row.
      */
-    private static final int PREVIEW_Y = 18;
+    private static final int PREVIEW_Y = 28;
+
+    /** Baseline of the counter, in panel space: its own row under the title label, which the screen draws at Y 6. */
+    private static final int COUNTER_Y = 16;
 
     /**
      * The instruction line's baseline, in panel space: <b>under</b> the model's panel, which is where a caption
@@ -308,8 +310,8 @@ public final class TransferAddonPage implements AddonPage {
     }
 
     /**
-     * The counter in the panel's top right corner: how many cell-faces the player has configured, and <b>nothing
-     * else</b>.
+     * The counter on its own row under the title, right aligned: how many cell-faces the player has configured,
+     * and <b>nothing else</b>.
      * <p>
      * <b>There is no maximum, so none is shown.</b> The model this page configures has one setting per face of every
      * cell of the machine's structure, which is a number the page cannot know before the structure is assembled and
@@ -326,7 +328,7 @@ public final class TransferAddonPage implements AddonPage {
         var layout = context.layout();
 
         graphics.text(font, text, context.screenX(layout.counterRight() - font.width(text)),
-                context.screenY(layout.counterY()), AddonPanelStyle.PANEL_TEXT, false);
+                context.screenY(COUNTER_Y), AddonPanelStyle.PANEL_TEXT, false);
     }
 
     // ------------------------------------------------------------------ clicks and drags
