@@ -57,8 +57,6 @@ subprojects {
         maven { url = 'https://maven.su5ed.dev/releases' }
         // GeckoLib
         maven { url = 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/' }
-        // owo-lib
-        maven { url = 'https://maven.wispforest.io/releases/' }
         // Parchment mappings
         maven { url = 'https://maven.parchmentmc.org' }
         // 仅开发期用（Oritech Things）
