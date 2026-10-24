@@ -1,21 +1,12 @@
 package io.github.xiao232ming.oritechaddonsone.block.entity;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.HolderLookup;
-import net.minecraft.core.Vec3i;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
 import org.jetbrains.annotations.Nullable;
 
-import rearth.oritech.api.item.ItemApi;
-import rearth.oritech.api.item.containers.DelegatingInventoryStorage;
 import rearth.oritech.block.entity.addons.AddonBlockEntity;
 import rearth.oritech.init.BlockContent;
 import rearth.oritech.util.Geometry;
@@ -66,15 +57,6 @@ import io.github.xiao232ming.oritechaddonsone.block.TransferAddonBlock;
  * ordinary addon behaviour: no GUI, no movement, an empty answer on every face.
  */
 public class TransferAddonBlockEntity extends ExtensionAddonBlockEntity {
-
-    /**
-     * The empty inventory every face of this plugin answers with. One instance for all six faces, because
-     * {@code ItemApi.BlockProvider} is part of what an Extension Addon is and the answer never changes: this plugin
-     * never offers the machine's items through its own block (see {@link #getInventoryStorage(Direction)}), so a pipe
-     * that looks at it sees "nothing here" rather than an error.
-     */
-    private final ItemApi.InventoryStorage emptyStorage =
-            new DelegatingInventoryStorage(() -> null, () -> false);
 
     public TransferAddonBlockEntity(BlockPos pos, BlockState state) {
         super(OritechAddonsOne.TRANSFER_ADDON_ENTITY.get(), pos, state);

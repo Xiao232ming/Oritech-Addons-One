@@ -203,11 +203,6 @@ public record ExtensionAddonLayout(int slots, int columns, int rows, int firstSl
         return WIDTH + (TAB_STRIP_WIDTH - TAB_ICON_SIZE) / 2;
     }
 
-    /** Y of the tab icon with the given index in GUI space: centred in its tab. */
-    public static int tabIconY(int index) {
-        return tabY(index) + (TAB_HEIGHT - TAB_ICON_SIZE) / 2;
-    }
-
     /** Layout used by types I and II: rows of nine slots. */
     public static ExtensionAddonLayout of(int requestedSlots) {
         var slots = Math.max(MIN_SLOTS, Math.min(MAX_SLOTS, requestedSlots));

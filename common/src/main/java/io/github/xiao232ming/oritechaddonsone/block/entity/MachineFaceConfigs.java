@@ -1,15 +1,12 @@
 package io.github.xiao232ming.oritechaddonsone.block.entity;
 
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
-import net.minecraft.core.Vec3i;
 import net.minecraft.world.level.Level;
 import net.minecraft.nbt.CompoundTag;
 
@@ -263,9 +260,4 @@ public final class MachineFaceConfigs {
 
     /** Save tag of the machine's six faces. */
     private static final String FACE_TAG = "machine_six_faces";
-
-    /** Every machine position this server currently holds settings for - used by the diagnostics and the tests. */
-    public static List<BlockPos> machines() {
-        return List.copyOf(SHARED.keySet());
-    }
 }

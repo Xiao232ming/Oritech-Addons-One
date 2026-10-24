@@ -7,7 +7,6 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.Vec3i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 
@@ -23,8 +22,6 @@ import io.github.xiao232ming.oritechaddonsone.block.entity.TransferFaceModes;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferMode;
 import io.github.xiao232ming.oritechaddonsone.client.AddonPanelStyle;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonMenu;
-import io.github.xiao232ming.oritechaddonsone.menu.FaceFilterMenu;
-import io.github.xiao232ming.oritechaddonsone.network.FilterNetworking;
 import io.github.xiao232ming.oritechaddonsone.network.ProxyNetworking;
 import io.github.xiao232ming.oritechaddonsone.network.TransferNetworking;
 
@@ -238,16 +235,6 @@ public final class TransferFaceModal {
     }
 
     /**
-     * The {@link FilterOpener} of a page that keys its settings by direction alone - the cube net page, whose
-     * model is one block's six faces. The face is the whole address there, and the cell of the machine's
-     * controller is the block's own, which is exactly what the two models have in common.
-     */
-    public static FilterOpener opener(BlockPos pos) {
-        return face -> NetworkManager.sendToServer(new FilterNetworking.OpenFilter(
-                new FilterNetworking.Target(pos, FaceFilterMenu.MODEL_FACE, face, Vec3i.ZERO)));
-    }
-
-    /**
      * The {@link Current} of a page that keys its settings by direction and has them only in the menu - the cube net
      * page, whose model is one block's six faces.
      */
@@ -263,15 +250,6 @@ public final class TransferFaceModal {
                 return menu.transferAutomation(face);
             }
         };
-    }
-
-    /**
-     * The {@link Sink} of a page that keys its settings by direction - the cube net page. The direction and the
-     * automation flag travel as the one packed value the block entity and the menu use for a face.
-     */
-    public static Sink sink(BlockPos pos) {
-        return (face, mode, automation) -> NetworkManager.sendToServer(new TransferNetworking.SetTransferMode(
-                pos, ProxyNetworking.faceIndex(face), TransferFaceModes.pack(mode, automation)));
     }
 
     /** The panel itself: Oritech's nine patch inside a darker frame, as on the cube net page. */

@@ -6,7 +6,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
 import net.minecraft.nbt.CompoundTag;
@@ -292,11 +291,5 @@ public final class CellFaceModes {
 
     private static boolean inRange(int value) {
         return value >= MIN_CELL_OFFSET && value <= MAX_CELL_OFFSET;
-    }
-
-    /** The cell offset of a world position relative to the machine's controller block. */
-    public static Vec3i offsetOf(BlockPos machinePos, BlockPos cellPos) {
-        return new Vec3i(cellPos.getX() - machinePos.getX(), cellPos.getY() - machinePos.getY(),
-                cellPos.getZ() - machinePos.getZ());
     }
 }

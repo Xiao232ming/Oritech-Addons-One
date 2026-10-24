@@ -22,8 +22,6 @@ import io.github.xiao232ming.oritechaddonsone.block.entity.CellFaceModes;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.MachineFaceConfigs;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferFaceModes;
-import io.github.xiao232ming.oritechaddonsone.block.entity.TransferAddonBlockEntity;
-import io.github.xiao232ming.oritechaddonsone.block.entity.TransferMode;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonMenu;
 
 /**

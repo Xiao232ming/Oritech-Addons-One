@@ -29,7 +29,6 @@ import rearth.oritech.block.blocks.processing.MachineCoreBlock;
 import rearth.oritech.util.Geometry;
 import rearth.oritech.util.MultiblockMachineController;
 
-import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferMode;
 
 /**
@@ -969,15 +968,6 @@ public final class FacePreviewWidget extends UIComponent {
             if (!isCore(entry)) visible.add(entry);
         }
         return visible;
-    }
-
-    /** One coordinate of a cell offset. */
-    private static float component(Vec3i offset, int axis) {
-        return switch (axis) {
-            case 0 -> offset.getX();
-            case 1 -> offset.getY();
-            default -> offset.getZ();
-        };
     }
 
     /**
