@@ -6,10 +6,11 @@ import net.minecraft.world.Container;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
+import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEntity;
 
 /**
- * The reserved item slot of the wireless page: exactly one item of any kind.
+ * The reserved item slot of the wireless page: exactly one chunk anchor plugin.
  * <p>
  * It is a real menu slot backed by the addon's own block entity ({@link ExtensionAddonBlockEntity#RESERVED_SLOT}),
  * so whatever is put in it is saved with the block and handed back when the block is mined.
@@ -36,10 +37,10 @@ public class ReservedItemSlot extends Slot {
         this.active = active;
     }
 
-    /** Any item may be placed, but only a single one. */
+    /** Only the chunk anchor may be placed, and only one of it: this slot exists for that plugin alone. */
     @Override
     public boolean mayPlace(ItemStack stack) {
-        return true;
+        return stack.is(OritechAddonsOne.CHUNK_ANCHOR_ADDON_ITEM.get());
     }
 
     @Override
