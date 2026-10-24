@@ -39,7 +39,7 @@ logoFile="oritechaddonsone.png" #optional
 authors="Xiao232ming"
 
 # The description text for the mod, shown in the mod list.
-description="A useful addon mod for oritech."
+description="A useful addon mod for Oritech."
 
 # The [[mixins]] block allows you to declare your mixin config to FML so that it gets loaded.
 [[mixins]]
