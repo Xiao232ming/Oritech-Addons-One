@@ -1,10 +1,12 @@
 package io.github.xiao232ming.oritechaddonsone.client.page;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -119,6 +121,9 @@ public final class TransferAddonPage implements AddonPage {
     /** Height of one line of the mod's font, i.e. what the instruction line occupies below the panel. */
     private static final int HINT_TEXT_HEIGHT = 9;
 
+    /** Horizontal margin the wrapped texts keep to the panel's borders. */
+    private static final int TEXT_MARGIN = 6;
+
     @Override
     public String id() {
         return ID;
@@ -160,7 +165,7 @@ public final class TransferAddonPage implements AddonPage {
      */
     @Override
     public int drawnHeight(ExtensionAddonLayout layout) {
-        int contentBottom = HINT_Y + HINT_TEXT_HEIGHT;
+        int contentBottom = HINT_Y + HINT_TEXT_HEIGHT * hintLineCount() + 2;
         // the two pixels AddonPickerPanel keeps above its placement floor, and a small margin so the modal's
         // frame is never flush with the panel's dark bottom bevel
         int modalBottom = AddonPickerPanel.ICON_SIZE + AddonPickerPanel.HEIGHT + 10;
@@ -227,9 +232,46 @@ public final class TransferAddonPage implements AddonPage {
      */
     private void drawHint(AddonPageContext context, GuiGraphicsExtractor graphics) {
         var font = Minecraft.getInstance().font;
-        var text = Component.translatable(HINT_KEY).getString();
-        graphics.text(font, text, context.screenX((context.panelWidth() - font.width(text)) / 2),
-                context.screenY(HINT_Y), AddonPanelStyle.PANEL_TEXT_DIM, false);
+        var lines = wrap(font, Component.translatable(HINT_KEY).getString(),
+                context.panelWidth() - 2 * TEXT_MARGIN);
+
+        for (int index = 0; index < lines.size(); index++) {
+            var line = lines.get(index);
+            graphics.text(font, line, context.screenX((context.panelWidth() - font.width(line)) / 2),
+                    context.screenY(HINT_Y + index * HINT_TEXT_HEIGHT), AddonPanelStyle.PANEL_TEXT_DIM, false);
+        }
+    }
+
+    /** Number of lines the hint needs at the panel's width; it grows the panel when it wraps. */
+    private static int hintLineCount() {
+        return wrap(Minecraft.getInstance().font, Component.translatable(HINT_KEY).getString(),
+                ExtensionAddonLayout.WIDTH - 2 * TEXT_MARGIN).size();
+    }
+
+    /**
+     * Splits the text at its spaces so no line is wider than {@code maxWidth}.
+     * <p>
+     * The hint and the "no machine" message are both wider than the panel in English, and a line that runs
+     * past the panel border reads as a drawing fault rather than as a sentence. A single word wider than the
+     * limit is kept as its own line - none of the translations of this page has one.
+     */
+    private static List<String> wrap(Font font, String text, int maxWidth) {
+        var lines = new ArrayList<String>();
+        var line = new StringBuilder();
+
+        for (var word : text.split(" ")) {
+            if (word.isEmpty()) continue;
+
+            if (line.length() > 0 && font.width(line + " " + word) > maxWidth) {
+                lines.add(line.toString());
+                line.setLength(0);
+            }
+            if (line.length() > 0) line.append(' ');
+            line.append(word);
+        }
+
+        if (line.length() > 0) lines.add(line.toString());
+        return lines;
     }
 
     /**
@@ -255,9 +297,14 @@ public final class TransferAddonPage implements AddonPage {
      */
     private void drawNoMachine(AddonPageContext context, GuiGraphicsExtractor graphics) {
         var font = Minecraft.getInstance().font;
-        var text = Component.translatable(NO_MACHINE_KEY).getString();
-        graphics.text(font, text, context.screenX((context.panelWidth() - font.width(text)) / 2),
-                context.screenY(PREVIEW_Y + PREVIEW_HEIGHT / 2), AddonPanelStyle.PANEL_TEXT_DIM, false);
+        var lines = wrap(font, Component.translatable(NO_MACHINE_KEY).getString(), PREVIEW_WIDTH - 2 * TEXT_MARGIN);
+        int y = PREVIEW_Y + (PREVIEW_HEIGHT - lines.size() * HINT_TEXT_HEIGHT) / 2;
+
+        for (var line : lines) {
+            graphics.text(font, line, context.screenX((context.panelWidth() - font.width(line)) / 2),
+                    context.screenY(y), AddonPanelStyle.PANEL_TEXT_DIM, false);
+            y += HINT_TEXT_HEIGHT;
+        }
     }
 
     /**
