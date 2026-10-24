@@ -1,6 +1,6 @@
 # Oritech Addons One — 多加载器（Fabric + NeoForge）改造说明
 
-本文件记录 `1.21.1-multiloader` 分支上把项目从"NeoForge 单模块"改成"common / fabric / neoforge 三模块"的
+本文件记录 `1.21.1` 分支上把项目从"NeoForge 单模块"改成"common / fabric / neoforge 三模块"的
 做法、依赖坐标、每处平台差异，以及仍然需要在能联网/能编译的机器上验证的清单。
 
 改造的原则是 **能照抄 Oritech 的都照抄**：Oritech 自己就是 `common` + `fabric` + `neoforge` 三模块，
