@@ -29,11 +29,12 @@ public final class PluginAddonMenus {
 
     /**
      * Opens the menu of the block entity at {@code pos} for this player, or reports that there is nothing to
-     * open ({@link InteractionResult#PASS}) - a block that is shown by this menu but has no block entity, or
-     * a client side call, which is not the side that opens menus.
+     * open ({@link InteractionResult#PASS}) - a block that is shown by this menu but has no block entity.
      * <p>
      * Nothing is opened on the client: the server is the side that decides, and vanilla tells the client
-     * about the menu it opened.
+     * about the menu it opened. The client still has to <b>consume</b> the click
+     * ({@link InteractionResult#SUCCESS_SERVER}), because a PASS would let vanilla run the item in the hand -
+     * placing the held block on the client only, which the server then never does.
      * <p>
      * No machine is sent along; a caller that has one writes it through
      * {@link #openPluginMenu(Level, BlockPos, Player, BlockPos)}.
@@ -59,8 +60,12 @@ public final class PluginAddonMenus {
      */
     public static InteractionResult openPluginMenu(Level level, BlockPos pos, Player player,
             @Nullable BlockPos servedMachine) {
-        if (level.isClientSide() || !(player instanceof ServerPlayer serverPlayer)) return InteractionResult.PASS;
         if (!(level.getBlockEntity(pos) instanceof ExtensionAddonBlockEntity blockEntity)) return InteractionResult.PASS;
+        // The client has to consume the click too. Answering PASS lets it run the item in the hand - i.e. place
+        // the held block - while the server only opens the screen, so the predicted block appears and is
+        // corrected away again. SUCCESS_SERVER is exactly "the server did it, do not predict anything here".
+        if (level.isClientSide()) return InteractionResult.SUCCESS_SERVER;
+        if (!(player instanceof ServerPlayer serverPlayer)) return InteractionResult.PASS;
 
         serverPlayer.openMenu(blockEntity,
                 buffer -> writeMenuData(buffer, blockEntity, pos,
@@ -131,8 +136,10 @@ public final class PluginAddonMenus {
      * code, and only the link stays the dock's own.
      */
     public static InteractionResult openDockMenu(Level level, BlockPos pos, Player player) {
-        if (level.isClientSide() || !(player instanceof ServerPlayer serverPlayer)) return InteractionResult.PASS;
         if (!(level.getBlockEntity(pos) instanceof WirelessExtensionAddonBlockEntity dock)) return InteractionResult.PASS;
+        // Same two sides agreement as openPluginMenu: the client must not fall through to placing the held block.
+        if (level.isClientSide()) return InteractionResult.SUCCESS_SERVER;
+        if (!(player instanceof ServerPlayer serverPlayer)) return InteractionResult.PASS;
 
         serverPlayer.openMenu(dock, buffer -> {
             buffer.writeBlockPos(pos);
