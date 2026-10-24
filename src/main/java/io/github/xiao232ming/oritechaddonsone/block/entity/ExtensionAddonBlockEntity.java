@@ -1652,7 +1652,7 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         if (isReservedSlot(slot)) {
             // The reserved item is not a plugin: it changes neither the machine's stats nor its storage,
             // so the machine must not be asked to recompute its addons because of it. One item of it may
-            // still have an effect of its own: the chunk anchor force loads the connected machine's chunk.
+            // still have an effect of its own: the chunk anchor force loads the chunk this block stands in.
             setChanged();
             refreshAnchor();
             return;

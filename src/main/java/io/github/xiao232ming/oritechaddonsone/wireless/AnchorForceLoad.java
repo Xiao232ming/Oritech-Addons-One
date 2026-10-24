@@ -24,8 +24,9 @@ import io.github.xiao232ming.oritechaddonsone.block.entity.ChunkAnchorAddonBlock
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEntity;
 
 /**
- * Keeps one chunk loaded per chunk anchor plugin: the chunk that contains the machine the anchor is
- * connected to.
+ * Keeps one chunk loaded per chunk anchor plugin: <b>the chunk the anchor itself stands in</b>, i.e. the
+ * chunk of the anchor block, or of the addon / dock that holds the anchor item. The machine the anchor is
+ * connected to only decides whether the anchor is active; it no longer decides which chunk is kept loaded.
  * <p>
  * The anchor works in two forms and both end up here:
  * <ul>
@@ -33,11 +34,12 @@ import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEn
  *     ordinary Oritech {@code MachineAddonBlock}) and writes its own position into the block entity, see
  *     {@link ChunkAnchorAddonBlockEntity};</li>
  *     <li><b>inserted into the reserved slot</b> of one of this mod's addons or wireless docks - the
- *     anchor item then names the machine that addon is connected to, see
- *     {@link ExtensionAddonBlockEntity#connectedMachinePos()}.</li>
+ *     source is the addon / dock itself, so its chunk stays loaded even when the machine it serves is in
+ *     another chunk and unloaded, see
+ *     {@link ExtensionAddonBlockEntity#connectedMachinePos()} for what makes it active.</li>
  * </ul>
- * Both forms report the machine position through {@link #machinePosOf}, so the force load itself is one
- * single code path.
+ * Both forms answer the "is this anchor active" question through {@link #machinePosOf}, while the forced
+ * chunk is always the source's own.
  *
  * <h2>Which API, and why</h2>
  * The chunk is forced with {@link ServerLevel#setChunkForced(int, int, boolean)} - the very call vanilla's
@@ -86,7 +88,7 @@ public final class AnchorForceLoad {
     private static final class Receipt {
         /** Position of the anchor block, or of the addon / dock that holds the anchor item. */
         private final BlockPos source;
-        /** Chunk of the connected machine: what is kept loaded. */
+        /** Chunk of the source itself: what is kept loaded. */
         private final long chunk;
         /** Source is a placed anchor block (true) or an addon / dock with the anchor in its reserved slot. */
         private final boolean placed;
@@ -221,9 +223,7 @@ public final class AnchorForceLoad {
 
             for (var receipt : receipts) {
                 // Both cases look up the source, so a source whose chunk is not loaded any more (or whose
-                // level was unloaded) answers "nothing to do here" and the force load goes away. The
-                // machine's own chunk is not required to be loaded: forcing a chunk loads it, so requiring
-                // that would make the feature unable to start.
+                // level was unloaded) answers "nothing to do here" and the force load goes away.
                 var wanted = receipt.placed
                         ? hasAnchorBlock(level, receipt.source)
                         : hasAnchorInReservedSlot(level, receipt.source, chunk);
@@ -261,22 +261,25 @@ public final class AnchorForceLoad {
     /**
      * Adds (or renews) the force load of one source. Only used when a source announces itself; the
      * periodic reconcile above is what keeps it honest.
+     * <p>
+     * The forced chunk is the source's own chunk, not the machine's: a dock in a far away chunk has to stay
+     * loaded for its plugins to keep reaching the machine, and an anchor is generally meant to keep the
+     * place it was built in alive. A source that is no longer connected to a machine still loads nothing.
      */
     @SuppressWarnings("deprecation")
     private static void refresh(@Nullable AddonBlockEntity addon) {
         if (addon == null || !(addon.getLevel() instanceof ServerLevel level)) return;
 
         var source = addon.getBlockPos();
-        var machine = machinePosOf(addon);
 
-        if (machine == null || !level.isLoaded(source)) {
+        if (machinePosOf(addon) == null || !level.isLoaded(source)) {
             // The slot was emptied, the addon is not connected (any more) or the source is unloaded: drop
             // whatever this source held. This is also the path that answers a removed anchor item.
             release(level, source);
             return;
         }
 
-        var chunk = ChunkPos.pack(machine);
+        var chunk = ChunkPos.pack(source);
         var existing = find(level, source, chunk);
         var alreadyForced = level.getForceLoadedChunks().contains(chunk);
 
@@ -362,18 +365,19 @@ public final class AnchorForceLoad {
      * True while the addon or dock at that position still holds the anchor item and is connected to a
      * machine.
      * <p>
-     * The reported chunk is only trusted while it is the machine's chunk: a relinked dock or a machine
-     * that was replaced resolves to a different chunk, which is then treated as "not this source any more"
-     * and released. The next {@link #refresh} adds the new one.
+     * The receipt's chunk is the source's own (see {@link #refresh}); a receipt carrying another chunk is a
+     * leftover and is treated as "not this source any more". Being connected is still required: an
+     * unlinked dock, or an addon whose machine is gone, turns the anchor off even though the chunk it
+     * stands in has not changed.
      */
     private static boolean hasAnchorInReservedSlot(ServerLevel level, BlockPos source, long chunk) {
         if (!level.isLoaded(source)) return false;
 
         if (!(level.getBlockEntity(source) instanceof ExtensionAddonBlockEntity addon)) return false;
         if (!holdsAnchor(addon)) return false;
+        if (ChunkPos.pack(source) != chunk) return false;
 
-        var machine = addon.connectedMachinePos();
-        return machine != null && ChunkPos.pack(machine) == chunk;
+        return addon.connectedMachinePos() != null;
     }
 
     /**
@@ -381,10 +385,9 @@ public final class AnchorForceLoad {
      * <p>
      * Two things have to hold: the machine's scan must have marked the anchor as used ({@code addon_used},
      * a synced block state, cleared again when the machine drops the addon), and a machine must be at the
-     * controller position the scan wrote. The machine's chunk is not required to be loaded - forcing a
-     * chunk loads it, so requiring that would keep the feature from ever starting - but when it is loaded
-     * it really has to be a machine, otherwise the anchor is a leftover of a machine that was broken or
-     * replaced.
+     * controller position the scan wrote. The machine's chunk does not have to be loaded - it is not the
+     * chunk this feature keeps loaded - but when it is loaded it really has to be a machine, otherwise the
+     * anchor is a leftover of a machine that was broken or replaced.
      */
     @Nullable
     private static BlockPos machineOf(ChunkAnchorAddonBlockEntity anchor) {
