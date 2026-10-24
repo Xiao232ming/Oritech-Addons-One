@@ -1103,6 +1103,26 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         mergePending = true;
     }
 
+    /**
+     * Merges this block's saved transfer settings into its machine's shared map if that has not happened yet.
+     * <p>
+     * The merge normally runs from the server tick ({@link #serverTickTransfer()}), which retries until the
+     * machine can be named. A screen can open before that first successful tick - right after a world load -
+     * and the map it is sent would then be the machine's still empty shared map instead of what the save file
+     * holds, which is what makes the configured faces of the model lose their colour until the next change.
+     * Asking here, at the moment the map is sent, closes that window.
+     *
+     * @return true while a pending merge ran
+     */
+    public boolean mergeSavedTransferSettings() {
+        if (!mergePending) return false;
+        if (level == null || level.isClientSide() || servedMachinePos() == null) return false;
+
+        syncCellFaces();
+        mergePending = false;
+        return true;
+    }
+
     void syncCellFaces() {
         var machinePos = servedMachinePos();
         if (level == null || level.isClientSide() || machinePos == null) {

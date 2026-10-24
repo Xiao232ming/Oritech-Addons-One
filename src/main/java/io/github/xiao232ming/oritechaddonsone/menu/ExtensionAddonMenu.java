@@ -1,5 +1,9 @@
 package io.github.xiao232ming.oritechaddonsone.menu;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -21,6 +25,8 @@ import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonType;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionTransferAddonBlockEntity;
+import io.github.xiao232ming.oritechaddonsone.block.entity.CellFaceModes;
+import io.github.xiao232ming.oritechaddonsone.block.entity.MachineFaceConfigs;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferFaceModes;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferMode;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferAddonBlockEntity;
@@ -227,7 +233,8 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
         // Resolved here, where the world is: 传输插件's page needs the machine behind the plugin's host extender as
         // well, and neither the extender's controller position nor the plugin's own reaches a client. The field is
         // what the client receives, so it is set on both sides and not only in the buffer (see #servedMachine).
-        this.servedMachine = blockEntity.servedMachinePos();
+        var machine = blockEntity.servedMachinePos();
+        this.servedMachine = machine == null ? null : machine.immutable();
         // resolved on the server, where the target's chunk is loaded whenever the target really exists
         this.linkedMachineNameKey = blockEntity.connectedMachineNameKey();
     }
@@ -719,37 +726,39 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
     // ------------------------------------------------------------------ the map of a transfer plugin stored inside
 
     /**
-     * Position of the 传输插件 whose cell-face map this menu already sent to its player, or {@code null} while
-     * none was sent yet.
+     * Machine whose cell-face map this menu last sent to its player, or {@code null} while none was sent yet.
      * <p>
      * Server side only - {@link #broadcastChanges()} returns on the client before it is read - and per menu,
-     * i.e. per player, which is what the map's second source needs: {@code TransferNetworking#sendFaceModes(Level,
-     * BlockPos)} sends to every player whose open menu belongs to that block, so one flag per menu sends one
-     * packet per player instead of one per player per tick.
+     * i.e. per player, paired with {@link #sentTransferEntries} so one unchanged map costs one packet and not
+     * one per tick.
      */
     @Nullable
     private BlockPos sentTransferMap;
 
+    /** Packed cell-faces of the map last sent to this player, sorted - see {@link #broadcastChanges}. */
+    private List<Integer> sentTransferEntries = List.of();
+
     /**
-     * Sends the cell-face map of a 传输插件 stored in this addon's slots to this player, once per plugin.
+     * Sends this menu's cell-face map to its player whenever the map changed - including the very first time.
      * <p>
      * <b>Why this is needed at all.</b> The map - what every cell-face of the machine is configured to do - is
      * the server's, and it cannot travel with the menu: the container data is a fixed set of slots, while a
      * structure has one setting per face of every cell of it (see {@code TransferNetworking.FaceModes}). The
-     * placed plugin's own screen therefore sends it right after opening the menu
+     * placed plugin's own screen also sends it right after opening the menu
      * ({@code TransferAddonBlock#openPluginMenu}), and every accepted change is answered with the whole map
      * again. An addon's screen had neither: opening it sent no map, so a player who configured a face saw
      * nothing - no colour on the model, and no setting after reopening the GUI - although the server had
      * written it and the automation moved items by it.
      * <p>
-     * <b>Why it runs here.</b> {@link #broadcastChanges()} is the server's per tick hook of an open menu, which
-     * is exactly the moment the map has to be sent - and the moment a plugin can have appeared: the page only
-     * exists while 传输插件 is in the slots, and a plugin put in afterwards was not there when the menu was
-     * opened. It also covers the client, whose screen asks for the page list a moment after the map arrives.
+     * <b>Why it compares the map and not only the machine.</b> A menu can be open before the block's saved
+     * settings have been merged into the machine's shared map (right after a world load, the merge is retried
+     * from the tick). Sending only when the machine changed sent that empty map once and never again, so the
+     * model showed no configured face until the player changed one - the change answered with the whole map.
+     * Comparing the packed entries turns the merge, a change made through another plugin of the machine and the
+     * map itself into the thing that triggers the send, so the page catches up on its own.
      * <p>
      * Nothing is sent while the block does not hold a transfer plugin or holds one that serves no machine -
-     * {@code sendFaceModes} answers nothing for a plain block entity, and a map that is empty costs one packet
-     * that says so.
+     * a map that is empty costs one packet that says so.
      */
     @Override
     public void broadcastChanges() {
@@ -758,18 +767,36 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
         var level = containerLevel();
         if (level == null || level.isClientSide()) return;
 
+        var blockEntity = blockEntity();
+        if (blockEntity == null) return;
+
+        // A screen can open before this block's first server tick after a world load: merge what it saved now,
+        // so the map sent below is not the machine's still empty shared map (see the method).
+        blockEntity.mergeSavedTransferSettings();
+
         // the machine of whichever transfer plugin this menu's block holds or hosts: the settings belong to the
         // machine and a block that serves none has no map to send
-        var machine = blockEntity() == null ? null : blockEntity().servedMachinePos();
+        var machine = blockEntity.servedMachinePos();
         if (machine == null) {
             // INFO while "the config disappears when the UI closes" is being chased: a menu whose block names no
             // machine sends no map, so the page comes back empty although the server still has the settings
             OritechAddonsOne.LOGGER.debug("[transfer] menu {} has no machine to send a map for", position);
             return;
         }
-        if (machine.equals(sentTransferMap)) return;
+        machine = machine.immutable();
+
+        // Send whenever what the map holds changed, not only when this menu first names the machine: the merge
+        // above, a change made through another plugin of the same machine and a face configured a moment ago all
+        // change it, and a page that was sent an empty map with the menu has to see the filled one.
+        var settings = MachineFaceConfigs.cellFaces(level, machine);
+        var entries = new ArrayList<Integer>(settings.configuredFaces());
+        for (var entry : settings.packedEntries()) entries.add(CellFaceModes.pack(entry));
+        Collections.sort(entries);
+
+        if (machine.equals(sentTransferMap) && entries.equals(sentTransferEntries)) return;
 
         sentTransferMap = machine;
+        sentTransferEntries = entries;
         TransferNetworking.sendFaceModes(level, machine);
     }
 
