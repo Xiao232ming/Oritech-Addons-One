@@ -807,7 +807,7 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
             } else {
                 syncCellFaces();
                 mergePending = false;
-                OritechAddonsOne.LOGGER.info(
+                OritechAddonsOne.LOGGER.debug(
                         "[transfer] merged the saved settings of {} into machine {}: shared now {} face(s)",
                         worldPosition, machinePos, MachineFaceConfigs.cellFaces(level, machinePos).configuredFaces());
             }
@@ -821,7 +821,7 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
                 // settings are merged into and the map the automation reads have to be the same one - and
                 // they come from two different resolutions (connectedMachinePos, servedMachinePos).
                 if (diagnosticsDue()) {
-                    OritechAddonsOne.LOGGER.info(
+                    OritechAddonsOne.LOGGER.debug(
                             "[transfer] {} holds a plugin but has no automated face: connected {}, served {}, "
                                     + "map here {} face(s) {}, map there {} face(s) {}, own copy {} face(s): {}",
                             worldPosition, connectedMachinePos(), servedMachinePos(),
@@ -844,7 +844,7 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
 
             var machine = MachineFaceStorage.machineStorage(this);
             if (machine == null && diagnosticsDue()) {
-                OritechAddonsOne.LOGGER.info(
+                OritechAddonsOne.LOGGER.debug(
                         "[transfer] face {} of {} is {} and automated, but the machine's inventory is not resolvable (machine {})",
                         face, worldPosition, mode, connectedMachinePos());
                 continue;
@@ -857,7 +857,7 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
 
             var neighbour = MachineFaceStorage.storageAt(level, worldPosition, face);
             if (neighbour == null && diagnosticsDue()) {
-                OritechAddonsOne.LOGGER.info(
+                OritechAddonsOne.LOGGER.debug(
                         "[transfer] face {} of {} is {} and automated, but {} holds no item handler",
                         face, worldPosition, mode, worldPosition.relative(face));
                 continue;
@@ -893,7 +893,7 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
             }
 
             if (out + in <= 0 && diagnosticsDue()) {
-                OritechAddonsOne.LOGGER.info(
+                OritechAddonsOne.LOGGER.debug(
                         "[transfer] face {} mode {} of {} moved nothing: neighbour {}, out {}, in {}",
                         face, mode, worldPosition, neighbour.getClass().getSimpleName(), out, in);
             }
@@ -970,7 +970,7 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
                 // INFO while "the items do not move" is being chased: a cell-face that moved something is the
                 // one thing that proves the settings, the machine and both handlers all worked - and it names
                 // the count and the direction, so "nothing moved" and "moved the wrong way" differ at a glance.
-                OritechAddonsOne.LOGGER.info(
+                OritechAddonsOne.LOGGER.debug(
                         "[transfer] cell {} face {} mode {} of {}: neighbour {}, out {}, in {}",
                         entry.cell(), entry.face(), mode, worldPosition,
                         neighbour.getClass().getSimpleName(), out, in);

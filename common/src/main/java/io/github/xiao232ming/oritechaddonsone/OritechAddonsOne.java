@@ -42,6 +42,9 @@ import io.github.xiao232ming.oritechaddonsone.block.entity.ChunkAnchorAddonBlock
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtenderFaceStorage;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionTransferAddonBlockEntity;
+import io.github.xiao232ming.oritechaddonsone.block.entity.FacePluginStorage;
+import io.github.xiao232ming.oritechaddonsone.block.entity.MachineFaceConfigs;
+import io.github.xiao232ming.oritechaddonsone.block.entity.MachineSlotRoles;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.WirelessExtensionAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.item.ExtensionAddonItem;
@@ -464,6 +467,17 @@ public class OritechAddonsOne {
     /** Registry path of the wireless variant of a type, e.g. {@code wireless_extension_addon_1}. */
     private static String wirelessId(ExtensionAddonType type) {
         return "wireless_" + type.id();
+    }
+
+    /**
+     * Drops the runtime caches that describe machines and their hosts, called from each loader's server-stopped
+     * hook. They are static and keyed by dimension and position, so without this a second world in the same
+     * process would read the first one's settings, and the cached block entities would keep the old levels alive.
+     */
+    public static void clearServerCaches() {
+        MachineFaceConfigs.clear();
+        MachineSlotRoles.clear();
+        FacePluginStorage.clear();
     }
 
     /**

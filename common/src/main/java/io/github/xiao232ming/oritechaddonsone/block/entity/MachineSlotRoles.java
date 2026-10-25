@@ -50,15 +50,19 @@ import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 public final class MachineSlotRoles {
 
     /**
-     * Role list of every machine position a handler ever asked about, mapped to the array itself. Bounded by
-     * the number of machines that were ever reached through a configured face, and one small array each -
-     * the entries are deliberately never dropped, exactly like the face handler caches of
-     * {@link MachineFaceStorage} and {@link ExtenderFaceStorage}, and a stale entry can never be read
-     * because the cache is validated against the block entity and the inventory size before it is used.
+     * Role list of every machine position a handler ever asked about, mapped to the array itself. A stale entry is
+     * never read because the cache is validated against the block entity and the inventory size before it is used,
+     * and it is cleared when the server stops ({@link #clear()}): an entry holds the machine's block entity (and
+     * through it its level), so keeping the entries past a world would keep the old level alive.
      */
     private static final Map<BlockPos, CacheEntry> CACHE = new ConcurrentHashMap<>();
 
     private MachineSlotRoles() {
+    }
+
+    /** Drops every remembered role list, called when the server stops. */
+    public static void clear() {
+        CACHE.clear();
     }
 
     /** One remembered answer: the machine it was computed for, its inventory size and the roles. */

@@ -184,25 +184,34 @@ public final class MachineFaceConfigs {
                 dropped == null ? 0 : dropped.cells.configuredFaces());
     }
 
+    /** Drops every machine's runtime settings, called when the server stops. */
+    public static void clear() {
+        SHARED.clear();
+    }
+
     // ------------------------------------------------------------------ save data
 
     /**
      * Writes the machine's settings as one packed int per configured cell-face, into the save data of the block
      * that is asking, plus the machine's six faces.
      * <p>
-     * Every block that serves the machine writes the whole map, so any one of them is enough to restore it. That
-     * is deliberate: the alternative - electing one owner - would need the other blocks to know about it, and
-     * this way a machine whose plugins are taken apart and rebuilt still comes back with its settings.
+     * <b>A block that serves no machine writes its own copy instead of the shared map.</b> The shared map is keyed by
+     * the machine, so a block whose machine is unknown (an unlinked dock, a plugin no machine claimed, or a dock
+     * whose link was dropped because it was moved to another dimension) has no map to write - writing the empty
+     * shared map would erase the settings the block still carries. While a machine is named the shared map is the
+     * union of every plugin serving it and stays the source of truth, so a change made through another plugin is
+     * never reverted by a block that did not see it.
      */
     public static void save(ExtensionAddonBlockEntity block, CompoundTag nbt, HolderLookup.Provider registries) {
-        var faces = faceModes(block);
+        var machine = block.servedMachinePos();
+        var faces = machine == null ? block.savedTransferFaces() : faceModes(block);
         var faceValues = new int[Direction.values().length];
         for (var face : Direction.values()) {
             faceValues[face.ordinal()] = TransferFaceModes.pack(faces.modeOf(face), faces.automationOf(face));
         }
         nbt.putIntArray(FACE_TAG, faceValues);
 
-        var settings = cellFaces(block);
+        var settings = machine == null ? block.savedCellFaces() : cellFaces(block);
         var values = new ArrayList<Integer>(settings.configuredFaces());
         for (var entry : settings.packedEntries()) {
             values.add(CellFaceModes.pack(entry.cell(), entry.face(), entry.value()));
@@ -212,12 +221,14 @@ public final class MachineFaceConfigs {
         for (int index = 0; index < packed.length; index++) packed[index] = values.get(index);
         nbt.putIntArray(CELL_TAG, packed);
 
-        // the filters belong to the machine just like the modes do, so every block that serves it writes the
-        // whole map as well - any one of them is enough to restore the configuration. They are the one part of
-        // this save that is not a packed int per entry: a listed item is an ItemStack, which needs the
-        // registries of the block that is being written.
-        faceFilters(block).save(nbt, registries);
-        cellFilters(block).save(nbt, registries);
+        // the filters follow the same rule: the shared map while a machine is named, the block's own copy otherwise
+        if (machine == null) {
+            block.savedFaceFilters().save(nbt, registries);
+            block.savedCellFilters().save(nbt, registries);
+        } else {
+            faceFilters(block).save(nbt, registries);
+            cellFilters(block).save(nbt, registries);
+        }
     }
 
     /** Reads the machine's settings back out of the block's save data; see {@link #save}. */

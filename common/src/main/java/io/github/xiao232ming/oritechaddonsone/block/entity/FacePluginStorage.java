@@ -7,6 +7,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
@@ -44,13 +45,13 @@ import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
  * {@link Direction#EAST} and stands on the face this storage must answer for. A hopper does the same with its own
  * facing. There is no translation to do here; the side is already the host's face.
  * <p>
- * <b>One object per host position and face, forever.</b> On this branch the capability wrapper Oritech builds for
- * us ({@code NeoforgeItemApiImpl.ContainerStorageWrapper}) holds the storage a face answered with, and the
- * {@code BlockLookupCache} of Oritech's own pipes keeps that answer until the level invalidates the position, so
- * the instance must never be replaced. Everything that can change - which plugin hangs where, its modes, the
- * machine behind the host - is therefore resolved fresh inside each call; the cache exists for identity, not for
- * staleness. It is keyed by the host position and grows only where a pipe really asked a host with a plugin on it,
- * which keeps it tiny in practice.
+ * <b>One object per host position and face, for as long as the host lives.</b> On this branch the capability wrapper
+ * Oritech builds for us ({@code NeoforgeItemApiImpl.ContainerStorageWrapper}) holds the storage a face answered with,
+ * and the {@code BlockLookupCache} of Oritech's own pipes keeps that answer until the level invalidates the position,
+ * so the instance must stay the same while the host block entity does. Everything that can change - which plugin hangs
+ * where, its modes, the machine behind the host - is therefore resolved fresh inside each call; the cache exists for
+ * identity, not for staleness. It is keyed by the <b>dimension and position</b> of the host, and is cleared when the
+ * server stops, so a new world never reuses a storage of an old one.
  * <p>
  * <b>Fail safe:</b> a face with no mode, a host no plugin hangs on, a host no machine has claimed, an unloaded
  * chunk and a host that has been unloaded long enough to be collected all resolve to "no inventory" - this storage
@@ -60,15 +61,14 @@ import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 public class FacePluginStorage extends DelegatingInventoryStorage {
 
     /**
-     * Storage of every host position and face that was ever asked, indexed by {@link Direction#ordinal()} - see the
-     * class comment for why the objects are kept.
+     * Storage of every host dimension and position that was ever asked, indexed by {@link Direction#ordinal()} - see
+     * the class comment for why the objects are kept.
      * <p>
-     * Bounded in practice by "one entry per host position a pipe ever asked about", and the entry is a fixed six
-     * element array, so a server that has seen <i>n</i> hosts asked about holds six references of <i>n</i>. It is
-     * deliberately not a cache of answers - the answers are re-resolved on every call, so a stale entry can never be
-     * seen; the map only preserves the identity of the storage objects.
+     * The entry is a fixed six element array. It is deliberately not a cache of answers - the answers are re-resolved
+     * on every call, so a stale entry can never be seen; the map only preserves the identity of the storage objects.
+     * It is cleared when the server stops ({@link #clear()}).
      */
-    private static final Map<BlockPos, FacePluginStorage[]> HANDLERS = new ConcurrentHashMap<>();
+    private static final Map<GlobalPos, FacePluginStorage[]> HANDLERS = new ConcurrentHashMap<>();
 
     /**
      * How many nanoseconds have to pass between two "this face answered nothing" diagnostic lines. A pipe asks its
@@ -79,11 +79,11 @@ public class FacePluginStorage extends DelegatingInventoryStorage {
     private static final long DIAGNOSTIC_INTERVAL_NANOS = 1_000_000_000L;
 
     /**
-     * Last time the diagnostic line of a host position was written. Keyed by position only - and not by position and
-     * face - so a host cannot flood the log even while a pipe walks all six faces. Entries are never removed, which
-     * is bounded by the number of hosts ever asked about, exactly like {@link #HANDLERS}.
+     * Last time the diagnostic line of a host was written. Keyed by dimension and position only - and not by position
+     * and face - so a host cannot flood the log even while a pipe walks all six faces. Entries are cleared with
+     * {@link #HANDLERS}.
      */
-    private static final Map<BlockPos, AtomicLong> LAST_DIAGNOSTIC = new ConcurrentHashMap<>();
+    private static final Map<GlobalPos, AtomicLong> LAST_DIAGNOSTIC = new ConcurrentHashMap<>();
 
     /**
      * Which plugin configures one face of the host, i.e. the one question a placement has to answer.
@@ -170,16 +170,22 @@ public class FacePluginStorage extends DelegatingInventoryStorage {
             MachineLookup machine, HandlerFactory create) {
         if (face == null) return null;
 
+        var level = host.getLevel();
+        if (level == null) return null;
+
         var pos = host.getBlockPos();
         if (lookup.modeOf(host, face) == TransferMode.NONE) {
-            logNothingAnswered(pos, face);
+            logNothingAnswered(GlobalPos.of(level.dimension(), pos), face);
             return null;
         }
 
-        var handlers = HANDLERS.computeIfAbsent(pos.immutable(),
-                key -> new FacePluginStorage[Direction.values().length]);
+        var key = GlobalPos.of(level.dimension(), pos.immutable());
+        var handlers = HANDLERS.computeIfAbsent(key,
+                ignored -> new FacePluginStorage[Direction.values().length]);
         var existing = handlers[face.ordinal()];
-        if (existing != null) return existing;
+        // the block entity at a position can be replaced (and the same coordinates in another world are a
+        // different host as well): only reuse the storage while it still belongs to this very host
+        if (existing != null && existing.host.get() == host) return existing;
 
         var created = create.create(host, face, lookup, machine);
         handlers[face.ordinal()] = created;
@@ -189,16 +195,22 @@ public class FacePluginStorage extends DelegatingInventoryStorage {
         return created;
     }
 
-    /** Writes the "answered nothing" diagnostic line, but at most once a second per host position. */
-    private static void logNothingAnswered(BlockPos pos, Direction face) {
-        var last = LAST_DIAGNOSTIC.computeIfAbsent(pos.immutable(), ignored -> new AtomicLong(Long.MIN_VALUE));
+    /** Drops every storage and diagnostic stamp, called when the server stops. */
+    public static void clear() {
+        HANDLERS.clear();
+        LAST_DIAGNOSTIC.clear();
+    }
+
+    /** Writes the "answered nothing" diagnostic line, but at most once a second per host. */
+    private static void logNothingAnswered(GlobalPos key, Direction face) {
+        var last = LAST_DIAGNOSTIC.computeIfAbsent(key, ignored -> new AtomicLong(Long.MIN_VALUE));
         var now = System.nanoTime();
         var previous = last.get();
 
         if (previous != Long.MIN_VALUE && now - previous < DIAGNOSTIC_INTERVAL_NANOS) return;
         if (!last.compareAndSet(previous, now)) return;
 
-        OritechAddonsOne.LOGGER.debug("[transfer] capability: {} face {} answered nothing", pos, face);
+        OritechAddonsOne.LOGGER.debug("[transfer] capability: {} face {} answered nothing", key, face);
     }
 
     /**

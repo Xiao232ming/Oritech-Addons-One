@@ -3,6 +3,7 @@ package io.github.xiao232ming.oritechaddonsone.fabric;
 import fuzs.forgeconfigapiport.fabric.api.neoforge.v4.NeoForgeConfigRegistry;
 
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.neoforged.fml.config.ModConfig;
 
 import io.github.xiao232ming.oritechaddonsone.Config;
@@ -25,5 +26,8 @@ public class OritechAddonsOneFabric implements ModInitializer {
 
         // Fabric 的注册表在 mod 初始化期间是开放的，所以这里可以直接解析插件集合并打日志
         OritechAddonsOne.logSetup();
+
+        // 服务器停止时丢掉按维度+坐标缓存的机器数据，否则同一进程里的下一个世界会读到上一个世界的设置
+        ServerLifecycleEvents.SERVER_STOPPED.register(server -> OritechAddonsOne.clearServerCaches());
     }
 }

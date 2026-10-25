@@ -5,6 +5,8 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 
 import io.github.xiao232ming.oritechaddonsone.Config;
 import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
@@ -31,5 +33,8 @@ public final class OritechAddonsOneNeoForge {
 
         // 注册完成后再解析插件集合（那里会读 Oritech 的 BlockContent，构造阶段注册表已冻结，不能提前）
         modEventBus.addListener(FMLCommonSetupEvent.class, event -> event.enqueueWork(OritechAddonsOne::logSetup));
+
+        // 服务器停止时丢掉按维度+坐标缓存的机器数据，否则同一进程里的下一个世界会读到上一个世界的设置
+        NeoForge.EVENT_BUS.addListener((ServerStoppedEvent event) -> OritechAddonsOne.clearServerCaches());
     }
 }
