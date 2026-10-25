@@ -99,30 +99,29 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
      * the slots of the machine, nothing of the player's.
      */
     private boolean playerSlotsActive = true;
-    /** Client side copy of {@link #targetChunkForceLoadedSlot} (the server computes the value itself). */
-    private boolean targetChunkForceLoaded;
+    /** Client side copy of {@link #ownChunkForceLoadedSlot} (the server computes the value itself). */
+    private boolean ownChunkForceLoaded;
 
     /**
-     * Container data slot 0: whether the chunk of the connected machine is force loaded, i.e. kept loaded
-     * without a player nearby. Both variants answer it - a wired addon by the chunk of the machine it is
-     * attached to, a dock by the chunk of the machine it is linked to - see
-     * {@link ExtensionAddonBlockEntity#isTargetChunkForceLoaded()}.
+     * Container data slot 0: whether the chunk this addon stands in is force loaded, i.e. kept loaded without a
+     * player nearby. Both variants answer it for their own chunk, which is the chunk the anchor plugin keeps
+     * loaded - see {@link ExtensionAddonBlockEntity#isOwnChunkForceLoaded()}.
      * <p>
      * Oritech's synced fields would need a networked block entity, and the addons are plain ones, so the
      * value is published through vanilla's container data instead: the server polls it on every menu tick
      * and sends it only when it changed, which is the same "resolve it on the server, tell the client when
      * it changes" shape the rest of this mod uses for GUI values.
      */
-    private final DataSlot targetChunkForceLoadedSlot = new DataSlot() {
+    private final DataSlot ownChunkForceLoadedSlot = new DataSlot() {
         @Override
         public int get() {
-            if (clientSide) return targetChunkForceLoaded ? 1 : 0;
-            return container instanceof ExtensionAddonBlockEntity addon && addon.isTargetChunkForceLoaded() ? 1 : 0;
+            if (clientSide) return ownChunkForceLoaded ? 1 : 0;
+            return container instanceof ExtensionAddonBlockEntity addon && addon.isOwnChunkForceLoaded() ? 1 : 0;
         }
 
         @Override
         public void set(int value) {
-            targetChunkForceLoaded = value != 0;
+            ownChunkForceLoaded = value != 0;
         }
     };
 
@@ -138,7 +137,7 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
      * The bindings live in the block entity's save data, which only the server writes, and the addons are
      * plain block entities rather than networked ones, so nothing of them reaches a client on its own. The
      * server therefore publishes one value per face here and vanilla keeps the client's copy up to date,
-     * exactly like {@link #targetChunkForceLoadedSlot}. That is what makes the page's counter, its green
+     * exactly like {@link #ownChunkForceLoadedSlot}. That is what makes the page's counter, its green
      * face markers and the selection plate of an already configured face correct on the client, and what
      * keeps a binding visible when the configuration page of that face is reopened.
      */
@@ -276,11 +275,11 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
     }
 
     /**
-     * True while the chunk of the connected machine is force loaded, i.e. kept loaded without a player
-     * nearby. On the server this is the value of this tick, on the client the value the server last sent.
+     * True while the chunk this addon stands in is force loaded, i.e. kept loaded without a player nearby. On
+     * the server this is the value of this tick, on the client the value the server last sent.
      */
-    public boolean targetChunkForceLoaded() {
-        return targetChunkForceLoadedSlot.get() != 0;
+    public boolean ownChunkForceLoaded() {
+        return ownChunkForceLoadedSlot.get() != 0;
     }
 
     /** Index of the reserved single item slot of the wireless page. */
@@ -397,7 +396,7 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
             addSlot(playerSlot(inventory, column, 8 + column * 18, layout.hotbarY()));
         }
 
-        addDataSlot(targetChunkForceLoadedSlot);
+        addDataSlot(ownChunkForceLoadedSlot);
 
         // One data slot per face, so the client's page sees the bindings the server wrote: the counter, the
         // green marker on a configured face and the selection plate all read them (see #proxyFaceSlot).

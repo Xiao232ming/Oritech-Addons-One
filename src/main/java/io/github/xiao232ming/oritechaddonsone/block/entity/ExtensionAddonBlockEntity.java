@@ -249,18 +249,20 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
     }
 
     /**
-     * True while the chunk of the connected machine is force loaded, i.e. while something keeps that chunk
-     * loaded on purpose - see {@link ForceLoadedChunks} for what counts (vanilla {@code /forceload}, the
+     * True while the chunk <b>this addon itself stands in</b> is force loaded, i.e. while something keeps that
+     * chunk loaded on purpose - see {@link ForceLoadedChunks} for what counts (vanilla {@code /forceload}, the
      * spawn area and force load tickets from other mods).
      * <p>
-     * It is the one value the GUI's status badge shows for both variants. False while there is no machine at
-     * all (nothing is kept loaded then), while the machine is in an unloaded chunk and while the chunk is
-     * only loaded because a player is nearby or because this mod looked the target up - looking a block up
-     * loads its chunk through vanilla's short lived {@code unknown} ticket, which is not a force load.
-     * Read on the server, see {@code ExtensionAddonMenu#targetChunkForceLoaded()}.
+     * It is the one value the GUI's status badge shows for both variants, and it answers for the addon's own
+     * chunk on purpose: that is the chunk the anchor plugin in the wireless page's reserved slot keeps loaded
+     * (see {@code AnchorForceLoad}), while the chunk of the machine this addon is attached to or linked to is
+     * never forced by this mod. False while the block is not in a level, and while its chunk is only loaded
+     * because a player is nearby or because this mod looked a block up - looking a block up loads its chunk
+     * through vanilla's short lived {@code unknown} ticket, which is not a force load.
+     * Read on the server, see {@code ExtensionAddonMenu#ownChunkForceLoaded()}.
      */
-    public boolean isTargetChunkForceLoaded() {
-        return ForceLoadedChunks.isForceLoaded(level, connectedMachinePos());
+    public boolean isOwnChunkForceLoaded() {
+        return ForceLoadedChunks.isForceLoaded(level, worldPosition);
     }
 
     // ------------------------------------------------------------------ storage bonuses
