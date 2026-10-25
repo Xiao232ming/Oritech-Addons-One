@@ -121,8 +121,8 @@ public class WirelessExtensionAddonBlockEntity extends ExtensionAddonBlockEntity
         return linkedMachine;
     }
 
-    // The inherited isTargetChunkForceLoaded() answers for the link as well, because it follows
-    // connectedMachinePos() - a dock that is not linked has no target and therefore nothing kept loaded.
+    // The inherited isOwnChunkForceLoaded() answers for this block's own chunk on both variants - the chunk the
+    // anchor plugin keeps loaded is the addon's, not the machine's (see ExtensionAddonBlockEntity).
 
     public boolean isLinkedTo(BlockPos machine) {
         return linkedMachine != null && linkedMachine.equals(machine);

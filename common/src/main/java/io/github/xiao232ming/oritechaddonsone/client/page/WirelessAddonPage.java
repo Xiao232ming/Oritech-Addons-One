@@ -157,26 +157,25 @@ public final class WirelessAddonPage implements AddonPage {
 
     /**
      * The text of the force load line. Its wording is still the plain "chunk loaded / not loaded" pair, but
-     * the value behind it is the force load state of the connected machine's chunk - see
-     * {@link ExtensionAddonMenu#targetChunkForceLoaded()}.
+     * the value behind it is the force load state of the chunk this addon itself stands in - see
+     * {@link ExtensionAddonMenu#ownChunkForceLoaded()}.
      */
     public static Component forceLoadStatus(ExtensionAddonMenu menu) {
-        return Component.translatable(menu.targetChunkForceLoaded() ? CHUNK_FORCE_LOADED_YES_KEY : CHUNK_FORCE_LOADED_NO_KEY);
+        return Component.translatable(menu.ownChunkForceLoaded() ? CHUNK_FORCE_LOADED_YES_KEY : CHUNK_FORCE_LOADED_NO_KEY);
     }
 
     /**
      * The force load state as the last info line of the page, in the green / red of the panel's own info
      * text.
      * <p>
-     * The value comes from {@link ExtensionAddonMenu#targetChunkForceLoaded()}, which the server resolves and
+     * The value comes from {@link ExtensionAddonMenu#ownChunkForceLoaded()}, which the server resolves and
      * pushes over a container data slot whenever it changes, so the line is live without the client looking
-     * anything up. Green means the machine's chunk is kept loaded (vanilla {@code /forceload}, the spawn area
-     * or another mod's force load), red means it is not (nothing is linked or claimed, or the chunk is only
-     * loaded because a player is nearby).
+     * anything up. Green means this addon's chunk is kept loaded (vanilla {@code /forceload}, the spawn area
+     * or another mod's force load), red means it is not (the chunk is only loaded because a player is nearby).
      */
     private static Line forceLoadLine(ExtensionAddonMenu menu) {
         return new Line(forceLoadStatus(menu),
-                menu.targetChunkForceLoaded() ? AddonPanelStyle.PANEL_TEXT_GOOD : AddonPanelStyle.PANEL_TEXT_BAD);
+                menu.ownChunkForceLoaded() ? AddonPanelStyle.PANEL_TEXT_GOOD : AddonPanelStyle.PANEL_TEXT_BAD);
     }
 
     /**
@@ -184,7 +183,7 @@ public final class WirelessAddonPage implements AddonPage {
      * <p>
      * A wired addon has the name of the machine it is attached to, a dock its whole binding. A dock that is
      * not linked, and a wired addon no machine ever claimed, show the same "not linked" line the under-panel
-     * line used to show. The force load state of that machine's chunk is the <b>last</b> line of all of them,
+     * line used to show. The force load state of the addon's own chunk is the <b>last</b> line of all of them,
      * so on a dock it sits right under the coordinates it belongs to.
      */
     private static List<Line> infoLines(ExtensionAddonMenu menu) {
