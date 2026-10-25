@@ -11,6 +11,7 @@ import net.minecraft.world.level.block.state.BlockState;
 
 import org.jetbrains.annotations.Nullable;
 
+import rearth.oritech.api.fluid.FluidApi;
 import rearth.oritech.api.item.ItemApi;
 import rearth.oritech.api.item.containers.DelegatingInventoryStorage;
 import rearth.oritech.block.entity.addons.AddonBlockEntity;
@@ -245,7 +246,8 @@ public class ExtensionTransferAddonBlockEntity extends ExtensionAddonBlockEntity
         if (!hangsOnExtender()) return;
 
         var machine = MachineFaceStorage.machineStorageAt(level, attachedMachinePos());
-        if (machine == null) return;
+        var machineFluid = MachineFaceStorage.machineFluidStorageAt(level, attachedMachinePos());
+        if (machine == null && machineFluid == null) return;
 
         var hostPos = hostPos();
         var skipped = ExtensionTransferAddonBlock.attachedFace(getBlockState());
@@ -267,18 +269,29 @@ public class ExtensionTransferAddonBlockEntity extends ExtensionAddonBlockEntity
             if (hostPos.relative(face).equals(machinePos)) continue;
 
             var neighbour = MachineFaceStorage.storageAt(level, hostPos, face);
-            if (neighbour == null) continue;
+            var neighbourFluid = MachineFaceStorage.fluidStorageAt(level, hostPos, face);
+            if (neighbour == null && neighbourFluid == null) continue;
 
             // Each direction is gated by its own filter (see #faceFilter): the OUTPUT one decides what may leave
             // the machine through this face, the INPUT one what may enter it. These faces are the machine's
             // own six faces, so they are exactly the ones the Extension Transfer page's 过滤 button writes.
+            if (neighbour != null && machine != null) {
+                if (mode.allowsExtract()) {
+                    MachineFaceStorage.move(machine, machineEntity, neighbour, null, MachineFaceStorage.itemsPerTick(),
+                            faceFilter(face, TransferMode.OUTPUT));
+                }
+                if (mode.allowsInsert()) {
+                    MachineFaceStorage.move(neighbour, null, machine, machineEntity, MachineFaceStorage.itemsPerTick(),
+                            faceFilter(face, TransferMode.INPUT));
+                }
+            }
+
+            // Fluids use the same two directions and the same per-tick budget, without item filters.
             if (mode.allowsExtract()) {
-                MachineFaceStorage.move(machine, machineEntity, neighbour, null, MachineFaceStorage.itemsPerTick(),
-                        faceFilter(face, TransferMode.OUTPUT));
+                MachineFaceStorage.moveFluid(machineFluid, neighbourFluid, MachineFaceStorage.fluidsPerTick());
             }
             if (mode.allowsInsert()) {
-                MachineFaceStorage.move(neighbour, null, machine, machineEntity, MachineFaceStorage.itemsPerTick(),
-                        faceFilter(face, TransferMode.INPUT));
+                MachineFaceStorage.moveFluid(neighbourFluid, machineFluid, MachineFaceStorage.fluidsPerTick());
             }
         }
     }
@@ -328,6 +341,16 @@ public class ExtensionTransferAddonBlockEntity extends ExtensionAddonBlockEntity
     @Override
     public ItemApi.InventoryStorage getInventoryStorage(Direction direction) {
         return emptyStorage;
+    }
+
+    /**
+     * Nothing, for the same reason as {@link #getInventoryStorage}: the net's faces are the extender's, so a
+     * pipe that looks at the plugin block itself must not see the machine's tanks either.
+     */
+    @Override
+    @Nullable
+    public FluidApi.FluidStorage getFluidStorage(@Nullable Direction direction) {
+        return null;
     }
 
     // ------------------------------------------------------------------ the extender's capability cache

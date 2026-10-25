@@ -8,6 +8,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 
 import org.jetbrains.annotations.Nullable;
 
+import rearth.oritech.api.fluid.FluidApi;
 import rearth.oritech.api.item.ItemApi;
 import rearth.oritech.api.item.containers.DelegatingInventoryStorage;
 import rearth.oritech.util.MachineAddonController;
@@ -65,6 +66,11 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
         return Config.transferItemsPerTick();
     }
 
+    /** How much fluid one face moves per tick and direction, in mB (see {@link Config#transferFluidPerTick()}). */
+    public static int fluidsPerTick() {
+        return Config.transferFluidPerTick();
+    }
+
     private final BlockEntity owner;
     /** Face this storage belongs to, resolved against the block entity on every call. */
     private final Direction face;
@@ -113,7 +119,84 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
     }
 
     /**
-     * Position of the machine an addon works on, or {@code null} while this block does not work on one. The
+     * The fluid storage of the machine an addon works on, or {@code null} while it has none - the fluid
+     * counterpart of {@link #machineStorage(BlockEntity)}.
+     */
+    @Nullable
+    public static FluidApi.FluidStorage machineFluidStorage(BlockEntity owner) {
+        if (!(owner instanceof ExtensionAddonBlockEntity addon)) return null;
+        return machineFluidStorageAt(addon.getLevel(), addon.connectedMachinePos());
+    }
+
+    /**
+     * The fluid storage of the block at {@code machinePos}, or {@code null} while there is none (no position,
+     * unloaded chunk, block entity gone, a block without a tank).
+     */
+    @Nullable
+    public static FluidApi.FluidStorage machineFluidStorageAt(@Nullable Level level, @Nullable BlockPos machinePos) {
+        if (level == null || machinePos == null || !level.isLoaded(machinePos)) return null;
+        return FluidApi.BLOCK.find(level, machinePos, null);
+    }
+
+    /**
+     * The fluid storage of the block outside one face of the block at {@code pos} - the tank automation moves
+     * fluids with - or {@code null} while there is none. The side is asked for as the neighbour's own face
+     * pointing back at that block, then without a side, exactly like {@link #storageAt}.
+     */
+    @Nullable
+    public static FluidApi.FluidStorage fluidStorageAt(@Nullable Level level, BlockPos pos, Direction face) {
+        if (level == null) return null;
+
+        var neighbourPos = pos.relative(face);
+        if (!level.isLoaded(neighbourPos)) return null;
+
+        var side = FluidApi.BLOCK.find(level, neighbourPos, face.getOpposite());
+        if (side != null) return side;
+
+        return FluidApi.BLOCK.find(level, neighbourPos, null);
+    }
+
+    /**
+     * Moves up to {@code amount} mB of fluid from {@code from} to {@code to} and reports how much was moved.
+     * No filters and no slot roles: a face moves whatever fluid its two handlers hold, in the direction its
+     * mode allows.
+     */
+    public static long moveFluid(@Nullable FluidApi.FluidStorage from, @Nullable FluidApi.FluidStorage to,
+            long amount) {
+        if (from == null || to == null) return 0;
+
+        var budget = Math.max(1L, Math.min(amount, fluidsPerTick()));
+        long moved = 0;
+
+        for (var stack : from.getContent()) {
+            if (budget <= 0) break;
+            if (stack == null || stack.isEmpty()) continue;
+
+            var offered = stack.copyWithAmount(Math.min(budget, stack.getAmount()));
+            var accepted = to.insert(offered.copy(), true);
+            if (accepted <= 0) continue;
+
+            var extracted = from.extract(offered.copyWithAmount(accepted), false);
+            if (extracted <= 0) continue;
+
+            var inserted = to.insert(offered.copyWithAmount(extracted), false);
+            if (inserted == extracted) {
+                from.update();
+                to.update();
+                moved += inserted;
+                budget -= inserted;
+            } else {
+                // Put back what the target did not take, so a failed insert cannot delete fluid.
+                if (extracted > inserted) from.insert(offered.copyWithAmount(extracted - inserted), false);
+                from.update();
+                to.update();
+            }
+        }
+
+        return moved;
+    }
+
+    /**
      * one place the machine position is derived from the addon, so the inventory
      * ({@link #machineStorage(BlockEntity)}) and the slot roles of that inventory
      * ({@link MachineSlotRoles}) can never be looked up for two different machines.

@@ -442,6 +442,10 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
     private final java.util.EnumMap<Direction, MachineFaceStorage> faceStorages =
             new java.util.EnumMap<>(Direction.class);
 
+    /** Fluid counterpart of {@link #faceStorages}; one storage per face, created on demand and kept. */
+    private final java.util.EnumMap<Direction, MachineFaceFluidStorage> fluidStorages =
+            new java.util.EnumMap<>(Direction.class);
+
     /** Number of inventory proxy addons stored in this block (a stack of them counts per item). */
     public int inventoryProxyCount() {
         return countPlugins(BlockContent.MACHINE_INVENTORY_PROXY_ADDON);
@@ -842,64 +846,68 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
             return;
         }
 
+        var machinePos = connectedMachinePos();
+        var machine = MachineFaceStorage.machineStorage(this);
+        var machineFluid = MachineFaceStorage.machineFluidStorage(this);
+
         for (var face : Direction.values()) {
             var mode = faces.modeOf(face);
             if (mode == TransferMode.NONE || !faces.automationOf(face)) continue;
 
-            var machine = MachineFaceStorage.machineStorage(this);
-            if (machine == null && diagnosticsDue()) {
-                OritechAddonsOne.LOGGER.debug(
-                        "[transfer] face {} of {} is {} and automated, but the machine's inventory is not resolvable (machine {})",
-                        face, worldPosition, mode, connectedMachinePos());
-                continue;
-            }
-
             // The face the machine itself sits on has no container to trade with: moving "machine to
             // neighbour" there would shuffle the machine's own items through its own inventory, so it is
             // skipped. All the other faces are free.
-            if (worldPosition.relative(face).equals(connectedMachinePos())) continue;
+            if (machinePos != null && worldPosition.relative(face).equals(machinePos)) continue;
 
             var neighbour = MachineFaceStorage.storageAt(level, worldPosition, face);
-            if (neighbour == null && diagnosticsDue()) {
-                OritechAddonsOne.LOGGER.debug(
-                        "[transfer] face {} of {} is {} and automated, but {} holds no item handler",
-                        face, worldPosition, mode, worldPosition.relative(face));
+            var neighbourFluid = MachineFaceStorage.fluidStorageAt(level, worldPosition, face);
+            if (neighbour == null && neighbourFluid == null) {
+                if (diagnosticsDue()) {
+                    OritechAddonsOne.LOGGER.debug(
+                            "[transfer] face {} of {} is {} and automated, but {} holds no item or fluid handler",
+                            face, worldPosition, mode, worldPosition.relative(face));
+                }
                 continue;
             }
 
             // The machine's own block entity, exactly as the cell-face loop resolves it: the roles of the
             // machine's slots - which of them are inputs and which are outputs - are read from the block entity
-            // the inventory belongs to, and the plugin block is not that entity. Handing the plugin over instead
-            // made every role unknown, and an unknown role means "put it in the first slot that takes it": the
-            // machine's products were then filled into the slots its recipes read from, and its output slots
-            // were filled with raw material while nothing emptied them (see MachineFaceStorage#insertInto).
-            var machineEntity = level.isLoaded(connectedMachinePos())
-                    ? level.getBlockEntity(connectedMachinePos()) : null;
+            // the inventory belongs to, and the plugin block is not that entity.
+            var machineEntity = machinePos != null && level.isLoaded(machinePos)
+                    ? level.getBlockEntity(machinePos) : null;
 
-            // The mode names the direction as seen from the machine, so "input" fills the machine from the
-            // container on that side and "output" empties the machine into it. The machine itself is passed
-            // along as the owner of the machine side, so both directions respect which of its slots are
-            // inputs and which are outputs (see MachineSlotRoles) instead of moving anything anywhere.
-            // The budget is passed so the step keeps filling while the machine's input slots have room and
-            // keeps emptying while its output slots hold something, instead of stopping after one stack.
-            // Each direction is gated by its own filter (see #faceFilter): the OUTPUT one decides what may leave
-            // the machine through this face, the INPUT one what may enter it - a face set to 输入 + 输出 really
-            // does answer two different questions here.
             var out = 0;
             var in = 0;
-            if (mode.allowsExtract()) {
-                out = MachineFaceStorage.move(machine, machineEntity, neighbour, null,
-                        MachineFaceStorage.itemsPerTick(), faceFilter(face, TransferMode.OUTPUT));
-            }
-            if (mode.allowsInsert()) {
-                in = MachineFaceStorage.move(neighbour, null, machine, machineEntity,
-                        MachineFaceStorage.itemsPerTick(), faceFilter(face, TransferMode.INPUT));
+            var fluidOut = 0;
+            var fluidIn = 0;
+
+            if (neighbour != null && machine != null) {
+                if (mode.allowsExtract()) {
+                    out = MachineFaceStorage.move(machine, machineEntity, neighbour, null,
+                            MachineFaceStorage.itemsPerTick(), faceFilter(face, TransferMode.OUTPUT));
+                }
+                if (mode.allowsInsert()) {
+                    in = MachineFaceStorage.move(neighbour, null, machine, machineEntity,
+                            MachineFaceStorage.itemsPerTick(), faceFilter(face, TransferMode.INPUT));
+                }
             }
 
-            if (out + in <= 0 && diagnosticsDue()) {
+            // The same two directions for fluids: no slot roles and no filters, a face moves whatever its two
+            // handlers hold up to the configured amount per tick.
+            if (mode.allowsExtract()) {
+                fluidOut = (int) MachineFaceStorage.moveFluid(machineFluid, neighbourFluid,
+                        MachineFaceStorage.fluidsPerTick());
+            }
+            if (mode.allowsInsert()) {
+                fluidIn = (int) MachineFaceStorage.moveFluid(neighbourFluid, machineFluid,
+                        MachineFaceStorage.fluidsPerTick());
+            }
+
+            if (out + in + fluidOut + fluidIn <= 0 && diagnosticsDue()) {
                 OritechAddonsOne.LOGGER.debug(
-                        "[transfer] face {} mode {} of {} moved nothing: neighbour {}, out {}, in {}",
-                        face, mode, worldPosition, neighbour.getClass().getSimpleName(), out, in);
+                        "[transfer] face {} mode {} of {} moved nothing: neighbour {}, out {}, in {}, fluid out {}, in {}",
+                        face, mode, worldPosition, neighbour == null ? neighbourFluid : neighbour,
+                        out, in, fluidOut, fluidIn);
             }
         }
 
@@ -940,7 +948,8 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         }
 
         var machine = MachineFaceStorage.machineStorageAt(level, machinePos);
-        if (machine == null) return;
+        var machineFluid = MachineFaceStorage.machineFluidStorageAt(level, machinePos);
+        if (machine == null && machineFluid == null) return;
 
         // The machine's own block entity, so that its slot roles can be respected - an INPUT face fills the
         // input slots only and an OUTPUT face empties the output slots only (see MachineSlotRoles). A handler
@@ -954,30 +963,44 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
 
             if (entry.cell().equals(Vec3i.ZERO) && entry.face() == hostFace) continue;
 
-            var neighbour = MachineFaceStorage.storageAt(level, machinePos.offset(entry.cell()), entry.face());
-            if (neighbour == null) continue;
+            var neighbourPos = machinePos.offset(entry.cell());
+            var neighbour = MachineFaceStorage.storageAt(level, neighbourPos, entry.face());
+            var neighbourFluid = MachineFaceStorage.fluidStorageAt(level, neighbourPos, entry.face());
+            if (neighbour == null && neighbourFluid == null) continue;
 
             var out = 0;
             var in = 0;
-            if (mode.allowsExtract()) {
-                out = MachineFaceStorage.move(machine, machineEntity, neighbour, null,
-                        MachineFaceStorage.itemsPerTick(),
-                        cellFilter(entry.cell(), entry.face(), TransferMode.OUTPUT));
-            }
-            if (mode.allowsInsert()) {
-                in = MachineFaceStorage.move(neighbour, null, machine, machineEntity,
-                        MachineFaceStorage.itemsPerTick(),
-                        cellFilter(entry.cell(), entry.face(), TransferMode.INPUT));
+            var fluidOut = 0;
+            var fluidIn = 0;
+
+            if (neighbour != null && machine != null) {
+                if (mode.allowsExtract()) {
+                    out = MachineFaceStorage.move(machine, machineEntity, neighbour, null,
+                            MachineFaceStorage.itemsPerTick(),
+                            cellFilter(entry.cell(), entry.face(), TransferMode.OUTPUT));
+                }
+                if (mode.allowsInsert()) {
+                    in = MachineFaceStorage.move(neighbour, null, machine, machineEntity,
+                            MachineFaceStorage.itemsPerTick(),
+                            cellFilter(entry.cell(), entry.face(), TransferMode.INPUT));
+                }
             }
 
-            if (diagnosticsDue()) {
-                // INFO while "the items do not move" is being chased: a cell-face that moved something is the
-                // one thing that proves the settings, the machine and both handlers all worked - and it names
-                // the count and the direction, so "nothing moved" and "moved the wrong way" differ at a glance.
+            // Fluids use the same directions and the same per-tick budget, without slot roles or item filters.
+            if (mode.allowsExtract()) {
+                fluidOut = (int) MachineFaceStorage.moveFluid(machineFluid, neighbourFluid,
+                        MachineFaceStorage.fluidsPerTick());
+            }
+            if (mode.allowsInsert()) {
+                fluidIn = (int) MachineFaceStorage.moveFluid(neighbourFluid, machineFluid,
+                        MachineFaceStorage.fluidsPerTick());
+            }
+
+            if (out + in + fluidOut + fluidIn > 0 && diagnosticsDue()) {
                 OritechAddonsOne.LOGGER.debug(
-                        "[transfer] cell {} face {} mode {} of {}: neighbour {}, out {}, in {}",
+                        "[transfer] cell {} face {} mode {} of {}: neighbour {}, out {}, in {}, fluid out {}, in {}",
                         entry.cell(), entry.face(), mode, worldPosition,
-                        neighbour.getClass().getSimpleName(), out, in);
+                        neighbour == null ? neighbourFluid : neighbour, out, in, fluidOut, fluidIn);
             }
         }
     }
@@ -1329,13 +1352,18 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
     @Override
     @Nullable
     public FluidApi.FluidStorage getFluidStorage(@Nullable Direction direction) {
-        if (!hasSteamBoilerPlugin() || level == null) return null;
+        // A stored steam boiler answers the machine's boiler tank through every face, exactly like the boiler
+        // addon itself. It takes precedence over the transfer faces: the boiler is what the player inserted.
+        if (hasSteamBoilerPlugin() && level != null) {
+            var machinePos = servedMachinePos();
+            if (machinePos != null
+                    && level.getBlockEntity(machinePos) instanceof UpgradableGeneratorBlockEntity generator) {
+                return generator.boilerStorage;
+            }
+        }
 
-        var machinePos = servedMachinePos();
-        if (machinePos == null) return null;
-        if (!(level.getBlockEntity(machinePos) instanceof UpgradableGeneratorBlockEntity generator)) return null;
-
-        return generator.boilerStorage;
+        var face = direction == null ? Direction.NORTH : direction;
+        return fluidStorages.computeIfAbsent(face, key -> new MachineFaceFluidStorage(this, key));
     }
 
     /** True while a steam boiler addon is stored in one of the plugin slots. */

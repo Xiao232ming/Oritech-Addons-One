@@ -41,6 +41,7 @@
 | `type2Slots` | 5 | 同上 | 扩展插件Ⅱ型可用的插件槽数 |
 | `type3SlotCapacity` | 256 | ≥ 1 | 扩展插件Ⅲ型单个槽位能容纳的插件数量 |
 | `transferItemsPerTick` | 64 | 1 – 6400 | 每个已配置面每 tick搬运的物品数 |
+| `transferFluidPerTick` | 1000 | 1 – 1000000 | 每个已配置面每 tick 搬运的流体量（mB） |
 | `showWirelessDocksInAddonPage` | true | – | 在 Oritech 自带的插件页面里列出该机器的无线扩展坞（客户端显示选项） |
 
 ## 🎮 游戏版本与前置
