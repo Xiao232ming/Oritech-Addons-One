@@ -3,6 +3,7 @@ package io.github.xiao232ming.oritechaddonsone.client;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 
@@ -166,7 +167,10 @@ public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddon
         ExtensionTransferPickerState.clear();
         TransferPickerState.clear();
         // only this GUI's own model: another addon screen can be open at the same time
-        TransferAddonState.clear(this.menu.position());
+        var level = this.minecraft == null ? null : this.minecraft.level;
+        if (level != null) {
+            TransferAddonState.clear(GlobalPos.of(level.dimension(), this.menu.position()));
+        }
         // and the cell-face map the server sent for this block, for the same reason - the next time this GUI is
         // opened the server sends it again with the menu. It is dropped under the position it is held under, which
         // is the plugin's and not this menu's: an addon's screen shows a transfer plugin standing in its slots

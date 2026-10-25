@@ -4,8 +4,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.core.Vec3i;
 
 import org.jetbrains.annotations.Nullable;
@@ -20,9 +20,10 @@ import io.github.xiao232ming.oritechaddonsone.block.entity.TransferMode;
  * <b>Why this is not a menu field.</b> The map is keyed by (cell, direction) and has no maximum: a 3x3x3 structure has
  * a hundred and sixty-two cell-faces, and Oritech's part lists are not bounded by six, so the fixed container data
  * slots that carry a setting per direction cannot carry this. The server sends the whole map instead
- * ({@code TransferNetworking.FaceModes}) and this class holds it, keyed by the plugin it belongs to - the same shape
+ * ({@code TransferNetworking.FaceModes}) and this class holds it, keyed by the machine it belongs to - the same shape
  * as {@link TransferAddonState}, and the same reason: the packet handler is not the screen, and the screen is not
- * the only thing that can ask.
+ * the only thing that can ask. The key is a {@link GlobalPos}, so the same coordinates in another dimension are
+ * another machine and never share a map.
  * <p>
  * The client is a <b>mirror</b> here, never the authority: every entry in it came from the server, so what the page
  * draws and what the automation does cannot drift. A click does not write here - it sends a packet and waits for the
@@ -34,17 +35,17 @@ import io.github.xiao232ming.oritechaddonsone.block.entity.TransferMode;
  */
 public final class TransferFaceState {
 
-    /** The map of every plugin the client currently knows about, keyed by the plugin's position. */
-    private static final Map<BlockPos, CellFaceModes> MODES = new ConcurrentHashMap<>();
+    /** The map of every machine the client currently knows about, keyed by its dimension and position. */
+    private static final Map<GlobalPos, CellFaceModes> MODES = new ConcurrentHashMap<>();
 
     private TransferFaceState() {
     }
 
     /** Replaces what the client knows about one machine: the whole authoritative map. */
-    public static void put(BlockPos machine, List<CellFaceModes.Entry> entries) {
+    public static void put(GlobalPos machine, List<CellFaceModes.Entry> entries) {
         var modes = new CellFaceModes();
         modes.setAll(entries);
-        MODES.put(machine.immutable(), modes);
+        MODES.put(machine, modes);
 
         // INFO while "the config disappears when the UI closes" is being chased: every arrival says under
         // which key and with how many faces it came, which is what separates a lost packet from a map that is
@@ -53,9 +54,9 @@ public final class TransferFaceState {
                 entries.size(), machine, MODES.keySet());
     }
 
-    /** Drops what the client knows about one plugin, called when its GUI closes. */
-    public static void clear(BlockPos pluginPos) {
-        MODES.remove(pluginPos);
+    /** Drops what the client knows about one machine, called when its GUI closes. */
+    public static void clear(GlobalPos machine) {
+        MODES.remove(machine);
     }
 
     /** Drops every map, called when a GUI closes. */
@@ -63,35 +64,35 @@ public final class TransferFaceState {
         MODES.clear();
     }
 
-    /** Every position the client currently holds a map under, for the diagnostics of a missing one. */
-    public static java.util.Set<BlockPos> keys() {
+    /** Every machine the client currently holds a map for, for the diagnostics of a missing one. */
+    public static java.util.Set<GlobalPos> keys() {
         return java.util.Set.copyOf(MODES.keySet());
     }
 
-    /** The map of one plugin, or {@code null} while the server has not sent one yet. */
+    /** The map of one machine, or {@code null} while the server has not sent one yet. */
     @Nullable
-    public static CellFaceModes modes(BlockPos pluginPos) {
-        return MODES.get(pluginPos);
+    public static CellFaceModes modes(@Nullable GlobalPos machine) {
+        return machine == null ? null : MODES.get(machine);
     }
 
     /**
      * Mode of one face of one cell, {@link TransferMode#NONE} while the server has not sent a map yet or that
      * cell-face transfers nothing. Never {@code null}, so the page can always ask.
      */
-    public static TransferMode modeOf(BlockPos pluginPos, Vec3i cell, @Nullable Direction face) {
-        var modes = modes(pluginPos);
+    public static TransferMode modeOf(@Nullable GlobalPos machine, Vec3i cell, @Nullable Direction face) {
+        var modes = modes(machine);
         return modes == null ? TransferMode.NONE : modes.modeOf(cell, face);
     }
 
     /** True while one face of one cell moves items by itself, as the server last reported it. */
-    public static boolean automationOf(BlockPos pluginPos, Vec3i cell, @Nullable Direction face) {
-        var modes = modes(pluginPos);
+    public static boolean automationOf(@Nullable GlobalPos machine, Vec3i cell, @Nullable Direction face) {
+        var modes = modes(machine);
         return modes != null && modes.automationOf(cell, face);
     }
 
-    /** Number of configured cell-faces the server last reported for one plugin. */
-    public static int configuredFaces(BlockPos pluginPos) {
-        var modes = modes(pluginPos);
+    /** Number of configured cell-faces the server last reported for one machine. */
+    public static int configuredFaces(@Nullable GlobalPos machine) {
+        var modes = modes(machine);
         return modes == null ? 0 : modes.configuredFaces();
     }
 }

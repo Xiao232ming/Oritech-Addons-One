@@ -4,11 +4,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.GlobalPos;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
@@ -176,7 +179,7 @@ public final class TransferNetworking {
 
     /**
      * The whole cell-face map of one plugin, one int per configured cell-face
-     * ({@link CellFaceModes#pack(CellFaceModes.Entry)}).
+     * ({@link CellFaceModes#pack(CellFaceModes.Entry)}), keyed by the machine's <b>dimension and position</b>.
      * <p>
      * <b>Why a packet and not menu data.</b> The menu's container data is a fixed set of slots, which fits a setting
      * per {@link net.minecraft.core.Direction} and cannot fit a setting per face of every cell of a structure whose
@@ -185,14 +188,19 @@ public final class TransferNetworking {
      * the one mechanism this mod already uses for exactly this kind of variable data (see
      * {@link ProxyNetworking.PickerSlots}).
      * <p>
+     * The dimension travels with the position because the client keeps one map per machine and the same coordinates
+     * in another dimension are another machine; the location is sent as its string so the codec does not depend on
+     * the dimension registry being present on the client's codec path.
+     * <p>
      * The list is <b>complete</b>, never a delta: a change replaces what the client had, which is what makes a clear
      * (an entry that is no longer there) expressible without a second packet type.
      */
-    public record FaceModes(BlockPos pos, List<Integer> entries) implements CustomPacketPayload {
+    public record FaceModes(BlockPos pos, String dimension, List<Integer> entries) implements CustomPacketPayload {
 
         public static final Type<FaceModes> TYPE = new Type<>(id("transfer_cell_face_modes"));
         public static final StreamCodec<RegistryFriendlyByteBuf, FaceModes> CODEC = StreamCodec.composite(
                 BlockPos.STREAM_CODEC, FaceModes::pos,
+                ByteBufCodecs.STRING_UTF8, FaceModes::dimension,
                 ByteBufCodecs.VAR_INT.apply(ByteBufCodecs.list()), FaceModes::entries,
                 FaceModes::new);
 
@@ -215,11 +223,13 @@ public final class TransferNetworking {
 
             // INFO while "the config disappears" is being chased: an arrival with entries that none of them
             // survived the decode is a different bug from an arrival with no entries at all
-            OritechAddonsOne.LOGGER.debug("[transfer] map packet for {} carried {} entry(ies), {} unreadable",
-                    packet.pos(), packet.entries().size(), unreadable);
+            OritechAddonsOne.LOGGER.debug("[transfer] map packet for {} in {} carried {} entry(ies), {} unreadable",
+                    packet.pos(), packet.dimension(), packet.entries().size(), unreadable);
 
             // Client side hook, behind a no-op holder so a dedicated server never touches a client class
-            ClientHandler.deliver(packet.pos(), entries);
+            var machine = GlobalPos.of(
+                    ResourceKey.create(Registries.DIMENSION, Identifier.parse(packet.dimension())), packet.pos());
+            ClientHandler.deliver(machine, entries);
         }
     }
 
@@ -235,7 +245,7 @@ public final class TransferNetworking {
         for (var entry : settings.packedEntries()) {
             packed.add(CellFaceModes.pack(entry));
         }
-        player.connection.send(new FaceModes(machine, packed));
+        player.connection.send(new FaceModes(machine, player.level().dimension().identifier().toString(), packed));
     }
 
     /**
@@ -281,16 +291,16 @@ public final class TransferNetworking {
      * no-op, so a dedicated server can load this class without ever touching a client class.
      */
     public interface ClientHandler {
-        void faceModes(BlockPos pos, List<CellFaceModes.Entry> entries);
+        void faceModes(GlobalPos machine, List<CellFaceModes.Entry> entries);
 
         /** Hands the map to the installed handler (no-op on a dedicated server). */
-        static void deliver(BlockPos pos, List<CellFaceModes.Entry> entries) {
-            clientHandler.faceModes(pos, entries);
+        static void deliver(GlobalPos machine, List<CellFaceModes.Entry> entries) {
+            clientHandler.faceModes(machine, entries);
         }
     }
 
     /** Replaced by the client setup; stays a no-op on a dedicated server. */
-    private static ClientHandler clientHandler = (pos, entries) -> {
+    private static ClientHandler clientHandler = (machine, entries) -> {
     };
 
     public static void setClientHandler(ClientHandler handler) {

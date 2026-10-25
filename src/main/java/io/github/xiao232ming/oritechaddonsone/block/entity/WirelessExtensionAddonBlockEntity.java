@@ -2,8 +2,13 @@ package io.github.xiao232ming.oritechaddonsone.block.entity;
 
 import java.util.HashSet;
 
+import com.mojang.serialization.Codec;
+
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import org.jetbrains.annotations.Nullable;
 import net.minecraft.world.level.Level;
@@ -42,6 +47,8 @@ import io.github.xiao232ming.oritechaddonsone.wireless.WirelessLinks;
 public class WirelessExtensionAddonBlockEntity extends ExtensionAddonBlockEntity {
 
     private static final String LINKED_MACHINE_TAG = "linked_machine";
+    /** Dimension the link was made in; saves written before this tag existed carry none (see #validateLinkDimension). */
+    private static final String LINKED_MACHINE_DIMENSION_TAG = "linked_machine_dimension";
 
     /** How often the dock re-applies itself, in ticks (the machine may recompute without telling us). */
     private static final int REFRESH_INTERVAL = 20;
@@ -66,6 +73,10 @@ public class WirelessExtensionAddonBlockEntity extends ExtensionAddonBlockEntity
 
     /** Machine this dock is linked to, or {@code null} while it is not linked. */
     private BlockPos linkedMachine;
+
+    /** Dimension the link was made in, or {@code null} for a save made before it was stored. */
+    @Nullable
+    private ResourceKey<Level> linkedMachineDimension;
 
     public WirelessExtensionAddonBlockEntity(BlockPos pos, BlockState state) {
         super(OritechAddonsOne.WIRELESS_EXTENSION_ADDON_ENTITY.get(), pos, state);
@@ -157,6 +168,7 @@ public class WirelessExtensionAddonBlockEntity extends ExtensionAddonBlockEntity
         }
 
         linkedMachine = machine.immutable();
+        linkedMachineDimension = level.dimension();
         setChanged();
 
         registerWithMachine();
@@ -172,6 +184,41 @@ public class WirelessExtensionAddonBlockEntity extends ExtensionAddonBlockEntity
         if (level != null) WirelessLinks.unregister(level, linkedMachine, worldPosition);
         releaseMachine(linkedMachine);
         linkedMachine = null;
+        linkedMachineDimension = null;
+        setChanged();
+    }
+
+    /**
+     * True while the saved link belongs to the level this block is in.
+     * <p>
+     * A link is a position plus the dimension it was made in: the position alone would resolve to whatever
+     * stands at those coordinates in another dimension, so a dock moved to another dimension has to drop its
+     * link instead of silently serving a different machine.
+     */
+    private boolean linkInThisLevel() {
+        return linkedMachine != null && level != null
+                && (linkedMachineDimension == null || linkedMachineDimension.equals(level.dimension()));
+    }
+
+    /**
+     * Drops a link that was made in another dimension, and fills in the dimension of a link saved before it
+     * was stored - such a link was always made in the dock's own level (see {@link #linkTo}).
+     */
+    private void validateLinkDimension() {
+        if (level == null || level.isClientSide() || linkedMachine == null) return;
+
+        if (linkedMachineDimension == null) {
+            linkedMachineDimension = level.dimension();
+            setChanged();
+            return;
+        }
+        if (linkedMachineDimension.equals(level.dimension())) return;
+
+        OritechAddonsOne.LOGGER.info("[wireless] dock {} dropped its link to {}: saved in {}, now in {}",
+                worldPosition, linkedMachine, linkedMachineDimension.identifier(), level.dimension().identifier());
+        linkedMachine = null;
+        linkedMachineDimension = null;
+        updateLinkedState();
         setChanged();
     }
 
@@ -194,7 +241,7 @@ public class WirelessExtensionAddonBlockEntity extends ExtensionAddonBlockEntity
     }
 
     private void registerWithMachine() {
-        if (linkedMachine != null) WirelessLinks.register(level, linkedMachine, worldPosition);
+        if (linkInThisLevel()) WirelessLinks.register(level, linkedMachine, worldPosition);
     }
 
     // ------------------------------------------------------------------ driving the machine
@@ -206,7 +253,7 @@ public class WirelessExtensionAddonBlockEntity extends ExtensionAddonBlockEntity
      * a foreign thread.
      */
     public void refreshMachine() {
-        if (!(level instanceof ServerLevel serverLevel) || linkedMachine == null) {
+        if (!(level instanceof ServerLevel serverLevel) || linkedMachine == null || !linkInThisLevel()) {
             OritechAddonsOne.LOGGER.debug("[diag] refresh: dock {} skipped (level={}, link={})",
                     worldPosition, level, linkedMachine);
             return;
@@ -316,6 +363,9 @@ public class WirelessExtensionAddonBlockEntity extends ExtensionAddonBlockEntity
     public void serverTick() {
         if (level == null || level.isClientSide()) return;
 
+        // a link saved in another dimension must not resolve to whatever stands at those coordinates here
+        validateLinkDimension();
+
         serverTickRedstone();
         // faces of the transfer page whose automation is on move their items here, exactly like on a wired
         // addon: the machine is the linked one, so nothing else is needed
@@ -342,6 +392,7 @@ public class WirelessExtensionAddonBlockEntity extends ExtensionAddonBlockEntity
     @Override
     public void onLoad() {
         super.onLoad();
+        validateLinkDimension();
         if (level == null || level.isClientSide() || linkedMachine == null) return;
 
         registerWithMachine();
@@ -421,11 +472,20 @@ public class WirelessExtensionAddonBlockEntity extends ExtensionAddonBlockEntity
         if (linkedMachine != null) {
             output.store(LINKED_MACHINE_TAG, BlockPos.CODEC, linkedMachine);
         }
+        if (linkedMachineDimension != null) {
+            output.store(LINKED_MACHINE_DIMENSION_TAG, Codec.STRING, linkedMachineDimension.identifier().toString());
+        }
     }
 
     @Override
     protected void loadAdditional(ValueInput input) {
         super.loadAdditional(input);
         linkedMachine = input.read(LINKED_MACHINE_TAG, BlockPos.CODEC).orElse(null);
+        linkedMachineDimension = input.read(LINKED_MACHINE_DIMENSION_TAG, Codec.STRING)
+                .map(id -> ResourceKey.create(Registries.DIMENSION, Identifier.parse(id)))
+                .orElse(null);
+
+        // drop a link that was saved in another dimension before the tick can announce it to a machine here
+        validateLinkDimension();
     }
 }

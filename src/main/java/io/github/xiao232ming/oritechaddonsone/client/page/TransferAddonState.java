@@ -6,6 +6,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.world.level.Level;
 
 import org.jetbrains.annotations.Nullable;
@@ -27,12 +28,13 @@ import rearth.oritech.api.screen.OritechSurface;
  * The state is kept per menu position - i.e. per panel that was opened, whether that panel belongs to a placed plugin
  * or to an Extension Addon that stores one - and rebuilt when the machine it serves changes, because a GUI can be open
  * while the machine behind the plugin is replaced. It is dropped when the screen closes ({@link #clear()}, called by
- * {@code ExtensionAddonScreen#removed()}), so a built model never outlives the GUI it was built for.
+ * {@code ExtensionAddonScreen#removed()}), so a built model never outlives the GUI it was built for. The key is a
+ * {@link GlobalPos}: the same coordinates in another dimension are another panel.
  */
 public final class TransferAddonState {
 
     /** The built preview and its interaction state, one per plugin position that had a GUI open. */
-    private static final Map<BlockPos, Preview> PREVIEWS = new ConcurrentHashMap<>();
+    private static final Map<GlobalPos, Preview> PREVIEWS = new ConcurrentHashMap<>();
 
     private TransferAddonState() {
     }
@@ -42,7 +44,7 @@ public final class TransferAddonState {
      * yet, or {@code null} while the machine cannot be resolved on this client - its chunk is not loaded, or the
      * plugin serves nothing.
      *
-     * @param previewKey position the built model is kept under, i.e. the position of the block the open menu belongs
+     * @param previewKey position and dimension the built model is kept under, i.e. of the block the open menu belongs
      *                   to, so a preview never outlives the panel it was built for
      * @param machinePos the machine the plugin serves, as the menu of the open screen reports it - the position the
      *                   server resolved and sent along, because a client cannot resolve it itself (see the class
@@ -53,7 +55,7 @@ public final class TransferAddonState {
      * @param height     height of the preview panel
      */
     @Nullable
-    public static Preview preview(BlockPos previewKey, @Nullable BlockPos machinePos, int x, int y, int width,
+    public static Preview preview(GlobalPos previewKey, @Nullable BlockPos machinePos, int x, int y, int width,
             int height) {
         if (machinePos == null) return null;
 
@@ -109,7 +111,7 @@ public final class TransferAddonState {
     }
 
     /** Drops the model of one plugin, called when its GUI closes. */
-    public static void clear(BlockPos pluginPos) {
+    public static void clear(GlobalPos pluginPos) {
         PREVIEWS.remove(pluginPos);
     }
 
