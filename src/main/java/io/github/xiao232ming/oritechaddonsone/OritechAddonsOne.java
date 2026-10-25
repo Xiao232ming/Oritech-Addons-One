@@ -25,7 +25,9 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
+import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.common.extensions.IMenuTypeExtension;
+import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredItem;
@@ -48,6 +50,9 @@ import io.github.xiao232ming.oritechaddonsone.block.entity.ChunkAnchorAddonBlock
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtenderFaceStorage;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionTransferAddonBlockEntity;
+import io.github.xiao232ming.oritechaddonsone.block.entity.FacePluginStorage;
+import io.github.xiao232ming.oritechaddonsone.block.entity.MachineFaceConfigs;
+import io.github.xiao232ming.oritechaddonsone.block.entity.MachineSlotRoles;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.WirelessExtensionAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonLayout;
@@ -476,9 +481,21 @@ public class OritechAddonsOne {
         modEventBus.addListener(TransferNetworking::register);
         modEventBus.addListener(FilterNetworking::register);
 
+        // The machine caches are static and keyed by dimension and position; a server that stops has to drop
+        // them, or the next world in the same client process would read the previous one's settings and the old
+        // levels could never be collected.
+        NeoForge.EVENT_BUS.addListener((ServerStoppedEvent event) -> clearServerCaches());
+
         LOGGER.info("Oritech Addons One loaded: {}, {}, {} and the wireless variants {} registered",
                 EXTENSION_ADDON_1.getId(), EXTENSION_ADDON_2.getId(), EXTENSION_ADDON_3.getId(),
                 WIRELESS_EXTENSION_ADDON_1.getId());
+    }
+
+    /** Drops the runtime caches that describe machines and their hosts; see the listener in the constructor. */
+    public static void clearServerCaches() {
+        MachineFaceConfigs.clear();
+        MachineSlotRoles.clear();
+        FacePluginStorage.clear();
     }
 
     /**

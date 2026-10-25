@@ -814,7 +814,7 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
             } else {
                 syncCellFaces();
                 mergePending = false;
-                OritechAddonsOne.LOGGER.info(
+                OritechAddonsOne.LOGGER.debug(
                         "[transfer] merged the saved settings of {} into machine {}: shared now {} face(s)",
                         worldPosition, machinePos, MachineFaceConfigs.cellFaces(level, machinePos).configuredFaces());
             }
@@ -828,7 +828,7 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
                 // the settings are merged into and the map the automation reads have to be the same one - and
                 // they are derived from two different resolutions (connectedMachinePos, servedMachinePos).
                 if (diagnosticsDue()) {
-                    OritechAddonsOne.LOGGER.info(
+                    OritechAddonsOne.LOGGER.debug(
                             "[transfer] {} holds a plugin but has no automated face: connected {}, served {}, "
                                     + "map here {} face(s) {}, map there {} face(s) {}, own copy {} face(s): {}",
                             worldPosition, connectedMachinePos(), servedMachinePos(),
@@ -851,7 +851,7 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
 
             var machine = MachineFaceStorage.machineStorage(this);
             if (machine == null && diagnosticsDue()) {
-                OritechAddonsOne.LOGGER.info(
+                OritechAddonsOne.LOGGER.debug(
                         "[transfer] face {} of {} is {} and automated, but the machine's inventory is not resolvable (machine {})",
                         face, worldPosition, mode, connectedMachinePos());
                 continue;
@@ -864,7 +864,7 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
 
             var neighbour = MachineFaceStorage.storageAt(level, worldPosition, face);
             if (neighbour == null && diagnosticsDue()) {
-                OritechAddonsOne.LOGGER.info(
+                OritechAddonsOne.LOGGER.debug(
                         "[transfer] face {} of {} is {} and automated, but {} holds no item handler",
                         face, worldPosition, mode, worldPosition.relative(face));
                 continue;
@@ -903,7 +903,7 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
                 // INFO on purpose, and only while a configured, automated face has moved nothing at all: this is
                 // the case that looks exactly like "the automation is dead", and the line names the two handlers
                 // and both counts, so the dead end can be found instead of guessed at.
-                OritechAddonsOne.LOGGER.info(
+                OritechAddonsOne.LOGGER.debug(
                         "[transfer] face {} mode {} of {} moved nothing: neighbour {}, out {}, in {}",
                         face, mode, worldPosition, neighbour.getClass().getSimpleName(), out, in);
             }
@@ -987,7 +987,7 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
                 // guessed at. A face that does its job logs nothing - otherwise every working automation
                 // would write one line per second per face for as long as the server runs (see the same
                 // "moved nothing" gate on the six-face loop in #serverTickTransfer).
-                OritechAddonsOne.LOGGER.info(
+                OritechAddonsOne.LOGGER.debug(
                         "[transfer] cell {} face {} mode {} of {} moved nothing: neighbour {}, out {}, in {}",
                         entry.cell(), entry.face(), mode, worldPosition,
                         neighbour.getClass().getSimpleName(), out, in);

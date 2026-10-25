@@ -30,8 +30,8 @@ import io.github.xiao232ming.oritechaddonsone.block.entity.TransferMode;
  * answer, which is what makes a refused configuration (a cell that is not part of the machine's structure)
  * visible on the page as "nothing happened".
  * <p>
- * It is dropped with the model when the GUI closes, so a page that is opened again starts from whatever the server
- * sends with the menu.
+ * It is kept across screens - reopening a page does not throw the map away, and the server sends it again when a
+ * menu opens - and cleared when the client disconnects, so a new world never shows the previous one's map.
  */
 public final class TransferFaceState {
 

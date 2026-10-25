@@ -8,9 +8,11 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.client.gui.ConfigurationScreen;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
+import net.neoforged.neoforge.common.NeoForge;
 
 import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferMode;
@@ -41,6 +43,11 @@ public class OritechAddonsOneClient {
         // the 过滤 page edits a filter the server owns, so the server sends back what it really holds after
         // every edit; routed here for the same reason, and the open page - if there is one - is what applies it
         FilterNetworking.setClientHandler(OritechAddonsOneClient::putFilterState);
+
+        // the cell-face maps are kept across screens, so a page can reopen without losing them; when the client
+        // disconnects they have to go, or the next world would read the previous one's maps under the same keys
+        NeoForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingOut event) -> TransferFaceState.clear());
+
         OritechAddonsOne.LOGGER.debug("In-game config screen registered for {}", OritechAddonsOne.MODID);
     }
 
