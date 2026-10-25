@@ -26,6 +26,7 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.neoforged.neoforge.transfer.energy.EnergyHandler;
 import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.fluid.FluidResource;
 import net.neoforged.neoforge.transfer.item.ItemResource;
 import org.jetbrains.annotations.Nullable;
 
@@ -35,7 +36,9 @@ import rearth.oritech.api.networking.NetworkedBlockEntity;
 import rearth.oritech.api.networking.SyncType;
 import rearth.oritech.api.transfer.energy.DelegatingEnergyStorage;
 import rearth.oritech.api.transfer.energy.EnergyProvider;
+import rearth.oritech.api.transfer.fluid.FluidProvider;
 import rearth.oritech.api.transfer.item.ItemProvider;
+import rearth.oritech.block.base.entity.UpgradableGeneratorBlockEntity;
 import rearth.oritech.block.blocks.addons.MachineAddonBlock;
 import rearth.oritech.block.entity.addons.AddonBlockEntity;
 import rearth.oritech.block.entity.addons.RedstoneAddonBlockEntity;
@@ -86,7 +89,7 @@ import io.github.xiao232ming.oritechaddonsone.wireless.WirelessLinks;
  * authoritative.
  */
 public class ExtensionAddonBlockEntity extends AddonBlockEntity
-        implements Container, MenuProvider, EnergyProvider, AddonBonusSource, ItemProvider {
+        implements Container, MenuProvider, EnergyProvider, AddonBonusSource, ItemProvider, FluidProvider {
 
     private final ExtensionAddonType type;
     /**
@@ -1345,6 +1348,36 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
     }
 
     // ------------------------------------------------------------------ energy input (acceptor plugin)
+
+    /**
+     * The boiler storage of the machine while a steam boiler addon is stored, so a pipe can fill water and
+     * drain steam through this addon exactly as it could through an attached boiler addon.
+     * <p>
+     * The boiler addon exposes the machine's own {@code boilerStorage}; this addon has no block of its own to
+     * attach that storage to, so it answers the same storage for every face. Without a boiler addon (or when
+     * the machine is not a generator) it answers {@code null}.
+     */
+    @Override
+    @Nullable
+    public ResourceHandler<FluidResource> getFluidLookup(@Nullable Direction direction) {
+        if (!hasSteamBoilerPlugin() || level == null) return null;
+
+        var machinePos = servedMachinePos();
+        if (machinePos == null) return null;
+        if (!(level.getBlockEntity(machinePos) instanceof UpgradableGeneratorBlockEntity generator)) return null;
+
+        return generator.boilerStorage.getExternalAccess();
+    }
+
+    /** True while a steam boiler addon is stored in one of the plugin slots. */
+    public boolean hasSteamBoilerPlugin() {
+        for (int slot = 0; slot < getContainerSize(); slot++) {
+            var stack = items.get(slot);
+            if (stack.isEmpty() || !(stack.getItem() instanceof BlockItem blockItem)) continue;
+            if (blockItem.getBlock() == BlockContent.STEAM_BOILER_ADDON.get()) return true;
+        }
+        return false;
+    }
 
     protected boolean isEnergyInputActive() {
         return hasAcceptorPlugin()

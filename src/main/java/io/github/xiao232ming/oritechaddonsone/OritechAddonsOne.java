@@ -604,6 +604,14 @@ public class OritechAddonsOne {
         event.registerBlockEntity(Capabilities.Item.BLOCK, TRANSFER_ADDON_ENTITY.get(),
                 (blockEntity, side) -> blockEntity.getItemLookup(side));
 
+        // The Extension Addons can hold a steam boiler addon; while they do, their faces answer the machine's
+        // boiler storage, so water can be piped in and steam out through the addon like through the boiler
+        // addon itself (see ExtensionAddonBlockEntity#getFluidLookup).
+        event.registerBlockEntity(Capabilities.Fluid.BLOCK, EXTENSION_ADDON_ENTITY.get(),
+                (blockEntity, side) -> blockEntity.getFluidLookup(side));
+        event.registerBlockEntity(Capabilities.Fluid.BLOCK, WIRELESS_EXTENSION_ADDON_ENTITY.get(),
+                (blockEntity, side) -> blockEntity.getFluidLookup(side));
+
         // Oritech's machine extender: a face with a placed transfer plugin on it is the connection the
         // transfer page configures, so a pipe can fill or empty the machine behind the extender through it.
         // The provider is logged per call (not per registration) on purpose: it is the only place that proves
