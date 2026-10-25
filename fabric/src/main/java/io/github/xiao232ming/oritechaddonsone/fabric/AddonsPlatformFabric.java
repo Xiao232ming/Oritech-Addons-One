@@ -5,12 +5,14 @@ import net.minecraft.core.BlockPos;
 import com.google.auto.service.AutoService;
 
 import net.fabricmc.api.EnvType;
+import net.fabricmc.fabric.api.transfer.v1.fluid.FluidStorage;
 import net.fabricmc.fabric.api.transfer.v1.item.ItemStorage;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ForcedChunksSavedData;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 
+import rearth.oritech.api.fluid.FluidApi;
 import rearth.oritech.api.item.ItemApi;
 
 import io.github.xiao232ming.oritechaddonsone.platform.AddonsPlatform;
@@ -49,6 +51,23 @@ public class AddonsPlatformFabric implements AddonsPlatform {
                 (blockEntity, side) -> {
                     var storage = source.storageFor(blockEntity, side);
                     return storage == null ? null : new FabricInventoryStorage(storage);
+                },
+                resolvedType);
+    }
+
+    /**
+     * 把延伸器某个面的 Oritech 流体存储注册到 Fabric 的 {@code FluidStorage.SIDED} 查询上。
+     * <p>
+     * 这里返回的 {@link FluidApi.FluidStorage} 由 {@link FabricFluidStorage} 包成
+     * {@code Storage<FluidVariant>}；门控与机器解析仍在被包装的存储里。
+     */
+    @Override
+    public void registerFaceFluidProvider(java.util.function.Supplier<BlockEntityType<?>> type, FaceFluidSource source) {
+        var resolvedType = type.get();
+        FluidStorage.SIDED.registerForBlockEntity(
+                (blockEntity, side) -> {
+                    var storage = source.storageFor(blockEntity, side);
+                    return storage == null ? null : new FabricFluidStorage(storage);
                 },
                 resolvedType);
     }

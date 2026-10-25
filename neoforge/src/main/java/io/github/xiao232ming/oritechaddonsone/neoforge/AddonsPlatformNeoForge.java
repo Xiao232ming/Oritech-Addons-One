@@ -34,6 +34,9 @@ public class AddonsPlatformNeoForge implements AddonsPlatform {
     /** {@link #registerFaceItemProvider} 排到这里，等 {@code RegisterCapabilitiesEvent} 再真正注册。 */
     private static final List<PendingFaceItemProvider> PENDING = new ArrayList<>();
 
+    /** {@link #registerFaceFluidProvider} 同样排队，等 {@code RegisterCapabilitiesEvent}。 */
+    private static final List<PendingFaceFluidProvider> PENDING_FLUID = new ArrayList<>();
+
     static void setModEventBus(IEventBus bus) {
         modEventBus = bus;
     }
@@ -57,6 +60,11 @@ public class AddonsPlatformNeoForge implements AddonsPlatform {
         PENDING.add(new PendingFaceItemProvider(type, source));
     }
 
+    @Override
+    public void registerFaceFluidProvider(java.util.function.Supplier<BlockEntityType<?>> type, FaceFluidSource source) {
+        PENDING_FLUID.add(new PendingFaceFluidProvider(type, source));
+    }
+
     /**
      * 在 {@code RegisterCapabilitiesEvent} 里把排队的能力注册上：把 {@code ItemApi.InventoryStorage}
      * 包成 NeoForge 的 {@code IItemHandler}。
@@ -72,6 +80,15 @@ public class AddonsPlatformNeoForge implements AddonsPlatform {
             });
         }
         PENDING.clear();
+
+        for (var pending : PENDING_FLUID) {
+            var type = (BlockEntityType<BlockEntity>) pending.type().get();
+            event.registerBlockEntity(Capabilities.FluidHandler.BLOCK, type, (blockEntity, side) -> {
+                var storage = pending.source().storageFor(blockEntity, side);
+                return storage == null ? null : new NeoForgeFluidStorageHandler(storage);
+            });
+        }
+        PENDING_FLUID.clear();
     }
 
     /**
@@ -109,5 +126,8 @@ public class AddonsPlatformNeoForge implements AddonsPlatform {
     }
 
     private record PendingFaceItemProvider(java.util.function.Supplier<BlockEntityType<?>> type, FaceItemSource source) {
+    }
+
+    private record PendingFaceFluidProvider(java.util.function.Supplier<BlockEntityType<?>> type, FaceFluidSource source) {
     }
 }

@@ -12,6 +12,7 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 
 import org.jetbrains.annotations.Nullable;
 
+import rearth.oritech.api.fluid.FluidApi;
 import rearth.oritech.api.item.ItemApi;
 
 /**
@@ -57,6 +58,18 @@ public interface AddonsPlatform {
     void registerFaceItemProvider(Supplier<BlockEntityType<?>> type, FaceItemSource source);
 
     /**
+     * 把某个方块实体类型在某个面上的流体存储暴露给外部世界（流体管道、泵、其它模组）。
+     * <p>
+     * 与 {@link #registerFaceItemProvider} 同一套延迟取值与排队规则：
+     * NeoForge 注册 {@code Capabilities.FluidHandler.BLOCK}，Fabric 注册 {@code FluidStorage.SIDED}，
+     * 两者都把 Oritech 的 {@link FluidApi.FluidStorage} 包成加载器自己的流体存储接口。
+     *
+     * @param type   延迟给出要暴露的方块实体类型
+     * @param source 回答"这个实体的这个面是什么流体存储"的回调；返回 {@code null} 表示该面不是连接
+     */
+    void registerFaceFluidProvider(Supplier<BlockEntityType<?>> type, FaceFluidSource source);
+
+    /**
      * 该区块当前是否被<b>模组</b>强制保持加载。
      * <p>
      * NeoForge：合并 {@code ForcedChunksSavedData} 的 block / entity 两个 {@code TicketTracker}。
@@ -89,5 +102,16 @@ public interface AddonsPlatform {
 
         @Nullable
         ItemApi.InventoryStorage storageFor(BlockEntity blockEntity, @Nullable Direction face);
+    }
+
+    /**
+     * 一个面上一份流体存储的来源。返回 Oritech 的 {@link FluidApi.FluidStorage}（跨加载器），
+     * 把它包成 loader 的流体存储接口是各加载器实现的事。
+     */
+    @FunctionalInterface
+    interface FaceFluidSource {
+
+        @Nullable
+        FluidApi.FluidStorage storageFor(BlockEntity blockEntity, @Nullable Direction face);
     }
 }

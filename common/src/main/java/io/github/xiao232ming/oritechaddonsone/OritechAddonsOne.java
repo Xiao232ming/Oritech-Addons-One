@@ -41,6 +41,7 @@ import io.github.xiao232ming.oritechaddonsone.block.TransferAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.block.WirelessExtensionAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ChunkAnchorAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtenderFaceStorage;
+import io.github.xiao232ming.oritechaddonsone.block.entity.ExtenderFaceFluidStorage;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionTransferAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.FacePluginStorage;
@@ -515,6 +516,11 @@ public class OritechAddonsOne {
                 (blockEntity, side) -> blockEntity instanceof AddonBlockEntity extender
                         ? ExtenderFaceStorage.handlerAt(extender, side)
                         : null);
+
+        // 同一个延伸器的面在挂着扩展传输插件时也回答流体：哪个面是连接、属于哪台机器、什么模式，
+        // 全部复用物品侧的判断（见 ExtenderFaceFluidStorage），这里只把结果注册给加载器。
+        AddonsPlatform.INSTANCE.registerFaceFluidProvider(() -> BlockEntitiesContent.ADDON_ENTITY,
+                ExtenderFaceFluidStorage::storageFor);
 
         // 让 Oritech 把本模组方块实体的能量存储暴露给 Oritech 自己的能量网络 *以及* 加载器的能量 API：
         // 它的桥只包装在这里注册过的方块实体类型，所以这一句是"装入 acceptor 插件后能当能量输入"的关键。
