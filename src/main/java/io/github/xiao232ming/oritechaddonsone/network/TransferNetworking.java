@@ -269,6 +269,8 @@ public final class TransferNetworking {
 
         var settings = MachineFaceConfigs.cellFaces(level, machine);
         for (var player : serverLevel.getServer().getPlayerList().getPlayers()) {
+            // the machine lives in this level, so a player of another dimension with the same coordinates is not its page
+            if (player.level() != level) continue;
             if (!(player.containerMenu instanceof ExtensionAddonMenu menu)) continue;
             if (!machine.equals(menu.transferMachinePos())) continue;
 
