@@ -48,6 +48,7 @@ import io.github.xiao232ming.oritechaddonsone.block.TransferAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.block.WirelessExtensionAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ChunkAnchorAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtenderFaceStorage;
+import io.github.xiao232ming.oritechaddonsone.block.entity.ExtenderFaceFluidStorage;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionTransferAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.FacePluginStorage;
@@ -496,6 +497,7 @@ public class OritechAddonsOne {
         MachineFaceConfigs.clear();
         MachineSlotRoles.clear();
         FacePluginStorage.clear();
+        ExtenderFaceFluidStorage.clear();
     }
 
     /**
@@ -625,5 +627,10 @@ public class OritechAddonsOne {
                             blockEntity.getBlockPos(), side);
                     return ExtenderFaceStorage.handlerAt(blockEntity, side);
                 });
+
+        // The same extender faces answer fluids while an extension transfer plugin hangs on it: the item side
+        // (ExtenderFaceStorage) decides which faces are connections, this one exposes the machine's tanks.
+        event.registerBlockEntity(Capabilities.Fluid.BLOCK, extenderType,
+                (blockEntity, side) -> ExtenderFaceFluidStorage.handlerAt(blockEntity, side));
     }
 }

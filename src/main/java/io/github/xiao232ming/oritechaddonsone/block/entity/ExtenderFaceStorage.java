@@ -60,7 +60,7 @@ public final class ExtenderFaceStorage {
      * "claimed by nobody" value.
      */
     @Nullable
-    private static BlockPos machinePos(BlockEntity host) {
+    static BlockPos machinePos(BlockEntity host) {
         if (!(host instanceof AddonBlockEntity extender)) return null;
 
         var machinePos = extender.getControllerPos();
@@ -91,7 +91,7 @@ public final class ExtenderFaceStorage {
      * own faces and never claims the extender's, so an extender carrying only 传输插件 keeps answering
      * "no inventory" - exactly as it did before that plugin existed.
      */
-    private static TransferMode transferMode(BlockEntity host, Direction face) {
+    static TransferMode transferMode(BlockEntity host, Direction face) {
         var level = host.getLevel();
         if (level == null || level.isClientSide()) return TransferMode.NONE;
 
