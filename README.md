@@ -43,6 +43,7 @@ And a few extra features:
 | `type2Slots` | 5 | as above | Usable addon slots of Extension Addon II |
 | `type3SlotCapacity` | 256 | ≥ 1 | How many addons one slot of Extension Addon III holds |
 | `transferItemsPerTick` | 64 | 1 – 6400 | Items one configured face moves per tick |
+| `transferFluidPerTick` | 1000 | 1 – 1000000 | mB of fluid one configured face moves per tick |
 | `showWirelessDocksInAddonPage` | true | – | List the machine's wireless addons in Oritech's own addon page (client-side display option) |
 
 ## 🎮 Game versions & dependencies

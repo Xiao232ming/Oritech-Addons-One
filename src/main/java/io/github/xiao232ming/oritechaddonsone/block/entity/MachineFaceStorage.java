@@ -7,12 +7,14 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.fluid.FluidResource;
 import net.neoforged.neoforge.transfer.item.ItemResource;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
 import net.neoforged.neoforge.transfer.transaction.TransactionContext;
 
 import org.jetbrains.annotations.Nullable;
 
+import rearth.oritech.api.transfer.fluid.FluidProvider;
 import rearth.oritech.api.transfer.item.DelegatingInventoryStorage;
 import rearth.oritech.api.transfer.item.ItemProvider;
 import rearth.oritech.util.MachineAddonController;
@@ -68,6 +70,11 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
         return Config.transferItemsPerTick();
     }
 
+    /** How much fluid one face moves per tick and direction, in mB (see {@link Config#transferFluidPerTick()}). */
+    public static int fluidsPerTick() {
+        return Config.transferFluidPerTick();
+    }
+
     private final BlockEntity owner;
     /** Face this storage belongs to, resolved against the block entity on every call. */
     private final Direction face;
@@ -115,7 +122,99 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
     }
 
     /**
-     * Position of the machine an addon works on, or {@code null} while this block does not work on one. The
+     * The fluid handler of the machine an addon works on, or {@code null} while it has none - the fluid
+     * counterpart of {@link #machineStorage(BlockEntity)}.
+     */
+    @Nullable
+    public static ResourceHandler<FluidResource> machineFluidStorage(BlockEntity owner) {
+        if (!(owner instanceof ExtensionAddonBlockEntity addon)) return null;
+        return machineFluidStorageAt(addon.getLevel(), addon.connectedMachinePos());
+    }
+
+    /**
+     * The fluid handler of the block at {@code machinePos}, or {@code null} while there is none: a machine's
+     * registered block capability is asked first, then Oritech's {@link FluidProvider} for machines that do
+     * not register one.
+     */
+    @Nullable
+    public static ResourceHandler<FluidResource> machineFluidStorageAt(@Nullable Level level, @Nullable BlockPos machinePos) {
+        if (level == null || machinePos == null || !level.isLoaded(machinePos)) return null;
+
+        var machine = level.getBlockEntity(machinePos);
+        if (machine == null) return null;
+
+        var state = level.getBlockState(machinePos);
+        var side = level.getCapability(Capabilities.Fluid.BLOCK, machinePos, state, machine, null);
+        if (side != null) return side;
+
+        return machine instanceof FluidProvider provider ? provider.getFluidLookup(null) : null;
+    }
+
+    /**
+     * The fluid handler of the block outside one face of the block at {@code pos} - the tank automation moves
+     * fluids with - or {@code null} while there is none. The side is asked for as the neighbour's own face
+     * pointing back at that block, then without a side, exactly like {@link #storageAt}.
+     */
+    @Nullable
+    public static ResourceHandler<FluidResource> fluidStorageAt(@Nullable Level level, BlockPos pos, Direction face) {
+        if (level == null) return null;
+
+        var neighbourPos = pos.relative(face);
+        if (!level.isLoaded(neighbourPos)) return null;
+
+        var state = level.getBlockState(neighbourPos);
+        var blockEntity = level.getBlockEntity(neighbourPos);
+
+        var side = level.getCapability(Capabilities.Fluid.BLOCK, neighbourPos, state, blockEntity, face.getOpposite());
+        if (side != null) return side;
+
+        return level.getCapability(Capabilities.Fluid.BLOCK, neighbourPos, state, blockEntity, null);
+    }
+
+    /**
+     * Moves up to {@code amount} mB of fluid from {@code from} to {@code to} and reports how much was moved.
+     * No filters and no slot roles: a face moves whatever fluid its two handlers hold, in the direction its
+     * mode allows.
+     */
+    public static int moveFluid(@Nullable ResourceHandler<FluidResource> from,
+            @Nullable ResourceHandler<FluidResource> to, int amount) {
+        if (from == null || to == null) return 0;
+
+        var budget = Math.max(1, Math.min(amount, fluidsPerTick()));
+        var moved = 0;
+
+        for (var slot = 0; slot < from.size() && budget > 0; slot++) {
+            var resource = from.getResource(slot);
+            if (resource.isEmpty()) continue;
+
+            var accepted = 0;
+            try (var probe = Transaction.openRoot()) {
+                accepted = to.insert(resource, budget, probe);
+            }
+            if (accepted <= 0) continue;
+
+            var inserted = 0;
+            try (var transaction = Transaction.openRoot()) {
+                var extracted = from.extract(slot, resource, accepted, transaction);
+                if (extracted > 0) {
+                    inserted = to.insert(resource, extracted, transaction);
+                    if (inserted == extracted) {
+                        transaction.commit();
+                    } else {
+                        // the transaction is rolled back, so nothing moved
+                        inserted = 0;
+                    }
+                }
+            }
+
+            moved += inserted;
+            budget -= inserted;
+        }
+
+        return moved;
+    }
+
+    /**
      * one place the machine position is derived from the addon, so the inventory
      * ({@link #machineStorage(BlockEntity)}) and the slot roles of that inventory
      * ({@link MachineSlotRoles}) can never be looked up for two different machines.

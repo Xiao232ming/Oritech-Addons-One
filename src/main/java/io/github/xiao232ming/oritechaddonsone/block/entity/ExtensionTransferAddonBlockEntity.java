@@ -9,6 +9,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
 import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.fluid.FluidResource;
 import net.neoforged.neoforge.transfer.item.ItemResource;
 
 import org.jetbrains.annotations.Nullable;
@@ -244,7 +245,8 @@ public class ExtensionTransferAddonBlockEntity extends ExtensionAddonBlockEntity
         if (!hangsOnExtender()) return;
 
         var machine = MachineFaceStorage.machineStorageAt(level, attachedMachinePos());
-        if (machine == null) return;
+        var machineFluid = MachineFaceStorage.machineFluidStorageAt(level, attachedMachinePos());
+        if (machine == null && machineFluid == null) return;
 
         var hostPos = hostPos();
         var skipped = ExtensionTransferAddonBlock.attachedFace(getBlockState());
@@ -266,19 +268,30 @@ public class ExtensionTransferAddonBlockEntity extends ExtensionAddonBlockEntity
             if (hostPos.relative(face).equals(machinePos)) continue;
 
             var neighbour = MachineFaceStorage.storageAt(level, hostPos, face);
-            if (neighbour == null) continue;
+            var neighbourFluid = MachineFaceStorage.fluidStorageAt(level, hostPos, face);
+            if (neighbour == null && neighbourFluid == null) continue;
 
             // each direction is gated by its own item filter, exactly as on the addon's own faces: the OUTPUT
             // one decides what may leave the machine through this face, the INPUT one what may enter it. The
             // filters live in the same per-machine map the page edited them in, so a filter configured anywhere
             // on this machine - on this plugin, on another one, or on a wired addon around it - applies here.
+            if (neighbour != null && machine != null) {
+                if (mode.allowsExtract()) {
+                    MachineFaceStorage.move(machine, machineEntity, neighbour, null, MachineFaceStorage.itemsPerTick(),
+                            faceFilter(face, TransferMode.OUTPUT));
+                }
+                if (mode.allowsInsert()) {
+                    MachineFaceStorage.move(neighbour, null, machine, machineEntity, MachineFaceStorage.itemsPerTick(),
+                            faceFilter(face, TransferMode.INPUT));
+                }
+            }
+
+            // Fluids use the same two directions and the same per-tick budget, without item filters.
             if (mode.allowsExtract()) {
-                MachineFaceStorage.move(machine, machineEntity, neighbour, null, MachineFaceStorage.itemsPerTick(),
-                        faceFilter(face, TransferMode.OUTPUT));
+                MachineFaceStorage.moveFluid(machineFluid, neighbourFluid, MachineFaceStorage.fluidsPerTick());
             }
             if (mode.allowsInsert()) {
-                MachineFaceStorage.move(neighbour, null, machine, machineEntity, MachineFaceStorage.itemsPerTick(),
-                        faceFilter(face, TransferMode.INPUT));
+                MachineFaceStorage.moveFluid(neighbourFluid, machineFluid, MachineFaceStorage.fluidsPerTick());
             }
         }
     }
@@ -328,6 +341,16 @@ public class ExtensionTransferAddonBlockEntity extends ExtensionAddonBlockEntity
     @Override
     public ResourceHandler<ItemResource> getItemLookup(@Nullable Direction direction) {
         return emptyStorage;
+    }
+
+    /**
+     * Nothing, for the same reason as {@link #getItemLookup}: the net's faces are the extender's, so a pipe
+     * that looks at the plugin block itself must not see the machine's tanks either.
+     */
+    @Override
+    @Nullable
+    public ResourceHandler<FluidResource> getFluidLookup(@Nullable Direction direction) {
+        return null;
     }
 
     // ------------------------------------------------------------------ the extender's capability cache

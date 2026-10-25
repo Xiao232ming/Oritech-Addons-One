@@ -34,6 +34,10 @@ public final class Config {
             .comment("修改传输插件自动输入输出的速度")
             .defineInRange("transferItemsPerTick", 64, 1, 6400);
 
+    public static final ModConfigSpec.IntValue TRANSFER_FLUID_PER_TICK = BUILDER
+            .comment("修改传输插件自动输入输出的流体速度（mB/t）")
+            .defineInRange("transferFluidPerTick", 1000, 1, 1_000_000);
+
     public static final ModConfigSpec.BooleanValue SHOW_WIRELESS_DOCKS_IN_ADDON_PAGE = BUILDER
             .comment("在机器插件预览中显示无线扩展坞")
             .define("showWirelessDocksInAddonPage", true);
@@ -74,6 +78,20 @@ public final class Config {
         } catch (IllegalStateException notLoadedYet) {
             // Config values are not available in every early loading stage; fall back to the default.
             return 64;
+        }
+    }
+
+    /**
+     * How much fluid (in mB) one configured face of a transfer plugin moves per tick, per direction
+     * ({@link #TRANSFER_FLUID_PER_TICK}). Clamped like the other accessors for the stages the values are not
+     * readable in.
+     */
+    public static int transferFluidPerTick() {
+        try {
+            return Math.max(1, TRANSFER_FLUID_PER_TICK.get());
+        } catch (IllegalStateException notLoadedYet) {
+            // Config values are not available in every early loading stage; fall back to the default.
+            return 1000;
         }
     }
 
