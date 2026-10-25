@@ -29,8 +29,11 @@ import org.jetbrains.annotations.Nullable;
 
 import rearth.oritech.api.energy.EnergyApi;
 import rearth.oritech.api.energy.containers.DelegatingEnergyStorage;
+import rearth.oritech.api.fluid.FluidApi;
 import rearth.oritech.api.item.ItemApi;
+import rearth.oritech.block.base.entity.UpgradableGeneratorBlockEntity;
 import rearth.oritech.block.blocks.addons.MachineAddonBlock;
+import rearth.oritech.init.BlockContent;
 import rearth.oritech.api.networking.NetworkedBlockEntity;
 import rearth.oritech.api.networking.SyncType;
 import rearth.oritech.block.entity.addons.AddonBlockEntity;
@@ -83,7 +86,8 @@ import io.github.xiao232ming.oritechaddonsone.wireless.WirelessLinks;
  * authoritative.
  */
 public class ExtensionAddonBlockEntity extends AddonBlockEntity
-        implements Container, MenuProvider, EnergyApi.BlockProvider, AddonBonusSource, ItemApi.BlockProvider {
+        implements Container, MenuProvider, EnergyApi.BlockProvider, AddonBonusSource, ItemApi.BlockProvider,
+        FluidApi.BlockProvider {
 
     private final ExtensionAddonType type;
     /**
@@ -1313,6 +1317,36 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
     }
 
     // ------------------------------------------------------------------ energy input (acceptor plugin)
+
+    /**
+     * The boiler storage of the machine while a steam boiler addon is stored, so a pipe can fill water and
+     * drain steam through this addon exactly as it could through an attached boiler addon.
+     * <p>
+     * The boiler addon exposes the machine's own {@code boilerStorage}; this addon has no block of its own to
+     * attach that storage to, so it answers the same storage for every face. Without a boiler addon (or when
+     * the machine is not a generator) it answers {@code null}.
+     */
+    @Override
+    @Nullable
+    public FluidApi.FluidStorage getFluidStorage(@Nullable Direction direction) {
+        if (!hasSteamBoilerPlugin() || level == null) return null;
+
+        var machinePos = servedMachinePos();
+        if (machinePos == null) return null;
+        if (!(level.getBlockEntity(machinePos) instanceof UpgradableGeneratorBlockEntity generator)) return null;
+
+        return generator.boilerStorage;
+    }
+
+    /** True while a steam boiler addon is stored in one of the plugin slots. */
+    public boolean hasSteamBoilerPlugin() {
+        for (int slot = 0; slot < getContainerSize(); slot++) {
+            var stack = items.get(slot);
+            if (stack.isEmpty() || !(stack.getItem() instanceof BlockItem blockItem)) continue;
+            if (blockItem.getBlock() == BlockContent.STEAM_BOILER_ADDON) return true;
+        }
+        return false;
+    }
 
     protected boolean isEnergyInputActive() {
         return hasAcceptorPlugin()

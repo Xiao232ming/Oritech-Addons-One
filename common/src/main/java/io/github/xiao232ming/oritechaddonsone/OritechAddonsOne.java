@@ -25,6 +25,7 @@ import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 
 import rearth.oritech.api.energy.EnergyApi;
+import rearth.oritech.api.fluid.FluidApi;
 import rearth.oritech.api.item.ItemApi;
 import rearth.oritech.block.blocks.addons.MachineAddonBlock;
 import rearth.oritech.block.entity.addons.AddonBlockEntity;
@@ -529,6 +530,11 @@ public class OritechAddonsOne {
         ItemApi.BLOCK.registerBlockEntity(() -> (BlockEntityType<?>) EXTENSION_ADDON_ENTITY.get());
         ItemApi.BLOCK.registerBlockEntity(() -> (BlockEntityType<?>) WIRELESS_EXTENSION_ADDON_ENTITY.get());
         ItemApi.BLOCK.registerBlockEntity(() -> (BlockEntityType<?>) EXTENSION_TRANSFER_ADDON_ENTITY.get());
+
+        // 同一座桥的流体侧：扩展插件里放入蒸汽锅炉插件时，它的面直接暴露机器的锅炉储罐，
+        // 于是可以从扩展插件注水、抽蒸汽，和贴着机器放锅炉插件一样（见 getFluidStorage）。
+        FluidApi.BLOCK.registerBlockEntity(() -> (BlockEntityType<?>) EXTENSION_ADDON_ENTITY.get());
+        FluidApi.BLOCK.registerBlockEntity(() -> (BlockEntityType<?>) WIRELESS_EXTENSION_ADDON_ENTITY.get());
 
         LOGGER.info("Oritech Addons One loaded: {}, {}, {} and the wireless variants {} registered",
                 EXTENSION_ADDON_1.getId(), EXTENSION_ADDON_2.getId(), EXTENSION_ADDON_3.getId(),
