@@ -10,6 +10,7 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.core.Vec3i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -349,7 +350,7 @@ public final class TransferAddonPage implements AddonPage {
         if (button == 1) {
             if (mode(context, cell, picked) != TransferMode.NONE) {
                 TransferPickerState.close();
-                clear(menu.transferPluginPos(), sharedKey(menu), cell, picked);
+                clear(menu.transferPluginPos(), menu.transferMachinePos(), cell, picked);
             }
             return true;
         }
@@ -476,17 +477,22 @@ public final class TransferAddonPage implements AddonPage {
      * model, so the model and its markings belong to the same machine by construction.
      */
     @Nullable
-    private static BlockPos sharedKey(ExtensionAddonMenu menu) {
-        return machinePos(menu);
+    private static GlobalPos sharedKey(ExtensionAddonMenu menu) {
+        var level = Minecraft.getInstance().level;
+        var machine = machinePos(menu);
+        return level == null || machine == null ? null : GlobalPos.of(level.dimension(), machine);
     }
 
     /** Machines whose missing map was already reported, so the diagnostics cannot flood the log. */
-    private static final java.util.Set<BlockPos> reportedMissing = java.util.concurrent.ConcurrentHashMap.newKeySet();
+    private static final java.util.Set<GlobalPos> reportedMissing = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
     /** The preview currently built for this menu, or {@code null} while there is none to draw. */
     @Nullable
     private static TransferAddonState.Preview currentPreview(AddonPageContext context) {
-        return TransferAddonState.preview(context.menu().position(), machinePos(context.menu()),
+        var level = Minecraft.getInstance().level;
+        if (level == null) return null;
+        return TransferAddonState.preview(GlobalPos.of(level.dimension(), context.menu().position()),
+                machinePos(context.menu()),
                 context.screenX(previewX(context)), context.screenY(PREVIEW_Y), PREVIEW_WIDTH, PREVIEW_HEIGHT);
     }
 
@@ -521,9 +527,9 @@ public final class TransferAddonPage implements AddonPage {
         }
         // the map is keyed by the machine, not by the block the page was opened on: one machine can be served
         // by several transfer plugins, and all of them draw the same settings
-        var key = context.menu().transferMachinePos();
+        var key = sharedKey(context.menu());
         var known = TransferFaceState.modes(key);
-        if (known == null && reportedMissing.add(key)) {
+        if (known == null && key != null && reportedMissing.add(key)) {
             // INFO while "the config disappears when the UI closes" is being chased: it names the key the page
             // looks under and every key the client actually holds, which is what tells a wrong key from a lost map
             OritechAddonsOne.LOGGER.debug("[transfer] page looks up machine {} (client holds {}) - menu {}",
@@ -538,7 +544,7 @@ public final class TransferAddonPage implements AddonPage {
         if (pending != null && TransferPickerState.isOpen(context.menu().position(), cell, face)) {
             return pending.automation();
         }
-        return TransferFaceState.automationOf(context.menu().transferMachinePos(), cell, face);
+        return TransferFaceState.automationOf(sharedKey(context.menu()), cell, face);
     }
 
     /** What the face the modal is configuring does, as the modal is told it. */
@@ -572,7 +578,7 @@ public final class TransferAddonPage implements AddonPage {
             // which is the addon for a stored plugin - and the machine, which is what the setting describes and
             // the key the server keeps and broadcasts the map under
             var blockPos = context.menu().transferPluginPos();
-            var machine = sharedKey(context.menu());
+            var machine = context.menu().transferMachinePos();
             NetworkManager.sendToServer(new TransferNetworking.SetCellFaceMode(blockPos, machine,
                     CellFaceModes.pack(cell, face, TransferFaceModes.pack(mode, automation))));
         };

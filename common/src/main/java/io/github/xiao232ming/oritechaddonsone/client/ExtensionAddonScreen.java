@@ -2,6 +2,7 @@ package io.github.xiao232ming.oritechaddonsone.client;
 
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 
@@ -167,7 +168,10 @@ public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddon
         ExtensionTransferPickerState.clear();
         TransferPickerState.clear();
         // only this GUI's own model: another addon screen can be open at the same time
-        TransferAddonState.clear(this.menu.position());
+        var level = this.minecraft == null ? null : this.minecraft.level;
+        if (level != null) {
+            TransferAddonState.clear(GlobalPos.of(level.dimension(), this.menu.position()));
+        }
         // The cell-face map the server sends (TransferFaceState) is deliberately NOT dropped here.
         //
         // It used to be, under the position of the block this GUI belongs to, and that is wrong twice over now:

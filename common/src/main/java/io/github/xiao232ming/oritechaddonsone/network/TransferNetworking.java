@@ -4,11 +4,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.core.RegistryAccess;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -189,12 +192,16 @@ public final class TransferNetworking {
      * <p>
      * The list is <b>complete</b>, never a delta: a change replaces what the client had, which is what makes a clear
      * (an entry that is no longer there) expressible without a second packet type.
+     * <p>
+     * The dimension travels with the position because the client keeps one map per machine and the same coordinates
+     * in another dimension are another machine.
      */
-    public record FaceModes(BlockPos pos, List<Integer> entries) implements CustomPacketPayload {
+    public record FaceModes(BlockPos pos, String dimension, List<Integer> entries) implements CustomPacketPayload {
 
         public static final Type<FaceModes> TYPE = new Type<>(id("transfer_cell_face_modes"));
         public static final StreamCodec<RegistryFriendlyByteBuf, FaceModes> CODEC = StreamCodec.composite(
                 BlockPos.STREAM_CODEC, FaceModes::pos,
+                ByteBufCodecs.STRING_UTF8, FaceModes::dimension,
                 ByteBufCodecs.VAR_INT.apply(ByteBufCodecs.list()), FaceModes::entries,
                 FaceModes::new);
 
@@ -215,11 +222,13 @@ public final class TransferNetworking {
                 entries.add(entry);
             }
 
-            OritechAddonsOne.LOGGER.debug("[transfer] map packet for {} carried {} entry(ies), {} unreadable",
-                    packet.pos(), packet.entries().size(), unreadable);
+            OritechAddonsOne.LOGGER.debug("[transfer] map packet for {} in {} carried {} entry(ies), {} unreadable",
+                    packet.pos(), packet.dimension(), packet.entries().size(), unreadable);
 
             // Client side hook, behind a no-op holder so a dedicated server never touches a client class
-            ClientHandler.deliver(packet.pos(), entries);
+            var machine = GlobalPos.of(
+                    ResourceKey.create(Registries.DIMENSION, ResourceLocation.parse(packet.dimension())), packet.pos());
+            ClientHandler.deliver(machine, entries);
         }
     }
 
@@ -235,7 +244,8 @@ public final class TransferNetworking {
         for (var entry : settings.packedEntries()) {
             packed.add(CellFaceModes.pack(entry));
         }
-        NetworkManager.sendPlayerHandle(new FaceModes(machine, packed), player);
+        NetworkManager.sendPlayerHandle(
+                new FaceModes(machine, player.level().dimension().location().toString(), packed), player);
     }
 
     /**
@@ -281,16 +291,16 @@ public final class TransferNetworking {
      * no-op, so a dedicated server can load this class without ever touching a client class.
      */
     public interface ClientHandler {
-        void faceModes(BlockPos pos, List<CellFaceModes.Entry> entries);
+        void faceModes(GlobalPos machine, List<CellFaceModes.Entry> entries);
 
         /** Hands the map to the installed handler (no-op on a dedicated server). */
-        static void deliver(BlockPos pos, List<CellFaceModes.Entry> entries) {
-            clientHandler.faceModes(pos, entries);
+        static void deliver(GlobalPos machine, List<CellFaceModes.Entry> entries) {
+            clientHandler.faceModes(machine, entries);
         }
     }
 
     /** Replaced by the client setup; stays a no-op on a dedicated server. */
-    private static ClientHandler clientHandler = (pos, entries) -> {
+    private static ClientHandler clientHandler = (machine, entries) -> {
     };
 
     public static void setClientHandler(ClientHandler handler) {

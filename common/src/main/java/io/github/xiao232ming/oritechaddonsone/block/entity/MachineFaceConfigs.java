@@ -6,6 +6,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.world.level.Level;
 import net.minecraft.nbt.CompoundTag;
@@ -41,8 +42,8 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class MachineFaceConfigs {
 
-    /** The settings of every machine this server has seen, keyed by the machine's position. */
-    private static final Map<BlockPos, Shared> SHARED = new ConcurrentHashMap<>();
+    /** The settings of every machine this server has seen, keyed by its dimension and position. */
+    private static final Map<GlobalPos, Shared> SHARED = new ConcurrentHashMap<>();
 
     private MachineFaceConfigs() {
     }
@@ -56,9 +57,9 @@ public final class MachineFaceConfigs {
     }
 
     @Nullable
-    private static Shared get(@Nullable BlockPos machine) {
-        if (machine == null) return null;
-        return SHARED.computeIfAbsent(machine.immutable(), ignored -> new Shared());
+    private static Shared get(@Nullable Level level, @Nullable BlockPos machine) {
+        if (level == null || machine == null) return null;
+        return SHARED.computeIfAbsent(GlobalPos.of(level.dimension(), machine.immutable()), ignored -> new Shared());
     }
 
     /**
@@ -66,13 +67,13 @@ public final class MachineFaceConfigs {
      * map, which reads as "this face transfers nothing".
      */
     public static TransferFaceModes faceModes(@Nullable Level level, @Nullable BlockPos machine) {
-        var shared = get(machine);
+        var shared = get(level, machine);
         return shared == null ? new TransferFaceModes() : shared.faces;
     }
 
     /** The cell-face settings of the machine, never {@code null} - same shape as {@link #faceModes}. */
     public static CellFaceModes cellFaces(@Nullable Level level, @Nullable BlockPos machine) {
-        var shared = get(machine);
+        var shared = get(level, machine);
         return shared == null ? new CellFaceModes() : shared.cells;
     }
 
@@ -91,13 +92,13 @@ public final class MachineFaceConfigs {
      * empty map, which reads as "this face moves everything".
      */
     public static FaceFilters faceFilters(@Nullable Level level, @Nullable BlockPos machine) {
-        var shared = get(machine);
+        var shared = get(level, machine);
         return shared == null ? new FaceFilters() : shared.faceFilters;
     }
 
     /** The item filters of the machine's cell-faces, never {@code null} - same shape as {@link #faceFilters}. */
     public static CellFilters cellFilters(@Nullable Level level, @Nullable BlockPos machine) {
-        var shared = get(machine);
+        var shared = get(level, machine);
         return shared == null ? new CellFilters() : shared.cellFilters;
     }
 
@@ -118,7 +119,7 @@ public final class MachineFaceConfigs {
      * loaded later cannot overwrite what a plugin of the same machine configured.
      */
     public static void contribute(@Nullable Level level, @Nullable BlockPos machine, TransferFaceModes own) {
-        var shared = get(machine);
+        var shared = get(level, machine);
         if (shared == null) return;
 
         for (var face : Direction.values()) {
@@ -136,7 +137,7 @@ public final class MachineFaceConfigs {
      * and a face another plugin configured must survive a block that does not know about it being loaded.
      */
     public static void contribute(@Nullable Level level, @Nullable BlockPos machine, CellFaceModes own) {
-        var shared = get(machine);
+        var shared = get(level, machine);
         if (shared == null) return;
 
         for (var entry : own.packedEntries()) {
@@ -153,7 +154,7 @@ public final class MachineFaceConfigs {
      * survives a block that does not know about it being loaded.
      */
     public static void contribute(@Nullable Level level, @Nullable BlockPos machine, FaceFilters own) {
-        var shared = get(machine);
+        var shared = get(level, machine);
         if (shared == null) return;
 
         own.entries().forEach((key, data) -> shared.faceFilters.set(key.face(), key.flow(), data));
@@ -161,7 +162,7 @@ public final class MachineFaceConfigs {
 
     /** Merges what one block had saved into the machine's cell-face item filters - see {@link #contribute}. */
     public static void contribute(@Nullable Level level, @Nullable BlockPos machine, CellFilters own) {
-        var shared = get(machine);
+        var shared = get(level, machine);
         if (shared == null) return;
 
         own.entries().forEach((key, data) -> shared.cellFilters.set(key.cell(), key.face(), key.flow(), data));
@@ -175,8 +176,8 @@ public final class MachineFaceConfigs {
      * the player configured by contributing it again.
      */
     public static void forget(@Nullable Level level, @Nullable BlockPos machine) {
-        if (machine == null) return;
-        var dropped = SHARED.remove(machine);
+        if (level == null || machine == null) return;
+        var dropped = SHARED.remove(GlobalPos.of(level.dimension(), machine.immutable()));
         // INFO while "the config disappears" is being chased: this is the only place shared settings are
         // dropped, so a lost configuration either passes through here or was never in the map at all
         OritechAddonsOne.LOGGER.debug("[transfer] forget({}) dropped {} face(s)", machine,
