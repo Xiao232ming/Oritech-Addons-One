@@ -115,14 +115,14 @@ public final class FilterNetworking {
     /**
      * The filter one address names, out of the map that actually holds it.
      * <p>
-     * <b>The model decides which map, and it has to be asked.</b> A filter of a block's six faces lives in
-     * {@code MachineFaceConfigs.faceFilters} and is found by its face alone, while a filter of one face of one
-     * cell of the structure lives in {@code cellFilters} and is found by that cell too. Reading a cell-face
-     * filter as if it were a block-face one answers {@code null} every time - the cell address names a face of
-     * the controller block that nobody filtered - so the page opened showing an empty filter, and the answer sent
-     * back after each edit was silently dropped, while the filter itself worked: it was stored under the cell it
-     * belongs to, as {@code SetFilter} correctly did. Every read of a filter by address goes through here so the
-     * two cannot drift apart again.
+     * <b>The model decides which map, and it has to be asked.</b> A filter of a block's six faces belongs to that
+     * block ({@code ExtensionAddonBlockEntity#faceFilter}) and is found by its face alone, while a filter of one
+     * face of one cell of the structure belongs to the machine's shared cell map ({@code CellFilters}) and is
+     * found by that cell too. Reading a cell-face filter as if it were a block-face one answers {@code null} every
+     * time - the cell address names a face of the controller block that nobody filtered - so the page opened
+     * showing an empty filter, and the answer sent back after each edit was silently dropped, while the filter
+     * itself worked: it was stored under the cell it belongs to, as {@code SetFilter} correctly did. Every read of
+     * a filter by address goes through here so the two cannot drift apart again.
      *
      * @return the filter, or {@code null} while this face of this model was never filtered
      */
