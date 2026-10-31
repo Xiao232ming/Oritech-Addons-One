@@ -61,6 +61,7 @@ import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonMenu;
 import io.github.xiao232ming.oritechaddonsone.menu.FaceFilterMenu;
 import io.github.xiao232ming.oritechaddonsone.network.FilterNetworking;
 import io.github.xiao232ming.oritechaddonsone.network.ProxyNetworking;
+import io.github.xiao232ming.oritechaddonsone.network.RedstoneNetworking;
 import io.github.xiao232ming.oritechaddonsone.network.TransferNetworking;
 
 /**
@@ -481,6 +482,7 @@ public class OritechAddonsOne {
         modEventBus.addListener(ProxyNetworking::register);
         modEventBus.addListener(TransferNetworking::register);
         modEventBus.addListener(FilterNetworking::register);
+        modEventBus.addListener(RedstoneNetworking::register);
 
         // The machine caches are static and keyed by dimension and position; a server that stops has to drop
         // them, or the next world in the same client process would read the previous one's settings and the old

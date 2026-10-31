@@ -43,6 +43,7 @@ import rearth.oritech.block.blocks.addons.MachineAddonBlock;
 import rearth.oritech.block.entity.addons.AddonBlockEntity;
 import rearth.oritech.block.entity.addons.RedstoneAddonBlockEntity;
 import rearth.oritech.block.entity.addons.RedstoneAddonBlockEntity.RedstoneControllable;
+import rearth.oritech.block.entity.addons.RedstoneAddonBlockEntity.RedstoneMode;
 import rearth.oritech.block.entity.interaction.AddonSplicerBlockEntity;
 import rearth.oritech.config.OritechConfig;
 import rearth.oritech.init.BlockContent;
@@ -92,6 +93,16 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         implements Container, MenuProvider, EnergyProvider, AddonBonusSource, ItemProvider, FluidProvider {
 
     private final ExtensionAddonType type;
+
+    /**
+     * Configuration of the stored control unit, the same two values Oritech's control unit block entity
+     * keeps: the mode it works in and the machine slot the {@code OUTPUT_SLOT} mode reports. A stored
+     * control unit has no block entity of its own, so the addon that holds it keeps them instead (see
+     * {@link #setRedstoneConfig}).
+     */
+    private RedstoneMode redstoneMode = RedstoneMode.INPUT_CONTROL;
+    private int monitoredSlot;
+    private int currentOutput;
     /**
      * Index of the reserved single item slot of the wireless page, right behind the plugin storage. The
      * plugin slots keep their indices {@code 0 .. getContainerSize() - 1}, and the reserved item rides
@@ -188,6 +199,41 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
             if (blockItem.getBlock() == BlockContent.CONTROL_UNIT_ADDON.get()) return true;
         }
         return false;
+    }
+
+    /** Mode the stored control unit works in; {@code INPUT_CONTROL} while none is stored. */
+    public RedstoneMode redstoneMode() {
+        return redstoneMode;
+    }
+
+    /** Machine slot the {@code OUTPUT_SLOT} mode reports. */
+    public int monitoredSlot() {
+        return monitoredSlot;
+    }
+
+    /** Comparator output of this block, i.e. what the stored control unit currently reports. */
+    public int redstoneOutput() {
+        return hasRedstonePlugin() ? currentOutput : 0;
+    }
+
+    /**
+     * Writes the configuration the Redstone Control page edits. The page calls this through
+     * {@code RedstoneNetworking}, so the server is what stores it; the values are saved with the block.
+     */
+    public void setRedstoneConfig(RedstoneMode mode, int slot) {
+        var previousMode = this.redstoneMode;
+        this.redstoneMode = mode;
+        this.monitoredSlot = Math.max(0, slot);
+
+        // Switching away from input control hands the machine back instead of leaving it disabled: Oritech's
+        // control unit only drives the machine in INPUT_CONTROL, and the mode page can be used while a
+        // signal is on. The release is the same path removal uses.
+        if (previousMode == RedstoneMode.INPUT_CONTROL && mode != RedstoneMode.INPUT_CONTROL
+                && redstoneApplied) {
+            applyRedstoneSignal(false);
+        }
+
+        setChanged();
     }
 
     /** True while the reserved slot of the wireless page holds a chunk anchor plugin. */
@@ -323,13 +369,52 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         }
 
         var hasPlugin = hasRedstonePlugin();
-        if (!hasPlugin && !redstoneApplied) return;
+        if (!hasPlugin) {
+            currentOutput = 0;
+            if (!redstoneApplied) return;
+
+            lastRedstonePowered = isPoweredByRedstone();
+            applyRedstoneSignal(lastRedstonePowered);
+            return;
+        }
+
+        // Output modes are polled every tick: the machine's energy, slot fill, progress and active state
+        // change on their own, and the comparator output has to follow them. Input control only reacts to
+        // a redstone edge, exactly like Oritech's own control unit.
+        if (redstoneMode != RedstoneMode.INPUT_CONTROL) {
+            updateRedstoneOutput();
+            return;
+        }
+
+        updateRedstoneOutput();
 
         var powered = isPoweredByRedstone();
-        if (powered == lastRedstonePowered && hasPlugin == redstoneApplied) return;
+        if (powered == lastRedstonePowered && redstoneApplied) return;
 
         lastRedstonePowered = powered;
         applyRedstoneSignal(powered);
+    }
+
+    /** Recomputes {@link #currentOutput} for the configured output mode. */
+    private void updateRedstoneOutput() {
+        var previous = currentOutput;
+
+        if (!hasRedstonePlugin() || redstoneMode == RedstoneMode.INPUT_CONTROL) {
+            currentOutput = 0;
+        } else if (level == null
+                || !(level.getBlockEntity(getControllerPos()) instanceof RedstoneControllable controllable)) {
+            currentOutput = 0;
+        } else {
+            currentOutput = switch (redstoneMode) {
+                case OUTPUT_POWER -> controllable.getComparatorEnergyAmount();
+                case OUTPUT_SLOT -> controllable.getComparatorSlotAmount(monitoredSlot);
+                case OUTPUT_PROGRESS -> controllable.getComparatorProgress();
+                case OUTPUT_ACTIVE -> controllable.getComparatorActiveState();
+                case INPUT_CONTROL -> 0;
+            };
+        }
+
+        if (currentOutput != previous) setChanged();
     }
 
     /** Redstone signal that has to be honoured: at this block, or at the machine it is attached to. */
@@ -358,7 +443,7 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         OritechAddonsOne.LOGGER.debug("[diag] redstone: {} powered={} plugin={} applied={} -> {}",
                 worldPosition, powered, hasRedstonePlugin(), redstoneApplied, getControllerPos());
 
-        if (hasRedstonePlugin()) {
+        if (hasRedstonePlugin() && redstoneMode == RedstoneMode.INPUT_CONTROL) {
             redstoneApplied = true;
             controllable.onRedstoneEvent(powered);
             return;
@@ -1821,6 +1906,10 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         output.store("items", ItemStack.OPTIONAL_CODEC.listOf(), singles);
         output.store("counts", Codec.INT.listOf(), counts);
 
+        // the stored control unit's configuration, the same two values Oritech's control unit block entity saves
+        output.putInt("redstoneMode", redstoneMode.ordinal());
+        output.putInt("redstoneSlot", monitoredSlot);
+
         // the per-face inventory proxy bindings of the Item Proxy page, the transfer modes of the
         // Extension Transfer page and the cell-faces of the 传输插件 page
         proxyFaces.save(output);
@@ -1837,6 +1926,11 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         // a stale binding or mode is harmless: it only resolves to an inventory while the machine is there
         proxyFaces.load(input);
         transferFaces.load(input);
+
+        var modeOrdinal = input.getIntOr("redstoneMode", RedstoneMode.INPUT_CONTROL.ordinal());
+        var modes = RedstoneMode.values();
+        redstoneMode = modes[Math.max(0, Math.min(modes.length - 1, modeOrdinal))];
+        monitoredSlot = Math.max(0, input.getIntOr("redstoneSlot", 0));
         // the machine's shared settings this block was saved with; the machine's controller offset is read by
         // the superclass above, so servedMachinePos() is available here
         MachineFaceConfigs.load(this, input);

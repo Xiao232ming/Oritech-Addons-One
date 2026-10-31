@@ -67,6 +67,7 @@
   "gui.oritechaddonsone.wireless.chunk_force_loaded.no": "Chunk: not force-loaded",
   "gui.oritechaddonsone.page.plugins": "Plugins",
   "gui.oritechaddonsone.page.wireless": "Wireless",
+  "gui.oritechaddonsone.page.redstone": "Redstone Control",
   "gui.oritechaddonsone.page.proxy": "Item Proxy",
   "gui.oritechaddonsone.proxy.counter": "Configurable: %s/%s",
   "gui.oritechaddonsone.proxy.face": "Face: %s",

@@ -128,7 +128,11 @@ public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddon
         // This runs on every frame of the open GUI (see extractBackground) as well as on init and on every tab change,
         // so leaving the page or closing the GUI puts the slots back without anything else having to remember it.
         var transferOnly = page == AddonPageRegistry.transferPage();
-        this.menu.setPlayerSlotsActive(!modalOpen && !this.menu.transferOnly() && !transferOnly);
+        // The Redstone Control page is the control unit's own configuration screen; in OUTPUT_SLOT that panel
+        // is 194 pixels tall and would be covered by the player inventory, so the page owns the panel while
+        // it is visible, exactly like the transfer-only pages above.
+        var redstoneOnly = page == AddonPageRegistry.redstonePage();
+        this.menu.setPlayerSlotsActive(!modalOpen && !this.menu.transferOnly() && !transferOnly && !redstoneOnly);
     }
 
     /**

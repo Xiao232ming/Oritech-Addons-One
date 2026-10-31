@@ -172,6 +172,44 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
     /** Client side copy of the faces a placed transfer addon hangs on (bitmask). */
     private int syncedAttachedTransferFaces = 0;
 
+    /** Client side copy of the stored control unit's configuration (Redstone Control page). */
+    private int syncedRedstoneMode;
+    private int syncedRedstoneSlot;
+
+    /**
+     * Container data slots of the stored control unit's mode and monitored slot. The addon keeps them
+     * because the control unit is an item here and has no block entity of its own; publishing them keeps
+     * the page and the redstone behaviour in step with what the server saved.
+     */
+    private final DataSlot redstoneModeSlot = new DataSlot() {
+        @Override
+        public int get() {
+            if (clientSide) return syncedRedstoneMode;
+            var blockEntity = blockEntity();
+            return blockEntity == null || !blockEntity.hasRedstonePlugin()
+                    ? 0 : blockEntity.redstoneMode().ordinal();
+        }
+
+        @Override
+        public void set(int value) {
+            syncedRedstoneMode = value;
+        }
+    };
+
+    private final DataSlot redstoneSlotSlot = new DataSlot() {
+        @Override
+        public int get() {
+            if (clientSide) return syncedRedstoneSlot;
+            var blockEntity = blockEntity();
+            return blockEntity == null ? 0 : blockEntity.monitoredSlot();
+        }
+
+        @Override
+        public void set(int value) {
+            syncedRedstoneSlot = value;
+        }
+    };
+
     /**
      * Container data slot of the faces a placed transfer addon hangs on this block, as a bitmask over
      * {@link Direction#values()}. The block entity recomputes it every server tick, so publishing it here is
@@ -413,6 +451,10 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
 
         // and the faces a placed transfer addon hangs on, which the page marks in gold
         addDataSlot(attachedTransferFacesSlot);
+
+        // the stored control unit's configuration, read by the Redstone Control page
+        addDataSlot(redstoneModeSlot);
+        addDataSlot(redstoneSlotSlot);
     }
 
     /** One slot of the player's own inventory; see {@link #playerSlotsActive}. */
@@ -502,6 +544,37 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
     /** True while the Item Proxy page has anything to show, i.e. while an inventory proxy addon is stored. */
     public boolean hasInventoryProxy() {
         return inventoryProxyCount() > 0;
+    }
+
+    /**
+     * True while the Redstone Control page has anything to show: a type II addon with a stored control unit
+     * plugin. Only type II accepts that plugin, so the type check is a guard for edited inventories.
+     */
+    public boolean hasRedstoneAddon() {
+        var blockEntity = blockEntity();
+        return pluginType() == ExtensionAddonType.TYPE_2
+                && blockEntity != null
+                && blockEntity.hasRedstonePlugin();
+    }
+
+    /** Ordinal of the stored control unit's {@code RedstoneMode}; {@code 0} while none is stored. */
+    public int redstoneMode() {
+        return redstoneModeSlot.get();
+    }
+
+    /** Machine slot the stored control unit's {@code OUTPUT_SLOT} mode reports. */
+    public int monitoredSlot() {
+        return redstoneSlotSlot.get();
+    }
+
+    /**
+     * Shows a just-clicked configuration immediately, before the server's data slot answers. The page still
+     * sends the packet; this only keeps the clicked arrow or slot from looking dead for a tick.
+     */
+    public void previewRedstoneConfig(int mode, int slot) {
+        if (!clientSide) return;
+        syncedRedstoneMode = mode;
+        syncedRedstoneSlot = slot;
     }
 
     /** True while the given face of the addon is bound to a machine inventory slot. */

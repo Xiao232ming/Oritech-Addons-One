@@ -177,6 +177,26 @@ public class ExtensionAddonBlock extends MachineAddonBlock {
     }
 
     /**
+     * The stored control unit's comparator output leaves the addon through its own block, exactly like it
+     * leaves Oritech's control unit block: output modes are read by a comparator next to this block, while
+     * {@code INPUT_CONTROL} simply reports zero.
+     */
+    @Override
+    public boolean isSignalSource(BlockState state) {
+        return true;
+    }
+
+    @Override
+    protected boolean hasAnalogOutputSignal(BlockState state) {
+        return true;
+    }
+
+    @Override
+    protected int getAnalogOutputSignal(BlockState state, Level level, BlockPos pos, Direction direction) {
+        return level.getBlockEntity(pos) instanceof ExtensionAddonBlockEntity addon ? addon.redstoneOutput() : 0;
+    }
+
+    /**
      * Server ticker that keeps re-reading the redstone state.
      * <p>
      * {@link #neighborChanged} alone is not enough: this block is a slab, so a lever is easily placed on

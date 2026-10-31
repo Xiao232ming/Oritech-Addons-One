@@ -132,6 +132,22 @@ public class WirelessExtensionAddonBlock extends Block implements EntityBlock, T
         return new WirelessExtensionAddonBlockEntity(pos, state);
     }
 
+    /** The stored control unit's comparator output, read by a comparator next to the dock. */
+    @Override
+    public boolean isSignalSource(BlockState state) {
+        return true;
+    }
+
+    @Override
+    protected boolean hasAnalogOutputSignal(BlockState state) {
+        return true;
+    }
+
+    @Override
+    protected int getAnalogOutputSignal(BlockState state, Level level, BlockPos pos, Direction direction) {
+        return level.getBlockEntity(pos) instanceof WirelessExtensionAddonBlockEntity dock ? dock.redstoneOutput() : 0;
+    }
+
     /**
      * Server ticker: the redstone control of type II and the periodic re-apply of the plugins. A wired
      * addon is polled by the machine, a wireless one has to do this itself.
