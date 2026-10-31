@@ -39,7 +39,7 @@
 | --- | --- | --- | --- |
 | `type1Slots` | 5 | 1 – 72 | 扩展插件Ⅰ型可用的插件槽数 |
 | `type2Slots` | 5 | 同上 | 扩展插件Ⅱ型可用的插件槽数 |
-| `type3SlotCapacity` | 256 | ≥ 1 | 扩展插件Ⅲ型单个槽位能容纳的插件数量 |
+| `type3SlotCapacity` | 1024 | ≥ 1 | 扩展插件Ⅲ型单个槽位能容纳的插件数量 |
 | `warehouseAddonSlots` | 16 | 1 – 64 | 每个仓库插件为机器每个物品槽增加的格数 |
 | `tankAddonCapacity` | 8000 | 1000 – 32000 | 每个储罐插件为机器每个流体罐增加的容量（mB） |
 | `transferItemsPerTick` | 64 | 1 – 6400 | 每个已配置面每 tick搬运的物品数 |
