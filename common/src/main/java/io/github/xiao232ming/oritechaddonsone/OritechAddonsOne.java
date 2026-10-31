@@ -56,6 +56,7 @@ import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonMenu;
 import io.github.xiao232ming.oritechaddonsone.menu.FaceFilterMenu;
 import io.github.xiao232ming.oritechaddonsone.network.FilterNetworking;
 import io.github.xiao232ming.oritechaddonsone.network.ProxyNetworking;
+import io.github.xiao232ming.oritechaddonsone.network.RedstoneNetworking;
 import io.github.xiao232ming.oritechaddonsone.network.TransferNetworking;
 import io.github.xiao232ming.oritechaddonsone.platform.AddonsPlatform;
 import io.github.xiao232ming.oritechaddonsone.wireless.AnchorForceLoad;
@@ -504,6 +505,7 @@ public class OritechAddonsOne {
         ProxyNetworking.register();
         TransferNetworking.register();
         FilterNetworking.register();
+        RedstoneNetworking.register();
 
         // 服务器 tick：区块锚点的强制加载对账（Architectury TickEvent）
         AnchorForceLoad.init();

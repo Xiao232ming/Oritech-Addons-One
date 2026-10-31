@@ -177,6 +177,22 @@ public class ExtensionAddonBlock extends MachineAddonBlock implements AddonDetai
         return ExtensionAddonBlockEntity.class;
     }
 
+    /** The stored control unit's comparator output leaves the addon through its own block. */
+    @Override
+    public boolean isSignalSource(BlockState state) {
+        return true;
+    }
+
+    @Override
+    protected boolean hasAnalogOutputSignal(BlockState state) {
+        return true;
+    }
+
+    @Override
+    protected int getAnalogOutputSignal(BlockState state, Level level, BlockPos pos) {
+        return level.getBlockEntity(pos) instanceof ExtensionAddonBlockEntity addon ? addon.redstoneOutput() : 0;
+    }
+
     /**
      * Server ticker that keeps re-reading the redstone state.
      * <p>

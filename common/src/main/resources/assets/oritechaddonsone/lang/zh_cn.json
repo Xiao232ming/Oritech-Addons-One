@@ -67,6 +67,7 @@
   "gui.oritechaddonsone.wireless.chunk_force_loaded.no": "区块：未强制加载",
   "gui.oritechaddonsone.page.plugins": "插件",
   "gui.oritechaddonsone.page.wireless": "无线",
+  "gui.oritechaddonsone.page.redstone": "红石控制",
   "gui.oritechaddonsone.page.proxy": "物品代理",
   "gui.oritechaddonsone.proxy.counter": "可配置数：%s/%s",
   "gui.oritechaddonsone.proxy.face": "面：%s",

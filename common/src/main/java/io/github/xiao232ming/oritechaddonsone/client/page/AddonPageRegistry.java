@@ -36,6 +36,9 @@ public final class AddonPageRegistry {
     /** The wireless page: the connected machine and the reserved single item slot. */
     private static final AddonPage WIRELESS = new WirelessAddonPage();
 
+    /** The Redstone Control page: the configuration of the control unit stored in a type II addon. */
+    private static final AddonPage REDSTONE = new RedstoneAddonPage();
+
     /** The Item Proxy page: the face net and the machine inventory a face proxies. */
     private static final AddonPage PROXY = new ItemProxyAddonPage();
 
@@ -71,7 +74,8 @@ public final class AddonPageRegistry {
         if (menu.transferOnly()) return List.of(TRANSFER);
         if (menu.extensionTransferOnly()) return List.of(EXTENSION_TRANSFER);
 
-        return pages(menu.hasInventoryProxy(), menu.hasExtensionTransferAddon(), menu.hasTransferAddon());
+        return pages(menu.hasInventoryProxy(), menu.hasExtensionTransferAddon(), menu.hasTransferAddon(),
+                menu.hasRedstoneAddon());
     }
 
     /**
@@ -87,9 +91,15 @@ public final class AddonPageRegistry {
      */
     public static List<AddonPage> pages(boolean hasInventoryProxy, boolean hasExtensionTransferAddon,
             boolean hasTransferAddon) {
-        var pages = new ArrayList<AddonPage>(5);
+        return pages(hasInventoryProxy, hasExtensionTransferAddon, hasTransferAddon, false);
+    }
+
+    public static List<AddonPage> pages(boolean hasInventoryProxy, boolean hasExtensionTransferAddon,
+            boolean hasTransferAddon, boolean hasRedstoneAddon) {
+        var pages = new ArrayList<AddonPage>(6);
         pages.add(PLUGINS);
         pages.add(WIRELESS);
+        if (hasRedstoneAddon) pages.add(REDSTONE);
         if (hasInventoryProxy) pages.add(PROXY);
         if (hasExtensionTransferAddon) pages.add(EXTENSION_TRANSFER);
         if (hasTransferAddon) pages.add(TRANSFER);
@@ -102,6 +112,11 @@ public final class AddonPageRegistry {
      */
     public static AddonPage wirelessPage() {
         return WIRELESS;
+    }
+
+    /** The Redstone Control page instance, shown while a type II addon holds a control unit plugin. */
+    public static AddonPage redstonePage() {
+        return REDSTONE;
     }
 
     /** The plugin page instance, the page a freshly opened GUI shows. */
