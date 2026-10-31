@@ -643,6 +643,16 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
     }
 
     /**
+     * True while this block's six-face configuration should be kept. The normal addons answer through
+     * {@link #hasExtensionTransferAddon()}; a placed extension transfer plugin overrides this because the
+     * block <em>is</em> the plugin - its configuration must survive its host chunk being unloaded, when the
+     * attached-face mask is temporarily zero.
+     */
+    protected boolean keepsSixFaceTransferConfig() {
+        return hasExtensionTransferAddon();
+    }
+
+    /**
      * True while the 传输插件 page has anything to show, i.e. while 传输插件 is stored in this
      * block's plugin slots.
      * <p>
@@ -1333,25 +1343,24 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
     }
 
     /**
-     * Drops every mode while the block no longer holds a transfer addon of either kind. Called from
-     * {@link #contentsChanged}: a block that lost its last transfer plugin must stop feeding or emptying the
-     * machine through its faces. Both plugins of this block share the modes, so either of them being present
-     * (see {@link #canTransferItems()}) keeps them.
+     * Drops every six-face mode and filter while the block no longer holds or hosts an extension transfer
+     * plugin. A block that lost its last such plugin must stop feeding or emptying the machine through its
+     * faces, and a later plugin inserted into the same block has to start from an empty configuration.
      * <p>
-     * <b>Only this block's own share goes away.</b> The modes themselves belong to the machine and are shared
-     * with the other plugins serving it ({@link MachineFaceConfigs}), so clearing the machine's map here would
-     * silently wipe what a player configured through a plugin that is still there. What this block does is drop
-     * the copy it saves and its contribution to the shared map is rebuilt from the blocks that remain.
+     * Only this block's own settings go away: the six-face model is per block now, so clearing it cannot
+     * affect another extension transfer plugin serving the same machine. The 3D transfer plugin's cell-face
+     * settings are kept, because those still belong to the machine.
      */
     private void reconcileTransferModes() {
         if (level == null || level.isClientSide()) return;
-        if (transferFaces.isEmpty()) return;
-        if (canTransferItems()) return;
+        if (transferFaces.isEmpty() && savedFaceFilters.isEmpty()) return;
+        if (keepsSixFaceTransferConfig()) return;
 
         transferFaces.clear();
+        savedFaceFilters.clear();
         setChanged();
 
-        OritechAddonsOne.LOGGER.debug("[transfer] reconcileTransferModes cleared the copy of {} (no transfer plugin)",
+        OritechAddonsOne.LOGGER.debug("[transfer] reconcileTransferModes cleared the settings of {} (no extension transfer plugin)",
                 worldPosition);
     }
 

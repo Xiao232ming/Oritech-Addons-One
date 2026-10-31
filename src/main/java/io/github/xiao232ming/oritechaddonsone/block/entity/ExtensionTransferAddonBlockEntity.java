@@ -50,6 +50,16 @@ import io.github.xiao232ming.oritechaddonsone.block.ExtensionTransferAddonBlock;
 public class ExtensionTransferAddonBlockEntity extends ExtensionAddonBlockEntity {
 
     /**
+     * The block itself is the extension transfer plugin, so its six-face configuration stays while the host
+     * or its chunk is temporarily unavailable; {@link #hangsOnExtender()} would answer false then and the
+     * inherited mask-based check would wrongly clear the settings.
+     */
+    @Override
+    protected boolean keepsSixFaceTransferConfig() {
+        return true;
+    }
+
+    /**
      * Faces of the extender this plugin hangs on, as a bitmask over {@link Direction#values()}. The base
      * class recomputes it from {@link #scanAttachedTransferFaces()} on the server and publishes it through
      * the menu's container data; on the client this field is the synced copy the menu writes, because the
