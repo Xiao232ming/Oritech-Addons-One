@@ -16,40 +16,43 @@ public final class Config {
     private static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
 
     public static final ModConfigSpec.IntValue TYPE_1_SLOTS = BUILDER
-            .comment("Number of plugin slots of the Extension Addon I.",
-                    "扩展插件Ⅰ型的物品栏格数。")
+            .comment("Plugin slots of the Extension Addon I.",
+                    "扩展插件Ⅰ型的插件格数。")
             .defineInRange("type1Slots", 5, ExtensionAddonLayout.MIN_SLOTS, ExtensionAddonLayout.MAX_SLOTS);
 
     public static final ModConfigSpec.IntValue TYPE_2_SLOTS = BUILDER
-            .comment("Number of plugin slots of the Extension Addon II.",
-                    "扩展插件Ⅱ型的物品栏格数。")
+            .comment("Plugin slots of the Extension Addon II.",
+                    "扩展插件Ⅱ型的插件格数。")
             .defineInRange("type2Slots", 5, ExtensionAddonLayout.MIN_SLOTS, ExtensionAddonLayout.MAX_SLOTS);
 
     public static final ModConfigSpec.IntValue TYPE_3_SLOT_CAPACITY = BUILDER
-            .comment("Capacity of every plugin slot of the Extension Addon III (how many plugins fit per slot).",
-                    "扩展插件Ⅲ型每个格子的容量（每格最多能放多少个插件）。")
+            .comment("Capacity of one Extension Addon III slot.",
+                    "扩展插件Ⅲ型每格的容量。")
             .defineInRange("type3SlotCapacity", 256, 1, Integer.MAX_VALUE);
 
     public static final ModConfigSpec.IntValue WAREHOUSE_ADDON_SLOTS = BUILDER
-            .comment("Item slots one warehouse addon adds to every slot of the machine.",
-                    "仓库插件为机器每个物品槽增加的格数。")
+            .comment("Item slots one warehouse addon adds per machine slot.",
+                    "每个仓库插件为每个机器物品槽增加的格数。")
             .defineInRange("warehouseAddonSlots", 16, 1, 64);
 
     public static final ModConfigSpec.IntValue TANK_ADDON_CAPACITY = BUILDER
-            .comment("Fluid capacity (mB) one tank addon adds to every tank of the machine.",
-                    "储罐插件为机器每个流体罐增加的容量（mB）。")
+            .comment("Fluid (mB) one tank addon adds per machine tank.",
+                    "每个储罐插件为每个机器流体罐增加的容量（mB）。")
             .defineInRange("tankAddonCapacity", 8000, 1000, 32000);
 
     public static final ModConfigSpec.IntValue TRANSFER_ITEMS_PER_TICK = BUILDER
-            .comment("修改传输插件自动输入输出的速度")
+            .comment("Items one configured face moves per tick.",
+                    "每个已配置面每 tick 搬运的物品数。")
             .defineInRange("transferItemsPerTick", 64, 1, 6400);
 
     public static final ModConfigSpec.IntValue TRANSFER_FLUID_PER_TICK = BUILDER
-            .comment("修改传输插件自动输入输出的流体速度（mB/t）")
+            .comment("Fluid (mB) one configured face moves per tick.",
+                    "每个已配置面每 tick 搬运的流体量（mB）。")
             .defineInRange("transferFluidPerTick", 1000, 1, 1_000_000);
 
     public static final ModConfigSpec.BooleanValue SHOW_WIRELESS_DOCKS_IN_ADDON_PAGE = BUILDER
-            .comment("在机器插件预览中显示无线扩展坞")
+            .comment("Show wireless extension docks in the machine addon page.",
+                    "在机器插件页面显示无线扩展坞。")
             .define("showWirelessDocksInAddonPage", true);
 
     public static final ModConfigSpec SPEC = BUILDER.build();
