@@ -22,7 +22,7 @@ import io.github.xiao232ming.oritechaddonsone.block.ExtensionTransferAddonBlock;
 
 /**
  * Block entity of the transfer addon that is <b>placed as a block</b> on an Oritech machine extender
- * ({@code oritech:machine_extender}).
+ * ({@code oritech:machine_extender}) or on the 储能扩展坞 ({@code oritech:capacitor_addon_extender}).
  * <p>
  * The plugin is the same item as the one that is put <i>into</i> an Extension Addon, and once it stands on
  * an extender it does for that extender what the stored plugin does for its addon: it makes the six faces of
@@ -109,15 +109,21 @@ public class ExtensionTransferAddonBlockEntity extends ExtensionAddonBlockEntity
     }
 
     /**
-     * True while this plugin hangs on an Oritech machine extender, i.e. while the whole placed behaviour -
-     * the GUI, the page, the movement - applies. The host is checked by block identity, so an addon or a
-     * machine that merely happens to be an Oritech addon block does not count.
+     * True while this plugin hangs on an Oritech extender, i.e. while the whole placed behaviour - the GUI,
+     * the page, the movement - applies. Both extender blocks count: the ordinary machine extender and the
+     * 储能扩展坞 ({@code oritech:capacitor_addon_extender}), which is the same addon host with an energy
+     * buffer. The host is checked by block identity, so an addon or a machine that merely happens to be an
+     * Oritech addon block does not count.
      */
     public boolean hangsOnExtender() {
         if (level == null || level.isClientSide()) return false;
 
         var hostPos = hostPos();
-        return level.isLoaded(hostPos) && level.getBlockState(hostPos).is(BlockContent.MACHINE_EXTENDER);
+        if (!level.isLoaded(hostPos)) return false;
+
+        var host = level.getBlockState(hostPos);
+        return host.is(BlockContent.MACHINE_EXTENDER)
+                || host.is(BlockContent.CAPACITOR_ADDON_EXTENDER);
     }
 
     /** Position of the block this plugin hangs on, i.e. of the extender while there is one. */
