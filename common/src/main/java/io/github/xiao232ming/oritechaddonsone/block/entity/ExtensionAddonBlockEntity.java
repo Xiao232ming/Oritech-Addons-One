@@ -574,10 +574,9 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
      * Which items may cross which of this block's six faces, and in which direction - the model of the 过滤
      * page of the Extension Transfer page (see {@link FaceFilters}).
      * <p>
-     * Like {@link #savedCellFaces} this is only <b>the copy this block saves</b>: the filters themselves belong
-     * to the machine and are read and written through {@link #faceFilters()}, so every plugin serving that
-     * machine filters on the same configuration. The copy is what lets a machine whose blocks are all unloaded
-     * still come back with what the player listed.
+     * Like {@link #savedCellFaces} this is the copy this block saves, but unlike the cell filters it belongs to
+     * this block alone and is never merged into a machine's shared map: two extension transfer plugins on one
+     * machine filter independently.
      */
     private final FaceFilters savedFaceFilters = new FaceFilters();
 
@@ -887,10 +886,9 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         // nothing is configured yet, but the page has to appear or disappear.
         refreshAttachedTransferFaces();
 
-        // A world load reads a block's settings while its machine cannot be named yet, so the merge into the
-        // machine's map is retried here, from the tick, until it can be - exactly once, because the merge clears
-        // the block's own copy. Without this the settings on disk stayed in the block and the machine's map was
-        // empty for the whole session: every face did nothing, however often it was configured.
+        // A world load reads a block's cell settings while its machine cannot be named yet, so the merge into
+        // the machine's map is retried here, from the tick, until it can be. The six-face model is per block
+        // and needs no such merge; it is loaded directly from the block's save data.
         if (mergePending) {
             var machinePos = servedMachinePos();
             if (machinePos == null) {
@@ -899,7 +897,7 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
                 syncCellFaces();
                 mergePending = false;
                 OritechAddonsOne.LOGGER.debug(
-                        "[transfer] merged the saved settings of {} into machine {}: shared now {} face(s)",
+                        "[transfer] merged the saved cell settings of {} into machine {}: shared now {} face(s)",
                         worldPosition, machinePos, MachineFaceConfigs.cellFaces(level, machinePos).configuredFaces());
             }
         }
@@ -1154,38 +1152,26 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         return MachineFaceConfigs.cellFilters(this);
     }
 
-    /**
-     * Merges what this block has saved into the machine's shared settings and mirrors the result back, called
-     * while loading and whenever the block starts serving a machine.
-     * <p>
-     * The merge is what makes the shared map survive a world load: every block that serves the machine brings
-     * its own copy, and a block that is loaded later finds the settings of the others already there. The mirror
-     * keeps this block's save data complete, so any one of the machine's plugins is enough to restore the whole
-     * configuration.
-     */
-    /** This block's own copy of the six faces, i.e. what it saves - see {@link #syncCellFaces()}. */
+    /** This block's own six-face modes; they are per block and never merged into the machine's map. */
     TransferFaceModes savedTransferFaces() {
         return transferFaces;
     }
 
     /**
-     * True while this block has settings of its own that have not been merged into its machine's map yet.
+     * True while this block has cell settings of its own that have not been merged into its machine's map yet.
      * <p>
      * It is set while the save data is read - at a moment the machine cannot be named yet - and cleared by the
-     * merge, which is what the tick retries until it can run. It is deliberately a flag and not "the block's
-     * maps are not empty": the merge mirrors the machine's map back into the block's own maps, so those stay
-     * non-empty for the rest of the session and an emptiness test would look like a merge that still has to
-     * happen.
+     * merge, which is what the tick retries until it can run.
      */
     private boolean mergePending;
 
-    /** Marks that this block holds settings the machine's map does not have yet; see {@link #mergePending}. */
+    /** Marks that this block holds cell settings the machine's map does not have yet; see {@link #mergePending}. */
     void markMergePending() {
         mergePending = true;
     }
 
     /**
-     * Merges this block's saved transfer settings into its machine's shared map if that has not happened yet.
+     * Merges this block's saved cell settings into its machine's shared map if that has not happened yet.
      * <p>
      * The merge normally runs from the server tick ({@link #serverTickTransfer()}), which retries until the
      * machine can be named. A screen can open before that first successful tick - right after a world load -
@@ -1851,8 +1837,8 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         // Extension Transfer page and the cell-faces of the 传输插件 page
         proxyFaces.save(nbt);
         transferFaces.save(nbt);
-        // the machine's shared settings as this block knows them, so that this block alone is enough to
-        // restore them (see MachineFaceConfigs#save)
+        // the machine's shared cell settings and this block's own six-face settings, so that this block
+        // alone is enough to restore them (see MachineFaceConfigs#save)
         MachineFaceConfigs.save(this, nbt, registries);
     }
 
@@ -1871,8 +1857,8 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         var modes = RedstoneMode.values();
         redstoneMode = modes[Math.max(0, Math.min(modes.length - 1, modeOrdinal))];
         monitoredSlot = Math.max(0, nbt.getInt("redstoneSlot"));
-        // the machine's shared settings this block was saved with; the machine's controller offset is read by
-        // the superclass above, so servedMachinePos() is available here
+        // the machine's shared cell settings and this block's own six-face settings; the machine's controller
+        // offset is read by the superclass above, so servedMachinePos() is available here
         MachineFaceConfigs.load(this, nbt, registries);
         // the machine cannot be named at this moment, so the merge happens once it can (see mergePending)
         markMergePending();
