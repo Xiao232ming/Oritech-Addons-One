@@ -126,7 +126,7 @@ public class OritechAddonsOne {
 
     /**
      * 仓库插件 - a stat plugin of its own category: every installed one raises the stack limit of
-     * <b>every</b> item slot of the machine by {@link AddonStorageBonus#SLOTS_PER_WAREHOUSE_ADDON}.
+     * <b>every</b> item slot of the machine by {@code Config#warehouseAddonSlots()}.
      * <p>
      * It is a plain Oritech {@link MachineAddonBlock} with neutral stats, so Oritech itself treats it like
      * any other plugin (it occupies an addon slot and contributes nothing to the six stats). The effect
@@ -144,7 +144,7 @@ public class OritechAddonsOne {
     /**
      * 储罐插件 - the fluid counterpart of {@link #WAREHOUSE_ADDON}: every installed one raises the
      * capacity of <b>every</b> fluid tank of the machine by
-     * {@link AddonStorageBonus#CAPACITY_PER_TANK_ADDON}.
+     * {@code Config#tankAddonCapacity()}.
      * <p>
      * Its model is the same speed addon pedestal with a miniature Oritech fluid tank on top of it, see
      * {@code models/block/tank_addon.json}.
@@ -242,18 +242,18 @@ public class OritechAddonsOne {
      * Block items of the warehouse and tank addons. They use {@link PluginAddonItem} because these two
      * plugins are neutral Oritech addons: Oritech's own tooltip describes nothing about them, so the item
      * states the effect this mod gives them (see the {@code tooltip.oritechaddonsone.*.desc} keys). The
-     * bonus they show is built from the same constants the effect uses.
+     * bonus they show is read from the config the effect uses.
      */
     public static final RegistrySupplier<BlockItem> WAREHOUSE_ADDON_ITEM = ITEMS.register(
             "warehouse_addon",
             () -> new PluginAddonItem(WAREHOUSE_ADDON.get(), new Item.Properties(),
-                    "+" + AddonStorageBonus.SLOTS_PER_WAREHOUSE_ADDON));
+                    () -> "+" + Config.warehouseAddonSlots()));
 
     /** Block item of the tank addon, see {@link #WAREHOUSE_ADDON_ITEM}. */
     public static final RegistrySupplier<BlockItem> TANK_ADDON_ITEM = ITEMS.register(
             "tank_addon",
             () -> new PluginAddonItem(TANK_ADDON.get(), new Item.Properties(),
-                    "+" + AddonStorageBonus.CAPACITY_PER_TANK_ADDON + " mB"));
+                    () -> "+" + Config.tankAddonCapacity() + " mB"));
 
     /**
      * Block item of the anchor plugin. Its description line has no number of its own - the plugin forces a

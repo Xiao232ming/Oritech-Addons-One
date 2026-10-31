@@ -41,6 +41,8 @@ And a few extra features:
 | `type1Slots` | 5 | 1 – 72 | Usable addon slots of Extension Addon I |
 | `type2Slots` | 5 | as above | Usable addon slots of Extension Addon II |
 | `type3SlotCapacity` | 256 | ≥ 1 | How many addons one slot of Extension Addon III holds |
+| `warehouseAddonSlots` | 16 | 1 – 64 | Item slots one warehouse addon adds to every machine slot |
+| `tankAddonCapacity` | 8000 | 1000 – 32000 | mB one tank addon adds to every machine tank |
 | `transferItemsPerTick` | 64 | 1 – 6400 | Items one configured face moves per tick |
 | `transferFluidPerTick` | 1000 | 1 – 1000000 | mB of fluid one configured face moves per tick |
 | `showWirelessDocksInAddonPage` | true | – | List the machine's wireless addons in Oritech's own addon page (client-side display option) |

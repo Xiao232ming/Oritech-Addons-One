@@ -24,6 +24,7 @@ import rearth.oritech.api.networking.NetworkedBlockEntity;
 import rearth.oritech.api.networking.SyncType;
 import rearth.oritech.util.MachineAddonController;
 
+import io.github.xiao232ming.oritechaddonsone.Config;
 import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 import io.github.xiao232ming.oritechaddonsone.wireless.WirelessLinks;
 
@@ -44,8 +45,8 @@ import io.github.xiao232ming.oritechaddonsone.wireless.WirelessLinks;
  *     attached - plus the wireless docks linked to the machine, which Oritech's own scan does not know
  *     about - and stored, so the next scan and every later plugin change uses it.</li>
  * </ul>
- * A "warehouse addon" adds {@link AddonStorageBonus#SLOTS_PER_WAREHOUSE_ADDON} to <b>every</b> item slot
- * of the machine and a "tank addon" adds {@link AddonStorageBonus#CAPACITY_PER_TANK_ADDON} mB to
+ * A "warehouse addon" adds {@code Config#warehouseAddonSlots()} to <b>every</b> item slot
+ * of the machine and a "tank addon" adds {@code Config#tankAddonCapacity()} mB to
  * <b>every</b> tank; stacked plugins count once per item.
  * <p>
  * Both plugins count from two places and those two totals add up: every plugin stored inside one of this
@@ -212,10 +213,10 @@ public final class MachineStorageBonuses {
 
         var block = level.getBlockState(pos).getBlock();
         if (block == OritechAddonsOne.WAREHOUSE_ADDON.get()) {
-            return new Bonus(AddonStorageBonus.SLOTS_PER_WAREHOUSE_ADDON, 0L);
+            return new Bonus(Config.warehouseAddonSlots(), 0L);
         }
         if (block == OritechAddonsOne.TANK_ADDON.get()) {
-            return new Bonus(0, AddonStorageBonus.CAPACITY_PER_TANK_ADDON);
+            return new Bonus(0, Config.tankAddonCapacity());
         }
         return null;
     }

@@ -315,13 +315,13 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
      */
     @Override
     public int oritechaddonsone$itemSlotBonus() {
-        return AddonStorageBonus.SLOTS_PER_WAREHOUSE_ADDON * countPlugins(OritechAddonsOne.WAREHOUSE_ADDON.get());
+        return Config.warehouseAddonSlots() * countPlugins(OritechAddonsOne.WAREHOUSE_ADDON.get());
     }
 
     /** Fluid capacity bonus this addon gives to every tank of its machine, see {@link #oritechaddonsone$itemSlotBonus()}. */
     @Override
     public long oritechaddonsone$fluidCapacityBonus() {
-        return AddonStorageBonus.CAPACITY_PER_TANK_ADDON * countPlugins(OritechAddonsOne.TANK_ADDON.get());
+        return Config.tankAddonCapacity() * countPlugins(OritechAddonsOne.TANK_ADDON.get());
     }
 
     /**

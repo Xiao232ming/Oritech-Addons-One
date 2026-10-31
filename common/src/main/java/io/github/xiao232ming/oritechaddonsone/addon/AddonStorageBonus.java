@@ -17,7 +17,7 @@ public interface AddonStorageBonus {
 
     /**
      * Item slots this storage gained: every stored "warehouse addon" adds
-     * {@link #SLOTS_PER_WAREHOUSE_ADDON}, on top of the vanilla 64.
+     * {@code Config#warehouseAddonSlots()}, on top of the vanilla 64.
      */
     int oritechaddonsone$slotBonus();
 
@@ -26,7 +26,7 @@ public interface AddonStorageBonus {
 
     /**
      * Fluid capacity in mB this storage gained: every stored "tank addon" adds
-     * {@link #CAPACITY_PER_TANK_ADDON}.
+     * {@code Config#tankAddonCapacity()}.
      */
     long oritechaddonsone$capacityBonus();
 
@@ -56,10 +56,4 @@ public interface AddonStorageBonus {
      * {@code ItemStack#limitSize}) whenever a machine writes into its inventory.
      */
     void oritechaddonsone$clampToCapacity();
-
-    /** Item slots one warehouse addon adds to every slot of the machine. */
-    int SLOTS_PER_WAREHOUSE_ADDON = 16;
-
-    /** Fluid capacity in mB one tank addon adds to every tank of the machine. */
-    long CAPACITY_PER_TANK_ADDON = 8000L;
 }

@@ -1,6 +1,7 @@
 package io.github.xiao232ming.oritechaddonsone.item;
 
 import java.util.List;
+import java.util.function.Supplier;
 
 import dev.architectury.platform.Platform;
 import dev.architectury.utils.Env;
@@ -45,21 +46,26 @@ public class PluginAddonItem extends BlockItem {
 
     /**
      * The value the description line shows, e.g. {@code +16} or {@code +8000 mB}, or {@code null} for a
-     * plugin that changes no stat. The registration passes it in, built from the very constant the machine
-     * effect uses, so the tooltip cannot drift away from what the plugin really adds.
+     * plugin that changes no stat. The registration passes a supplier that reads the config, so an edited
+     * value is shown on the next tooltip rather than the default captured at registration time.
      */
     @Nullable
-    private final String bonus;
+    private final Supplier<String> bonus;
 
     /** Item of a plugin that shows a number, e.g. the warehouse addon. */
-    public PluginAddonItem(Block block, Properties properties, String bonus) {
+    public PluginAddonItem(Block block, Properties properties, Supplier<String> bonus) {
         super(block, properties);
         this.bonus = bonus;
     }
 
+    /** Item of a plugin that shows a fixed number. */
+    public PluginAddonItem(Block block, Properties properties, String bonus) {
+        this(block, properties, bonus == null ? null : () -> bonus);
+    }
+
     /** Item of a plugin without a number, e.g. the chunk anchor. */
     public PluginAddonItem(Block block, Properties properties) {
-        this(block, properties, null);
+        this(block, properties, (Supplier<String>) null);
     }
 
     @Override
@@ -72,8 +78,9 @@ public class PluginAddonItem extends BlockItem {
         if (!isControlDown()) return;
 
         var key = "tooltip.oritechaddonsone." + BuiltInRegistries.BLOCK.getKey(getBlock()).getPath();
+        var value = bonus == null ? null : bonus.get();
 
-        if (bonus == null) {
+        if (value == null) {
             // A plugin without a number: the language key is a plain sentence.
             tooltipComponents.add(Component.translatable(key + ".desc").withStyle(ChatFormatting.GRAY));
             return;
@@ -82,7 +89,7 @@ public class PluginAddonItem extends BlockItem {
         // The number is the %s of the language key and stays green: a styled argument keeps its own
         // colour over the grey of the surrounding line, exactly like Oritech's own coloured numbers.
         tooltipComponents.add(Component.translatable(key + ".desc",
-                Component.literal(bonus).withStyle(ChatFormatting.GREEN)).withStyle(ChatFormatting.GRAY));
+                Component.literal(value).withStyle(ChatFormatting.GREEN)).withStyle(ChatFormatting.GRAY));
     }
 
     /** True while the player holds Ctrl, like Oritech's own addon items check. */
