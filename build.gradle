@@ -8,7 +8,7 @@ allprojects {
     apply plugin: 'java'
 
     base {
-        // 归档名带模块名，例如 oritechaddonsone-fabric-1.2.1+mc1.21.1.jar
+        // 归档名带模块名，例如 oritechaddonsone-fabric-1.2.2-beta+mc1.21.1.jar
         archivesName = "${mod_id}-${project.name}"
     }
 

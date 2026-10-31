@@ -129,7 +129,7 @@ modmenu_version=11.0.3
 ./gradlew :common:compileJava   # 只验证加载器中立代码
 ```
 
-产物名：`oritechaddonsone-fabric-1.2.1+mc1.21.1.jar` / `oritechaddonsone-neoforge-1.2.1+mc1.21.1.jar`。
+产物名：`oritechaddonsone-fabric-1.2.2-beta+mc1.21.1.jar` / `oritechaddonsone-neoforge-1.2.2-beta+mc1.21.1.jar`。
 Fabric 侧的 `mods.toml` / `fabric.mod.json` 里的 `${version}` 由 `processResources` 展开。
 
 ## 7. 仍需验证的清单
@@ -468,7 +468,7 @@ BUILD SUCCESSFUL in 6s   (16 actionable tasks: 11 executed, 5 up-to-date)
 
 ### 产物自检（两个 jar 的内容都对）
 
-| | `oritechaddonsone-fabric-1.2.1+mc1.21.1.jar` | `oritechaddonsone-neoforge-1.2.1+mc1.21.1.jar` |
+| | `oritechaddonsone-fabric-1.2.2-beta+mc1.21.1.jar` | `oritechaddonsone-neoforge-1.2.2-beta+mc1.21.1.jar` |
 |---|---|---|
 | 条目 / class | 332 / 174 | 328 / 171 |
 | 元数据 | `fabric.mod.json` ✅ | `META-INF/neoforge.mods.toml` ✅（由 `generateModMetadata` 从模板展开） |
@@ -504,7 +504,7 @@ maven { url = 'https://maven.ftb.dev/releases' }
 
 服务器真的启动了，日志（`neoforge/run/logs/latest.log` 与 `debug.log`）里可以看到：
 
-- **Mod List 里有 `Oritech Addons One 1.2.1 (oritechaddonsone)`** —— 模组被发现并加载；
+- **Mod List 里有 `Oritech Addons One 1.2.2-beta (oritechaddonsone)`** —— 模组被发现并加载；
   同列表里 Oritech 1.2.12 / Oritech Things 0.0.46 / Architectury 13.0.11 / Athena 4.0.0 / GeckoLib 4.6.6 / Jade 15.8.2 / Grand Power 3.0.2 全部就位。
 - **`Preparing oritechaddonsone.mixins.json (23)` 且 `Prepared 49 mixins ... ` 无任何 mixin 报错** ——
   23 个 mixin 的**目标类全部解析成功**（prepare 阶段就要解析 `@Mixin(Target.class)` 的目标）。
