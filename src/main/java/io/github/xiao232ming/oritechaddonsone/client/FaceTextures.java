@@ -76,6 +76,9 @@ public record FaceTextures(Map<Direction, Face> faces, Direction front) {
     /** Same, for the extender's {@code addon_used=false} model ({@code machine_extender_off}). */
     private static final Identifier EXTENDER_PORT_OFF =
             Identifier.fromNamespaceAndPath("oritech", "textures/block/machine_extender_off.png");
+    /** The 储能扩展坞's single cube_all texture (its CTM particle face). */
+    private static final Identifier POWER_BANK_EXTENDER =
+            Identifier.fromNamespaceAndPath("oritech", "textures/block/capacitor_ctm/particle.png");
     private static final Identifier ADDON_1_SIDE =
             Identifier.fromNamespaceAndPath("oritechaddonsone", "textures/block/extension_addon_1_side.png");
     private static final Identifier ADDON_2_SIDE =
@@ -114,6 +117,12 @@ public record FaceTextures(Map<Direction, Face> faces, Direction front) {
         if (block == BlockContent.MACHINE_EXTENDER.get()) {
             var extender = isAddonUsed(resolved) ? EXTENDER_PORT : EXTENDER_PORT_OFF;
             return new FaceTextures(defaultFaces(extender, extender), Direction.NORTH);
+        }
+
+        // The 储能扩展坞 is a second extender host with a cube_all model of its own; unfold its own texture
+        // so a transfer plugin placed on it shows that block's faces, not the machine extender's.
+        if (block == BlockContent.POWER_BANK_ADDON_EXTENDER.get()) {
+            return new FaceTextures(defaultFaces(POWER_BANK_EXTENDER, POWER_BANK_EXTENDER), Direction.NORTH);
         }
 
         var wired = block instanceof ExtensionAddonBlock;
