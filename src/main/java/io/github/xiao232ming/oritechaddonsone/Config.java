@@ -28,7 +28,7 @@ public final class Config {
     public static final ModConfigSpec.IntValue TYPE_3_SLOT_CAPACITY = BUILDER
             .comment("Capacity of one Extension Addon III slot.",
                     "扩展插件Ⅲ型每格的容量。")
-            .defineInRange("type3SlotCapacity", 256, 1, Integer.MAX_VALUE);
+            .defineInRange("type3SlotCapacity", 1024, 1, Integer.MAX_VALUE);
 
     public static final ModConfigSpec.IntValue WAREHOUSE_ADDON_SLOTS = BUILDER
             .comment("Item slots one warehouse addon adds per machine slot.",
@@ -115,7 +115,7 @@ public final class Config {
         try {
             return Math.max(1, TYPE_3_SLOT_CAPACITY.get());
         } catch (IllegalStateException notLoadedYet) {
-            return 256;
+            return 1024;
         }
     }
 
