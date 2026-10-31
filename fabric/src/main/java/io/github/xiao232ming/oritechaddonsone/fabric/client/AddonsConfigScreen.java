@@ -1,12 +1,16 @@
 package io.github.xiao232ming.oritechaddonsone.fabric.client;
 
-import java.util.function.IntConsumer;
+import java.util.ArrayList;
+import java.util.List;
 
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+
+import net.neoforged.neoforge.common.ModConfigSpec;
 
 import io.github.xiao232ming.oritechaddonsone.Config;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonLayout;
@@ -14,27 +18,23 @@ import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonLayout;
 /**
  * Fabric 侧的配置界面（由 Mod Menu 承载）。
  * <p>
- * NeoForge 侧用的是它自带的 {@code ConfigurationScreen}（{@code IConfigScreenFactory} 扩展点），Fabric 没有
- * 等价物，所以这里用原版控件画一个最小的界面，直接读写 common 里那一份 {@code Config.SPEC}。
+ * NeoForge 侧用自带的 {@code ConfigurationScreen}，Fabric 没有等价物，所以这里提供一个原版控件组成的
+ * 数字输入页：每个整数配置一项，输入框接受十进制数字，Done 时才校验并写入 {@link Config#SPEC}，Cancel
+ * 关闭时不会改动任何值。配置数据仍然是 common 里的那一份 {@code ModConfigSpec}。
  * <p>
- * 注意：Ⅰ/Ⅱ型的格数会决定菜单布局与槽位数量，保存后需要重开存档（或重启游戏）才生效；Ⅲ型容量与传输速度
- * 是每次读取的，立即生效。
+ * 数值范围就是配置项自己的范围：Ⅰ/Ⅱ型格数、Ⅲ型容量、仓库/储罐插件加成、物品/流体传输速度。文本标签
+ * 使用 {@code oritechaddonsone.configuration.*} 翻译键，不再写死英文。
  */
 public class AddonsConfigScreen extends Screen {
 
-    private static final int ROW_HEIGHT = 24;
-    private static final int WIDGET_WIDTH = 220;
+    private static final int ROW_HEIGHT = 30;
+    private static final int FIELD_HEIGHT = 16;
 
     private final Screen parent;
+    private final List<Field> fields = new ArrayList<>();
 
-    private IntSlider type1Slider;
-    private IntSlider type2Slider;
-    private IntSlider type3Slider;
-    private IntSlider transferSlider;
-    private Button wirelessButton;
-
-    /** 打开界面时的原值，Cancel/Esc 时写回。 */
-    private boolean showWirelessOriginal;
+    private boolean wirelessValue;
+    private Component error;
 
     public AddonsConfigScreen(Screen parent) {
         super(Component.translatable("oritechaddonsone.configuration.title"));
@@ -43,78 +43,126 @@ public class AddonsConfigScreen extends Screen {
 
     @Override
     protected void init() {
-        var x = this.width / 2 - WIDGET_WIDTH / 2;
-        var y = this.height / 4;
+        fields.clear();
+        error = null;
 
-        type1Slider = addRenderableWidget(new IntSlider(x, y, WIDGET_WIDTH, 20,
-                "Extension Addon I - slots", ExtensionAddonLayout.MIN_SLOTS, ExtensionAddonLayout.MAX_SLOTS,
-                intValue(Config.TYPE_1_SLOTS), value -> set(Config.TYPE_1_SLOTS, value)));
+        int columnWidth = Math.max(120, Math.min(250, (this.width - 30) / 2));
+        int gap = 10;
+        int left = this.width / 2 - columnWidth - gap / 2;
+        int right = this.width / 2 + gap / 2;
+        int top = Math.max(42, this.height / 2 - 100);
 
-        type2Slider = addRenderableWidget(new IntSlider(x, y + ROW_HEIGHT, WIDGET_WIDTH, 20,
-                "Extension Addon II - slots", ExtensionAddonLayout.MIN_SLOTS, ExtensionAddonLayout.MAX_SLOTS,
-                intValue(Config.TYPE_2_SLOTS), value -> set(Config.TYPE_2_SLOTS, value)));
+        addField(left, top + ROW_HEIGHT * 0, columnWidth, "type1Slots",
+                Config.TYPE_1_SLOTS, ExtensionAddonLayout.MIN_SLOTS, ExtensionAddonLayout.MAX_SLOTS);
+        addField(left, top + ROW_HEIGHT * 1, columnWidth, "type2Slots",
+                Config.TYPE_2_SLOTS, ExtensionAddonLayout.MIN_SLOTS, ExtensionAddonLayout.MAX_SLOTS);
+        addField(left, top + ROW_HEIGHT * 2, columnWidth, "type3SlotCapacity",
+                Config.TYPE_3_SLOT_CAPACITY, 1, Integer.MAX_VALUE);
+        addField(left, top + ROW_HEIGHT * 3, columnWidth, "warehouseAddonSlots",
+                Config.WAREHOUSE_ADDON_SLOTS, 1, 64);
 
-        type3Slider = addRenderableWidget(new IntSlider(x, y + ROW_HEIGHT * 2, WIDGET_WIDTH, 20,
-                "Extension Addon III - slot capacity", 1, 4096,
-                intValue(Config.TYPE_3_SLOT_CAPACITY), value -> set(Config.TYPE_3_SLOT_CAPACITY, value)));
+        addField(right, top + ROW_HEIGHT * 0, columnWidth, "tankAddonCapacity",
+                Config.TANK_ADDON_CAPACITY, 1000, 32000);
+        addField(right, top + ROW_HEIGHT * 1, columnWidth, "transferItemsPerTick",
+                Config.TRANSFER_ITEMS_PER_TICK, 1, 6400);
+        addField(right, top + ROW_HEIGHT * 2, columnWidth, "transferFluidPerTick",
+                Config.TRANSFER_FLUID_PER_TICK, 1, 1_000_000);
 
-        transferSlider = addRenderableWidget(new IntSlider(x, y + ROW_HEIGHT * 3, WIDGET_WIDTH, 20,
-                "Transfer plugin - items per tick", 1, 6400,
-                intValue(Config.TRANSFER_ITEMS_PER_TICK), value -> set(Config.TRANSFER_ITEMS_PER_TICK, value)));
+        wirelessValue = boolValue(Config.SHOW_WIRELESS_DOCKS_IN_ADDON_PAGE);
+        var wirelessWidth = Math.min(300, this.width - 40);
+        var wirelessY = top + ROW_HEIGHT * 4 + 6;
+        addRenderableWidget(Button.builder(
+                        wirelessLabel(wirelessValue), button -> {
+                            wirelessValue = !wirelessValue;
+                            button.setMessage(wirelessLabel(wirelessValue));
+                            error = null;
+                        })
+                .bounds(this.width / 2 - wirelessWidth / 2, wirelessY, wirelessWidth, 20)
+                .build());
 
-        showWirelessOriginal = boolValue(Config.SHOW_WIRELESS_DOCKS_IN_ADDON_PAGE);
-        wirelessButton = addRenderableWidget(Button.builder(wirelessLabel(showWirelessOriginal), button -> {
-            var next = !boolValue(Config.SHOW_WIRELESS_DOCKS_IN_ADDON_PAGE);
-            set(Config.SHOW_WIRELESS_DOCKS_IN_ADDON_PAGE, next);
-            button.setMessage(wirelessLabel(next));
-        }).bounds(x, y + ROW_HEIGHT * 4, WIDGET_WIDTH, 20).build());
-
-        var footer = y + ROW_HEIGHT * 5 + 8;
+        var footer = wirelessY + 28;
         addRenderableWidget(Button.builder(Component.translatable("gui.done"), button -> saveAndClose())
-                .bounds(this.width / 2 - 102, footer, 100, 20).build());
-        addRenderableWidget(Button.builder(Component.translatable("gui.cancel"), button -> cancel())
-                .bounds(this.width / 2 + 2, footer, 100, 20).build());
+                .bounds(this.width / 2 - 102, footer, 100, 20)
+                .build());
+        addRenderableWidget(Button.builder(Component.translatable("gui.cancel"), button -> onClose())
+                .bounds(this.width / 2 + 2, footer, 100, 20)
+                .build());
+    }
+
+    private void addField(int x, int y, int width, String key, ModConfigSpec.IntValue spec, int min, int max) {
+        var box = new EditBox(this.font, x, y + 11, width, FIELD_HEIGHT,
+                Component.translatable("oritechaddonsone.configuration." + key));
+        box.setMaxLength(10);
+        box.setFilter(value -> value.isEmpty() || value.chars().allMatch(Character::isDigit));
+        box.setValue(Integer.toString(intValue(spec)));
+        box.setResponder(value -> error = null);
+        addRenderableWidget(box);
+        fields.add(new Field(key, spec, min, max, box));
     }
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         super.render(graphics, mouseX, mouseY, partialTick);
 
-        graphics.drawCenteredString(this.font, this.title, this.width / 2, this.height / 4 - 28, 0xFFFFFF);
+        graphics.drawCenteredString(this.font, this.title, this.width / 2, 12, 0xFFFFFF);
         graphics.drawCenteredString(this.font,
-                Component.literal("Slot counts need a world reload; capacity and speed apply immediately."),
-                this.width / 2, this.height / 4 - 16, 0xA0A0A0);
-        graphics.drawCenteredString(this.font,
-                Component.literal("Capacity above 4096 has to be edited in config/oritechaddonsone-common.toml."),
-                this.width / 2, this.height / 4 + ROW_HEIGHT * 5 + 40, 0xA0A0A0);
+                Component.translatable("gui.oritechaddonsone.config.note"),
+                this.width / 2, 24, 0xA0A0A0);
+
+        for (var field : fields) {
+            graphics.drawString(this.font, field.label(), field.box().getX(), field.box().getY() - 10, 0xFFFFFF);
+        }
+
+        if (error != null) {
+            graphics.drawCenteredString(this.font, error, this.width / 2,
+                    fields.getFirst().box().getY() + ROW_HEIGHT * 4 + 56, 0xFF5555);
+        }
     }
 
     @Override
     public void onClose() {
-        cancel();
-    }
-
-    private void saveAndClose() {
-        try {
-            Config.SPEC.save();
-        } catch (Throwable failure) {
-            // 配置还没被加载时无法保存；不因为一个界面把游戏搞崩
-            io.github.xiao232ming.oritechaddonsone.OritechAddonsOne.LOGGER.warn(
-                    "Could not save oritechaddonsone config from the Mod Menu screen", failure);
-        }
         this.minecraft.setScreen(parent);
     }
 
-    private void cancel() {
-        set(Config.SHOW_WIRELESS_DOCKS_IN_ADDON_PAGE, showWirelessOriginal);
+    private void saveAndClose() {
+        var values = new int[fields.size()];
+        for (int index = 0; index < fields.size(); index++) {
+            var field = fields.get(index);
+            var text = field.box().getValue().trim();
+            try {
+                if (text.isEmpty()) throw new NumberFormatException();
+                var value = Integer.parseInt(text);
+                if (value < field.min() || value > field.max()) throw new NumberFormatException();
+                values[index] = value;
+            } catch (NumberFormatException invalid) {
+                error = Component.translatable("gui.oritechaddonsone.config.invalid", field.label());
+                return;
+            }
+        }
+
+        try {
+            for (int index = 0; index < fields.size(); index++) {
+                fields.get(index).spec().set(values[index]);
+            }
+            Config.SHOW_WIRELESS_DOCKS_IN_ADDON_PAGE.set(wirelessValue);
+            Config.SPEC.save();
+        } catch (Throwable failure) {
+            io.github.xiao232ming.oritechaddonsone.OritechAddonsOne.LOGGER.warn(
+                    "Could not save oritechaddonsone config from the Mod Menu screen", failure);
+            error = Component.translatable("gui.oritechaddonsone.config.save_failed");
+            return;
+        }
+
         this.minecraft.setScreen(parent);
     }
 
     private static Component wirelessLabel(boolean value) {
-        return Component.literal("Show wireless docks in the addon page: " + (value ? "ON" : "OFF"));
+        return Component.translatable("oritechaddonsone.configuration.showWirelessDocksInAddonPage")
+                .append(Component.literal(": "))
+                .append(Component.translatable(value ? "options.on" : "options.off"));
     }
 
-    private static int intValue(net.neoforged.neoforge.common.ModConfigSpec.IntValue value) {
+    private static int intValue(ModConfigSpec.IntValue value) {
         try {
             return value.get();
         } catch (IllegalStateException notLoadedYet) {
@@ -122,7 +170,7 @@ public class AddonsConfigScreen extends Screen {
         }
     }
 
-    private static boolean boolValue(net.neoforged.neoforge.common.ModConfigSpec.BooleanValue value) {
+    private static boolean boolValue(ModConfigSpec.BooleanValue value) {
         try {
             return value.get();
         } catch (IllegalStateException notLoadedYet) {
@@ -130,56 +178,11 @@ public class AddonsConfigScreen extends Screen {
         }
     }
 
-    private static void set(net.neoforged.neoforge.common.ModConfigSpec.IntValue value, int newValue) {
-        try {
-            value.set(newValue);
-        } catch (IllegalStateException notLoadedYet) {
-            // 未加载时忽略：界面上的改动无法生效，保存时也不会写坏文件
-        }
-    }
+    /** One numeric config option and its input field. */
+    private record Field(String key, ModConfigSpec.IntValue spec, int min, int max, EditBox box) {
 
-    private static void set(net.neoforged.neoforge.common.ModConfigSpec.BooleanValue value, boolean newValue) {
-        try {
-            value.set(newValue);
-        } catch (IllegalStateException notLoadedYet) {
-            // 见上
-        }
-    }
-
-    /** 一个最小的整数滑条：左端是 min，右端是 max，拖动时立刻写进配置。 */
-    private static final class IntSlider extends AbstractSliderButton {
-
-        private final String label;
-        private final int min;
-        private final int max;
-        private final IntConsumer onChange;
-
-        private IntSlider(int x, int y, int width, int height, String label, int min, int max, int initial,
-                IntConsumer onChange) {
-            super(x, y, width, height, Component.empty(), max <= min ? 0.0 : (double) (clamp(initial, min, max) - min) / (max - min));
-            this.label = label;
-            this.min = min;
-            this.max = max;
-            this.onChange = onChange;
-            updateMessage();
-        }
-
-        private int current() {
-            return (int) Math.round(min + this.value * (max - min));
-        }
-
-        @Override
-        protected void updateMessage() {
-            setMessage(Component.literal(label + ": " + current()));
-        }
-
-        @Override
-        protected void applyValue() {
-            onChange.accept(current());
-        }
-
-        private static int clamp(int value, int min, int max) {
-            return Math.max(min, Math.min(max, value));
+        Component label() {
+            return Component.translatable("oritechaddonsone.configuration." + key).withStyle(ChatFormatting.WHITE);
         }
     }
 }
