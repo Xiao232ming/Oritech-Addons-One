@@ -159,15 +159,18 @@ public class TransferAddonBlock extends PluginAddonBlock {
     }
 
     /**
-     * True while the block this plugin was placed against is an Oritech machine extender. The neighbour is the one
-     * the plugin hangs on (see {@link #attachedTowards(BlockState)}), which is where the machine extender sits when
-     * the plugin is placed on one - on either side.
+     * True while the block this plugin was placed against is one of Oritech's extender hosts. The neighbour is
+     * the one the plugin hangs on (see {@link #attachedTowards(BlockState)}), which is where the machine
+     * extender or the 储能扩展坞 ({@code oritech:power_bank_addon_extender}) sits when the plugin is placed
+     * on one - on either side.
      */
     private static boolean isAttachedToExtender(BlockState state, Level level, BlockPos pos) {
         var hostPos = pos.relative(attachedTowards(state));
         if (!level.isLoaded(hostPos)) return false;
 
-        return level.getBlockState(hostPos).is(BlockContent.MACHINE_EXTENDER.get());
+        var host = level.getBlockState(hostPos);
+        return host.is(BlockContent.MACHINE_EXTENDER.get())
+                || host.is(BlockContent.POWER_BANK_ADDON_EXTENDER.get());
     }
 
     /**
