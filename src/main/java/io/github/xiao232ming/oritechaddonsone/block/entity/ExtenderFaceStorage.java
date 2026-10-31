@@ -50,7 +50,7 @@ public final class ExtenderFaceStorage {
     @Nullable
     public static FacePluginStorage handlerAt(AddonBlockEntity extender, @Nullable Direction face) {
         return FacePluginStorage.handlerAt(extender, face, ExtenderFaceStorage::transferMode,
-                ExtenderFaceStorage::machinePos, ExtenderHandler::new);
+                ExtenderFaceStorage::machinePos, ExtenderFaceStorage::filterFor, ExtenderHandler::new);
     }
 
     /**
@@ -111,6 +111,31 @@ public final class ExtenderFaceStorage {
     }
 
     /**
+     * The filter of the plugin that configures this face. Read from that plugin's own map, never from the
+     * machine's shared one: two extension transfer plugins on one machine filter independently.
+     */
+    @Nullable
+    static ItemFilterData filterFor(BlockEntity host, Direction face, TransferMode flow) {
+        var level = host.getLevel();
+        if (level == null || level.isClientSide()) return null;
+
+        for (var side : Direction.values()) {
+            var plugin = pluginAt(host, level, side);
+            if (plugin == null) continue;
+
+            var pluginFace = ExtensionTransferAddonBlock.attachedFace(plugin.getBlockState());
+            if (face == pluginFace) continue;
+            if (!plugin.canTransferItems()) continue;
+
+            if (plugin.transferModes().modeOf(face) != TransferMode.NONE) {
+                return plugin.faceFilter(face, flow);
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * The transfer plugin hanging on the given face of the extender, i.e. the neighbour whose attachment points
      * back at this very extender, or {@code null} while there is none.
      * <p>
@@ -138,8 +163,9 @@ public final class ExtenderFaceStorage {
      */
     private static final class ExtenderHandler extends FacePluginStorage {
 
-        private ExtenderHandler(BlockEntity host, Direction face, FaceLookup lookup, MachineLookup machine) {
-            super(host, face, lookup, machine);
+        private ExtenderHandler(BlockEntity host, Direction face, FaceLookup lookup, MachineLookup machine,
+                FilterLookup filter) {
+            super(host, face, lookup, machine, filter);
         }
     }
 }

@@ -717,39 +717,37 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
     }
 
     /**
-     * The per-face transfer modes of the machine this block serves; never {@code null}, empty while nothing is
-     * configured.
+     * The per-face transfer modes of this block; never {@code null}, empty while nothing is configured.
      * <p>
-     * <b>Shared with every other plugin of that machine</b>, like the cell-face settings: a machine can be
-     * served by several transfer plugins, and a face configured through one of them has to be visible and active
-     * in the others ({@link MachineFaceConfigs}). A block that serves no machine answers an empty map, which is
-     * what the cube net page shows as "this face transfers nothing".
+     * They belong to <b>this block</b>, not to the machine: two extension transfer plugins on the same machine
+     * are configured independently, and taking one out or changing one must not change the other. The
+     * 3D transfer plugin's cell-face settings are the ones that stay shared per machine
+     * ({@link MachineFaceConfigs}); this six-face model does not use that map.
      */
     public TransferFaceModes transferModes() {
-        return MachineFaceConfigs.faceModes(level, servedMachinePos());
+        return transferFaces;
     }
 
     /**
      * Sets what one face does with the machine's items and whether it does it on its own, or clears the face
      * again with {@link TransferMode#NONE}. Refused on the client and while no transfer addon is stored.
      * <p>
-     * The setting goes into the machine's shared map (see {@link #transferModes()}), so every plugin serving
-     * that machine acts on it and shows it.
+     * The setting belongs to this block; another extension transfer plugin on the same machine keeps its own.
      */
     public boolean setTransferConfig(Direction face, TransferMode mode, boolean automation) {
         if (level == null || level.isClientSide() || face == null || mode == null) return false;
         if (mode != TransferMode.NONE && !canTransferItems()) return false;
 
         var machinePos = servedMachinePos();
-        var settings = MachineFaceConfigs.faceModes(level, machinePos);
+        var settings = transferFaces;
         var before = settings.modeOf(face);
         var beforeAutomation = settings.automationOf(face);
         settings.set(face, mode, automation);
         setChanged();
 
         // INFO on purpose: this is the one place a face is configured, so it names what was asked for, what the
-        // machine's shared map holds afterwards, and whether the machine position the write used is the one the
-        // automation reads with - the three things that have to agree for a face to move items by itself.
+        // block holds afterwards, and whether the machine position the automation reads with - the three things
+        // that have to agree for a face to move items by itself.
         OritechAddonsOne.LOGGER.info(
                 "[transfer] set {} face {} of {} (machine {}): was {} / auto {}, now {} / auto {}, {} configured",
                 mode, face, worldPosition, machinePos, before, beforeAutomation, settings.modeOf(face),
@@ -768,7 +766,7 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
      */
     @Nullable
     public ItemFilterData faceFilter(Direction face, TransferMode flow) {
-        return MachineFaceConfigs.faceFilters(level, servedMachinePos()).of(face, flow);
+        return savedFaceFilters.of(face, flow);
     }
 
     /** The filter of one face of one cell of the machine's structure - see {@link #faceFilter}. */
@@ -792,7 +790,7 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         if (!isAFilterFlow(flow)) return false;
         if (!data.isEmpty() && !canTransferItems()) return false;
 
-        var settings = MachineFaceConfigs.faceFilters(level, servedMachinePos());
+        var settings = savedFaceFilters;
         var before = settings.of(face, flow);
         if (!settings.set(face, flow, data)) return true;
 
@@ -1182,9 +1180,9 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         return savedCellFilters;
     }
 
-    /** The item filters of this block's six faces, i.e. of the machine it serves; never {@code null}. */
+    /** The item filters of this block's six faces, never {@code null}; they belong to this block. */
     public FaceFilters faceFilters() {
-        return MachineFaceConfigs.faceFilters(this);
+        return savedFaceFilters;
     }
 
     /** The item filters of the machine's cell-faces, i.e. of the machine it serves; never {@code null}. */
@@ -1255,30 +1253,16 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
             return;
         }
 
-        // the six faces and the cell-faces of this block both belong to the machine, so both are merged here and
-        // both are mirrored back afterwards - the merge is what makes a world load keep what the player set
-        MachineFaceConfigs.contribute(level, machinePos, transferFaces);
+        // Only the 3D transfer plugin's cell-faces (and their filters) belong to the machine and are merged
+        // here. The six-face model of the extension transfer plugin is per block and never goes through this
+        // shared map, so two such plugins on one machine keep independent settings.
         MachineFaceConfigs.contribute(level, machinePos, savedCellFaces);
-        MachineFaceConfigs.contribute(level, machinePos, savedFaceFilters);
         MachineFaceConfigs.contribute(level, machinePos, savedCellFilters);
-
-        var sharedFaces = MachineFaceConfigs.faceModes(level, machinePos);
-        for (var face : Direction.values()) {
-            transferFaces.set(face, sharedFaces.modeOf(face), sharedFaces.automationOf(face));
-        }
 
         var shared = MachineFaceConfigs.cellFaces(level, machinePos);
         savedCellFaces.clear();
         for (var entry : shared.packedEntries()) {
             savedCellFaces.set(entry.cell(), entry.face(), entry.mode(), entry.automation());
-        }
-
-        // the filters are mirrored the same way, so this block's save data carries the whole configuration
-        var sharedFaceFilters = MachineFaceConfigs.faceFilters(level, machinePos);
-        savedFaceFilters.clear();
-        for (var entry : sharedFaceFilters.packedEntries()) {
-            var key = FaceFilters.unpack(entry.key());
-            if (key != null) savedFaceFilters.set(key.face(), key.flow(), entry.data());
         }
 
         var sharedCellFilters = MachineFaceConfigs.cellFilters(level, machinePos);
@@ -1290,10 +1274,10 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
 
         setChanged();
 
-        OritechAddonsOne.LOGGER.debug("[transfer] syncCellFaces on {} -> machine {}, shared now {} face(s), "
-                        + "{} face filter(s), {} cell filter(s)",
+        OritechAddonsOne.LOGGER.debug("[transfer] syncCellFaces on {} -> machine {}, shared now {} cell face(s), "
+                        + "{} cell filter(s)",
                 worldPosition, machinePos, shared.configuredFaces(),
-                sharedFaceFilters.configured(), sharedCellFilters.configured());
+                savedCellFilters.configured());
     }
 
 

@@ -113,6 +113,17 @@ public class FacePluginStorage extends DelegatingInventoryStorage {
     }
 
     /**
+     * The filter of one face of the host, read from the plugin that configures that face - not from a shared
+     * per-machine map, because two extension transfer plugins on one machine are configured independently.
+     */
+    @FunctionalInterface
+    public interface FilterLookup {
+        /** Filter for one direction of {@code face}, or {@code null} while none is set. */
+        @Nullable
+        ItemFilterData filterOf(BlockEntity host, Direction face, TransferMode flow);
+    }
+
+    /**
      * Builds the handler of one placement. A factory is used instead of a plain constructor reference because
      * the concrete handlers are private to their own placement class and because the cache of
      * {@link #handlerAt} has to be able to create exactly one object per host position and face.
@@ -120,7 +131,8 @@ public class FacePluginStorage extends DelegatingInventoryStorage {
     @FunctionalInterface
     public interface HandlerFactory {
         /** The handler of one face of the host, created once and then kept forever. */
-        FacePluginStorage create(BlockEntity host, Direction face, FaceLookup lookup, MachineLookup machine);
+        FacePluginStorage create(BlockEntity host, Direction face, FaceLookup lookup, MachineLookup machine,
+                FilterLookup filter);
     }
 
     /**
@@ -132,6 +144,7 @@ public class FacePluginStorage extends DelegatingInventoryStorage {
     private final BlockPos hostPos;
     private final FaceLookup lookup;
     private final MachineLookup machine;
+    private final FilterLookup filter;
     /** Face of the host this storage belongs to, resolved against the block entity on every call. */
     private final Direction face;
 
@@ -139,13 +152,15 @@ public class FacePluginStorage extends DelegatingInventoryStorage {
      * Creates the handler of one face. Protected, not private: a placement is a subclass of this class (see
      * {@link ExtenderFaceStorage}), and the factory in {@link #handlerAt} only ever calls one of them.
      */
-    protected FacePluginStorage(BlockEntity host, Direction face, FaceLookup lookup, MachineLookup machine) {
+    protected FacePluginStorage(BlockEntity host, Direction face, FaceLookup lookup, MachineLookup machine,
+            FilterLookup filter) {
         super(() -> machineStorage(host, machine), () -> lookup.modeOf(host, face) != TransferMode.NONE);
         this.host = new WeakReference<>(host);
         this.hostPos = host.getBlockPos();
         this.face = face;
         this.lookup = lookup;
         this.machine = machine;
+        this.filter = filter;
     }
 
     /**
@@ -168,7 +183,7 @@ public class FacePluginStorage extends DelegatingInventoryStorage {
      */
     @Nullable
     public static FacePluginStorage handlerAt(BlockEntity host, @Nullable Direction face, FaceLookup lookup,
-            MachineLookup machine, HandlerFactory create) {
+            MachineLookup machine, FilterLookup filter, HandlerFactory create) {
         if (face == null) return null;
 
         var level = host.getLevel();
@@ -188,7 +203,7 @@ public class FacePluginStorage extends DelegatingInventoryStorage {
         // different host as well): only reuse the handler while it still belongs to this very host
         if (existing != null && existing.host.get() == host) return existing;
 
-        var created = create.create(host, face, lookup, machine);
+        var created = create.create(host, face, lookup, machine, filter);
         handlers[face.ordinal()] = created;
 
         OritechAddonsOne.LOGGER.debug("[transfer] capability: host {} face {} now answers its handler",
@@ -287,13 +302,7 @@ public class FacePluginStorage extends DelegatingInventoryStorage {
         var current = host();
         if (current == null) return null;
 
-        var level = current.getLevel();
-        if (level == null) return null;
-
-        var pos = machine.machinePos(current);
-        if (pos == null) return null;
-
-        return MachineFaceConfigs.faceFilters(level, pos).of(face, flow);
+        return filter.filterOf(current, face, flow);
     }
 
     /** True while the face's filter for that direction lets the given item through. */

@@ -204,13 +204,19 @@ public final class MachineFaceConfigs {
      */
     public static void save(ExtensionAddonBlockEntity block, ValueOutput output) {
         var machine = block.servedMachinePos();
-        var faces = machine == null ? block.savedTransferFaces() : faceModes(block);
+
+        // The six-face transfer model belongs to the block, not to the machine: save its own map even while a
+        // machine is named, otherwise a second extension transfer plugin (or a save after an unload) would
+        // replace this block's settings with the shared map's - which no longer holds them.
+        var faces = block.savedTransferFaces();
         var faceValues = new int[Direction.values().length];
         for (var face : Direction.values()) {
             faceValues[face.ordinal()] = TransferFaceModes.pack(faces.modeOf(face), faces.automationOf(face));
         }
         output.putIntArray(FACE_TAG, faceValues);
 
+        // The cell-faces still belong to the machine (3D transfer plugin) and follow the shared map while it
+        // can be named.
         var settings = machine == null ? block.savedCellFaces() : cellFaces(block);
         var values = new ArrayList<Integer>(settings.configuredFaces());
         for (var entry : settings.packedEntries()) {
@@ -221,12 +227,11 @@ public final class MachineFaceConfigs {
         for (int index = 0; index < packed.length; index++) packed[index] = values.get(index);
         output.putIntArray(CELL_TAG, packed);
 
-        // the filters follow the same rule: the shared map while a machine is named, the block's own copy otherwise
+        // six-face filters are per block too; cell filters follow the shared map.
+        block.savedFaceFilters().save(output);
         if (machine == null) {
-            block.savedFaceFilters().save(output);
             block.savedCellFilters().save(output);
         } else {
-            faceFilters(block).save(output);
             cellFilters(block).save(output);
         }
     }
