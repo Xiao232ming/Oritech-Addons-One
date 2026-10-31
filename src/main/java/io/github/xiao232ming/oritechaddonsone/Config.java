@@ -30,6 +30,16 @@ public final class Config {
                     "扩展插件Ⅲ型每个格子的容量（每格最多能放多少个插件）。")
             .defineInRange("type3SlotCapacity", 256, 1, Integer.MAX_VALUE);
 
+    public static final ModConfigSpec.IntValue WAREHOUSE_ADDON_SLOTS = BUILDER
+            .comment("Item slots one warehouse addon adds to every slot of the machine.",
+                    "仓库插件为机器每个物品槽增加的格数。")
+            .defineInRange("warehouseAddonSlots", 16, 1, 64);
+
+    public static final ModConfigSpec.IntValue TANK_ADDON_CAPACITY = BUILDER
+            .comment("Fluid capacity (mB) one tank addon adds to every tank of the machine.",
+                    "储罐插件为机器每个流体罐增加的容量（mB）。")
+            .defineInRange("tankAddonCapacity", 8000, 1000, 32000);
+
     public static final ModConfigSpec.IntValue TRANSFER_ITEMS_PER_TICK = BUILDER
             .comment("修改传输插件自动输入输出的速度")
             .defineInRange("transferItemsPerTick", 64, 1, 6400);
@@ -103,6 +113,33 @@ public final class Config {
             return Math.max(1, TYPE_3_SLOT_CAPACITY.get());
         } catch (IllegalStateException notLoadedYet) {
             return 256;
+        }
+    }
+
+    /**
+     * Item slots one warehouse addon adds to every slot of the machine
+     * ({@link #WAREHOUSE_ADDON_SLOTS}, default 16, range 1-64). Read on the addon scan, so a changed value
+     * applies to the next scan rather than to already modified stacks.
+     */
+    public static int warehouseAddonSlots() {
+        try {
+            return Math.max(1, Math.min(64, WAREHOUSE_ADDON_SLOTS.get()));
+        } catch (IllegalStateException notLoadedYet) {
+            // Config values are not available in every early loading stage; fall back to the default.
+            return 16;
+        }
+    }
+
+    /**
+     * Fluid capacity in mB one tank addon adds to every tank of the machine
+     * ({@link #TANK_ADDON_CAPACITY}, default 8000, range 1000-32000).
+     */
+    public static long tankAddonCapacity() {
+        try {
+            return Math.max(1000L, Math.min(32000L, TANK_ADDON_CAPACITY.get()));
+        } catch (IllegalStateException notLoadedYet) {
+            // Config values are not available in every early loading stage; fall back to the default.
+            return 8000L;
         }
     }
 

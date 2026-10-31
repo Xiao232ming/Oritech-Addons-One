@@ -22,12 +22,12 @@ import io.github.xiao232ming.oritechaddonsone.addon.StorageBonusHolder;
  * machine slot, so the limit is changed here, on the NeoForge class every Oritech inventory is built on.
  * <p>
  * The bonus is <b>relative</b>: the number NeoForge computed for this slot and this item is the base and
- * every warehouse addon adds {@link StorageBonusHolder#SLOTS_PER_WAREHOUSE_ADDON} on top of it. A normal
- * 64 stack therefore ends up at 80 (64 + 16, the same number the 1.21.1 branch produces), while a slot
- * whose base is already 99 - Oritech's drone port reports that for an empty slot - grows to 115 instead of
- * being cut down to 80. The item's own maximum is still exceeded on purpose: a slot really holds 80 items
- * of a 64 stack. Without a bonus the value NeoForge computed is returned untouched, so unmodified machines
- * keep the stack limit they had.
+ * every warehouse addon adds {@code Config#warehouseAddonSlots()} (default 16) on top of it. A normal
+ * 64 stack therefore ends up at 64 plus the configured bonus (80 at the default, the same number the
+ * 1.21.1 branch produces), while a slot whose base is already 99 - Oritech's drone port reports that for
+ * an empty slot - grows instead of being cut down. The item's own maximum is still exceeded on purpose:
+ * with the default a slot really holds 80 items of a 64 stack. Without a bonus the value NeoForge
+ * computed is returned untouched, so unmodified machines keep the stack limit they had.
  * <p>
  * The bonus lives in the storage instance and is set by {@code MachineStorageBonuses}; it is not synced
  * and not saved - the limits of a machine are recomputed from its plugins on every addon scan. Because

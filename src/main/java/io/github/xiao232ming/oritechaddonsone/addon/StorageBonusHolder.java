@@ -46,10 +46,4 @@ public interface StorageBonusHolder {
      * loses exactly the amount above the new limit.
      */
     void oritechaddonsone$clampToCapacity();
-
-    /** Item slots one warehouse addon adds to every slot of the machine. */
-    int SLOTS_PER_WAREHOUSE_ADDON = 16;
-
-    /** Fluid capacity in mB one tank addon adds to every tank of the machine. */
-    long CAPACITY_PER_TANK_ADDON = 8000L;
 }
