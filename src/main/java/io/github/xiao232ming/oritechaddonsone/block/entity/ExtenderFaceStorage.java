@@ -157,8 +157,8 @@ public final class ExtenderFaceStorage {
     }
 
     /**
-     * The concrete handler of this placement: a {@link FacePluginStorage} whose two answers are the static
-     * methods above. It exists as a class only so the handler cache can create exactly one object per host
+     * The concrete handler of this placement: a {@link FacePluginStorage} whose mode, machine and filter
+     * lookups are the static methods above. It exists as a class only so the handler cache can create exactly one object per host
      * position and face - the base class constructs its handlers itself.
      */
     private static final class ExtenderHandler extends FacePluginStorage {

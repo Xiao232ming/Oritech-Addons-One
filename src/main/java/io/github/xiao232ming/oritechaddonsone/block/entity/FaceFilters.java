@@ -13,8 +13,8 @@ import net.minecraft.world.level.storage.ValueOutput;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * The per-<b>face</b> item filters of one machine: which items may cross one face of an Extension Addon /
- * Wireless Extension Dock, and in which direction.
+ * The per-<b>face</b> item filters of one Extension Addon / Wireless Extension Dock: which items may cross
+ * one of its faces, and in which direction. They belong to that block, not to the machine it serves.
  * <p>
  * <b>A face has two filters, not one.</b> A face set to 输入 moves items from the container beside it into the
  * machine, and a face set to 输出 moves them the other way; a face set to 输入 + 输出 does both. What may
