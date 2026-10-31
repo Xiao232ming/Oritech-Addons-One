@@ -2,6 +2,7 @@ package io.github.xiao232ming.oritechaddonsone.block.entity;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -114,7 +115,7 @@ public class TransferAddonBlockEntity extends ExtensionAddonBlockEntity {
         var hostPos = attachedHostPos();
         if (!level.isLoaded(hostPos)) return null;
 
-        if (level.getBlockState(hostPos).is(BlockContent.MACHINE_EXTENDER)) {
+        if (isExtender(level, hostPos)) {
             if (!(level.getBlockEntity(hostPos) instanceof AddonBlockEntity extender)) return null;
 
             var machinePos = extender.getControllerPos();
@@ -148,8 +149,9 @@ public class TransferAddonBlockEntity extends ExtensionAddonBlockEntity {
     }
 
     /**
-     * True while this plugin hangs on an Oritech machine extender that a machine claimed, i.e. while the extender
-     * placement really applies.
+     * True while this plugin hangs on an Oritech extender that a machine claimed, i.e. while the extender
+     * placement really applies. Both hosts count: the machine extender and the 储能扩展坞
+     * ({@code oritech:capacitor_addon_extender}).
      * <p>
      * The host is checked by block identity, so an addon or a machine that merely happens to be an Oritech addon
      * block does not count, and the extender's own controller position has to point at a machine as well: an
@@ -160,9 +162,16 @@ public class TransferAddonBlockEntity extends ExtensionAddonBlockEntity {
 
         var hostPos = attachedHostPos();
         if (!level.isLoaded(hostPos)) return false;
-        if (!level.getBlockState(hostPos).is(BlockContent.MACHINE_EXTENDER)) return false;
+        if (!isExtender(level, hostPos)) return false;
 
         return hostMachinePos() != null;
+    }
+
+    /** True while the block at {@code pos} is one of Oritech's extender hosts. */
+    private static boolean isExtender(Level level, BlockPos pos) {
+        var host = level.getBlockState(pos);
+        return host.is(BlockContent.MACHINE_EXTENDER)
+                || host.is(BlockContent.CAPACITOR_ADDON_EXTENDER);
     }
 
     /**
@@ -179,7 +188,7 @@ public class TransferAddonBlockEntity extends ExtensionAddonBlockEntity {
         if (level == null || level.isClientSide()) return false;
 
         var hostPos = attachedHostPos();
-        if (level.getBlockState(hostPos).is(BlockContent.MACHINE_EXTENDER)) return false;
+        if (isExtender(level, hostPos)) return false;
 
         return hostMachinePos() != null;
     }
