@@ -184,7 +184,9 @@ public final class RedstoneAddonPage implements AddonPage {
 
             new ItemSlotWidget(x, y).render(graphics, relX, relY, partialTick);
 
-            var hovered = relX >= x && relX < x + 16 && relY >= y && relY < y + 16;
+            // Oritech's selection button is the 10x10 plate inside the 16x16 cell, so only that rectangle
+            // hovers and binds - clicking the frame itself does nothing on its screen either.
+            var hovered = relX >= x + 3 && relX < x + 13 && relY >= y + 3 && relY < y + 13;
             var plate = slot.index() == selected
                     ? OritechSurface.PANEL_DARK
                     : hovered ? OritechSurface.PANEL_HOVER : OritechSurface.PANEL;
@@ -225,7 +227,7 @@ public final class RedstoneAddonPage implements AddonPage {
             for (var slot : provider.getGuiSlots()) {
                 var slotX = slot.x();
                 var slotY = 120 + slot.y();
-                if (x >= slotX && x < slotX + 16 && y >= slotY && y < slotY + 16) {
+                if (x >= slotX + 3 && x < slotX + 13 && y >= slotY + 3 && y < slotY + 13) {
                     apply(menu, mode, slot.index());
                     return true;
                 }
@@ -269,6 +271,7 @@ public final class RedstoneAddonPage implements AddonPage {
         return Component.translatable("tooltip.oritech.redstone_" + mode.name().toLowerCase(Locale.ROOT));
     }
 }
+
 
 
 
