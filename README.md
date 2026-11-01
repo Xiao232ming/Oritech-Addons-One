@@ -33,6 +33,7 @@ Additional features:
 - install addons on your **Refinery** through a wireless extension addon;
 - show the processing speed of the **Atomic Forge**;
 - let the **Atomic Forge** process in parallel by installing an **Auxiliary Processing Chamber Addon** on the **Enderic Lasers** that charge it;
+- right-clicking air with the Target Designator clears the stored coordinates;
 - edit the common config in game through the NeoForge config screen, or through **Mod Menu** on Fabric.
 
 ## ⚙️ Configuration
