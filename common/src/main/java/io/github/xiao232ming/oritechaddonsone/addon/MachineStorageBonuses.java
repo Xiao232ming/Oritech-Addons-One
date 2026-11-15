@@ -26,6 +26,7 @@ import rearth.oritech.util.MachineAddonController;
 
 import io.github.xiao232ming.oritechaddonsone.Config;
 import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
+import io.github.xiao232ming.oritechaddonsone.fluid.FluidAmounts;
 import io.github.xiao232ming.oritechaddonsone.wireless.WirelessLinks;
 
 /**
@@ -216,7 +217,7 @@ public final class MachineStorageBonuses {
             return new Bonus(Config.warehouseAddonSlots(), 0L);
         }
         if (block == OritechAddonsOne.TANK_ADDON.get()) {
-            return new Bonus(0, Config.tankAddonCapacity());
+            return new Bonus(0, FluidAmounts.ofMillibuckets(Config.tankAddonCapacity()));
         }
         return null;
     }

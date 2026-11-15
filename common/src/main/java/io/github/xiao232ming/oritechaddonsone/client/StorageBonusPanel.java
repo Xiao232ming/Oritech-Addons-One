@@ -11,6 +11,7 @@ import rearth.oritech.api.screen.widgets.ButtonWidget;
 import rearth.oritech.api.screen.widgets.LabelWidget;
 
 import io.github.xiao232ming.oritechaddonsone.addon.StorageBonusDisplay;
+import io.github.xiao232ming.oritechaddonsone.fluid.FluidAmounts;
 
 /**
  * The two storage lines of the machine addon panel.
@@ -67,7 +68,7 @@ public final class StorageBonusPanel {
             lines.add(line(ITEM_SLOTS_TITLE, ITEM_SLOTS_TOOLTIP, slots));
         }
 
-        long capacity = display.oritechaddonsone$shownFluidCapacityBonus();
+        long capacity = FluidAmounts.toMillibuckets(display.oritechaddonsone$shownFluidCapacityBonus());
         if (capacity > 0L) {
             lines.add(line(FLUID_CAPACITY_TITLE, FLUID_CAPACITY_TOOLTIP, capacity));
         }

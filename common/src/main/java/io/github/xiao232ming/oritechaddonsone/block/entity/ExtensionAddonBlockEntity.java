@@ -56,6 +56,7 @@ import io.github.xiao232ming.oritechaddonsone.block.AddonDetailProvider;
 import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonType;
 import io.github.xiao232ming.oritechaddonsone.block.entity.WirelessExtensionAddonBlockEntity;
+import io.github.xiao232ming.oritechaddonsone.fluid.FluidAmounts;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonLayout;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonMenu;
 import io.github.xiao232ming.oritechaddonsone.wireless.AnchorForceLoad;
@@ -321,7 +322,7 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
     /** Fluid capacity bonus this addon gives to every tank of its machine, see {@link #oritechaddonsone$itemSlotBonus()}. */
     @Override
     public long oritechaddonsone$fluidCapacityBonus() {
-        return Config.tankAddonCapacity() * countPlugins(OritechAddonsOne.TANK_ADDON.get());
+        return FluidAmounts.ofMillibuckets(Config.tankAddonCapacity()) * countPlugins(OritechAddonsOne.TANK_ADDON.get());
     }
 
     /**
