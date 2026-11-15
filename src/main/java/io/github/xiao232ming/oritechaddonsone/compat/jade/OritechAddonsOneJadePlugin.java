@@ -22,12 +22,14 @@ public class OritechAddonsOneJadePlugin implements IWailaPlugin {
 
     @Override
     public void register(IWailaCommonRegistration registration) {
-        // server side data (the link and the force load state are save data of a plain block entity)
-        registration.registerBlockDataProvider(WirelessDockJadeProvider.INSTANCE, WirelessExtensionAddonBlock.class);
+        // server side data (the link and the force load state are save data of a plain block entity).
+        // Since 1.21.6 Jade rejects a provider that also implements IComponentProvider, so the server
+        // and client halves live in two separate classes.
+        registration.registerBlockDataProvider(WirelessDockDataProvider.INSTANCE, WirelessExtensionAddonBlock.class);
     }
 
     @Override
     public void registerClient(IWailaClientRegistration registration) {
-        registration.registerBlockComponent(WirelessDockJadeProvider.INSTANCE, WirelessExtensionAddonBlock.class);
+        registration.registerBlockComponent(WirelessDockTooltipProvider.INSTANCE, WirelessExtensionAddonBlock.class);
     }
 }
