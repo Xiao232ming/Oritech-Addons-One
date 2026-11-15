@@ -2,7 +2,7 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "key": {
-    "A": "oritech:steel_ingot",
+    "A": "#c:ingots/steel",
     "B": "oritech:machine_extender",
     "C": "oritech:flux_gate"
   },

@@ -2,9 +2,9 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "key": {
-    "A": "oritech:plastic_sheet",
+    "A": "#c:plates/plastic",
     "B": "oritech:portable_tank",
-    "C": "oritech:silicon",
+    "C": "#c:silicon",
     "D": "#oritech:plating"
   },
   "pattern": [

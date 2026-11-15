@@ -3,7 +3,7 @@
   "category": "misc",
   "key": {
     "A": "minecraft:piston",
-    "B": "oritech:plastic_sheet",
+    "B": "#c:plates/plastic",
     "C": "oritech:processing_unit",
     "D": "#oritech:plating"
   },

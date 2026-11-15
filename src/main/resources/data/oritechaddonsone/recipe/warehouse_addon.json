@@ -2,8 +2,8 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "key": {
-    "A": "oritech:plastic_sheet",
-    "B": "minecraft:chest",
+    "A": "#c:plates/plastic",
+    "B": "#c:chests/wooden",
     "C": "#minecraft:planks",
     "D": "#oritech:plating"
   },

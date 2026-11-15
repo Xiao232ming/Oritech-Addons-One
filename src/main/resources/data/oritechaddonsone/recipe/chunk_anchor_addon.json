@@ -2,8 +2,8 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "key": {
-    "A": "oritech:plastic_sheet",
-    "B": "oritech:platinum_ingot",
+    "A": "#c:plates/plastic",
+    "B": "#c:ingots/platinum",
     "C": "minecraft:ender_eye",
     "D": "oritech:processing_unit",
     "E": "#oritech:plating"

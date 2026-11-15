@@ -2,10 +2,10 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "key": {
-    "A": "oritech:steel_ingot",
+    "A": "#c:ingots/steel",
     "B": "oritech:machine_extender",
     "C": "oritech:super_ai_chip",
-    "D": "minecraft:ender_pearl"
+    "D": "#c:ender_pearls"
   },
   "pattern": [
     "ABA",
