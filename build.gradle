@@ -132,6 +132,10 @@ dependencies {
     // real mods above).
     compileOnly "maven.modrinth:geckolib:${geckolib_version}"
 
+    // Jade：可选兼容，仅编译期需要（compat.jade 里的插件由 Jade 的 @WailaPlugin 注解扫描发现）。
+    // 运行期没有 Jade 时这些类不会被加载，所以不需要声明为必需依赖。
+    compileOnly "maven.modrinth:jade:${jade_version}"
+
     // Loaded in dev runs (gradlew runClient / runData) so the addon can actually be tested in game.
     // These mods are NOT bundled into the built jar.
     localRuntime "maven.modrinth:oritech:${oritech_version}"
