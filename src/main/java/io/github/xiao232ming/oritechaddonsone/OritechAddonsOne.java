@@ -42,6 +42,11 @@ import io.github.xiao232ming.oritechaddonsone.addon.StorageBonusHolder;
 import io.github.xiao232ming.oritechaddonsone.block.ChunkAnchorAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonType;
+import io.github.xiao232ming.oritechaddonsone.block.PaintableChunkAnchorAddonBlock;
+import io.github.xiao232ming.oritechaddonsone.block.PaintableExtensionAddonBlock;
+import io.github.xiao232ming.oritechaddonsone.block.PaintableExtensionTransferAddonBlock;
+import io.github.xiao232ming.oritechaddonsone.block.PaintablePluginAddonBlock;
+import io.github.xiao232ming.oritechaddonsone.block.PaintableWirelessExtensionAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.block.PluginAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.block.ExtensionTransferAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.block.TransferAddonBlock;
@@ -93,13 +98,13 @@ public class OritechAddonsOne {
      */
     public static final DeferredBlock<ExtensionAddonBlock> EXTENSION_ADDON_1 = BLOCKS.registerBlock(
             ExtensionAddonType.TYPE_1.id(),
-            properties -> new ExtensionAddonBlock(properties, addonSettings(), ExtensionAddonType.TYPE_1),
+            properties -> new PaintableExtensionAddonBlock(properties, addonSettings(), ExtensionAddonType.TYPE_1),
             OritechAddonsOne::blockProperties);
 
     /** 扩展插件Ⅱ型 - slots for every other plugin (except the Heart of the Machine / inventory proxy). */
     public static final DeferredBlock<ExtensionAddonBlock> EXTENSION_ADDON_2 = BLOCKS.registerBlock(
             ExtensionAddonType.TYPE_2.id(),
-            properties -> new ExtensionAddonBlock(properties, addonSettings(), ExtensionAddonType.TYPE_2),
+            properties -> new PaintableExtensionAddonBlock(properties, addonSettings(), ExtensionAddonType.TYPE_2),
             OritechAddonsOne::blockProperties);
 
     /** 扩展插件Ⅲ型 - one dedicated slot per stat plugin, configurable capacity per slot. */
@@ -114,13 +119,13 @@ public class OritechAddonsOne {
      */
     public static final DeferredBlock<WirelessExtensionAddonBlock> WIRELESS_EXTENSION_ADDON_1 = BLOCKS.registerBlock(
             wirelessId(ExtensionAddonType.TYPE_1),
-            properties -> new WirelessExtensionAddonBlock(properties, ExtensionAddonType.TYPE_1),
+            properties -> new PaintableWirelessExtensionAddonBlock(properties, ExtensionAddonType.TYPE_1),
             OritechAddonsOne::wirelessBlockProperties);
 
     /** 无线扩展坞Ⅱ型 - see {@link #WIRELESS_EXTENSION_ADDON_1}. */
     public static final DeferredBlock<WirelessExtensionAddonBlock> WIRELESS_EXTENSION_ADDON_2 = BLOCKS.registerBlock(
             wirelessId(ExtensionAddonType.TYPE_2),
-            properties -> new WirelessExtensionAddonBlock(properties, ExtensionAddonType.TYPE_2),
+            properties -> new PaintableWirelessExtensionAddonBlock(properties, ExtensionAddonType.TYPE_2),
             OritechAddonsOne::wirelessBlockProperties);
 
     /** 无线扩展坞Ⅲ型 - see {@link #WIRELESS_EXTENSION_ADDON_1}. */
@@ -144,7 +149,7 @@ public class OritechAddonsOne {
      */
     public static final DeferredBlock<PluginAddonBlock> WAREHOUSE_ADDON = BLOCKS.registerBlock(
             "warehouse_addon",
-            properties -> new PluginAddonBlock(properties, pluginAddonSettings()),
+            properties -> new PaintablePluginAddonBlock(properties, pluginAddonSettings()),
             OritechAddonsOne::blockProperties);
 
     /**
@@ -157,7 +162,7 @@ public class OritechAddonsOne {
      */
     public static final DeferredBlock<PluginAddonBlock> TANK_ADDON = BLOCKS.registerBlock(
             "tank_addon",
-            properties -> new PluginAddonBlock(properties, pluginAddonSettings()),
+            properties -> new PaintablePluginAddonBlock(properties, pluginAddonSettings()),
             OritechAddonsOne::blockProperties);
 
     /**
@@ -174,7 +179,7 @@ public class OritechAddonsOne {
      */
     public static final DeferredBlock<ChunkAnchorAddonBlock> CHUNK_ANCHOR_ADDON = BLOCKS.registerBlock(
             "chunk_anchor_addon",
-            properties -> new ChunkAnchorAddonBlock(properties, pluginAddonSettings()),
+            properties -> new PaintableChunkAnchorAddonBlock(properties, pluginAddonSettings()),
             OritechAddonsOne::blockProperties);
 
     /**
@@ -194,7 +199,7 @@ public class OritechAddonsOne {
      */
     public static final DeferredBlock<ExtensionTransferAddonBlock> EXTENSION_TRANSFER_ADDON = BLOCKS.registerBlock(
             "extension_transfer_addon",
-            properties -> new ExtensionTransferAddonBlock(properties, pluginAddonSettings()),
+            properties -> new PaintableExtensionTransferAddonBlock(properties, pluginAddonSettings()),
             OritechAddonsOne::blockProperties);
 
     /**

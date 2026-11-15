@@ -37,8 +37,6 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import rearth.oritech.block.blocks.addons.MachineAddonBlock;
-import rearth.oritech.util.ColorableMachine.ColorVariant;
-import rearth.oritech.util.PaintableBlock;
 
 import io.github.xiao232ming.oritechaddonsone.Config;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEntity;
@@ -55,7 +53,7 @@ import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEn
  *     (lower or upper half block).</li>
  * </ul>
  */
-public class ExtensionAddonBlock extends MachineAddonBlock implements PaintableBlock {
+public class ExtensionAddonBlock extends MachineAddonBlock {
 
     /** Used for the standing orientation: which half of the block the slab occupies. */
     public static final EnumProperty<Direction> HORIZONTAL_FACING = BlockStateProperties.HORIZONTAL_FACING;
@@ -94,21 +92,16 @@ public class ExtensionAddonBlock extends MachineAddonBlock implements PaintableB
     public static final BooleanProperty HAS_CONTROL_UNIT = BooleanProperty.create("control_unit");
 
     private final ExtensionAddonType type;
-    /** Type III keeps its single orange texture, so it never carries Oritech's color property. */
-    private final boolean paintable;
 
     public ExtensionAddonBlock(Properties properties, AddonSettings addonSettings, ExtensionAddonType type) {
         super(properties, addonSettings);
         this.type = type;
-        this.paintable = type != ExtensionAddonType.TYPE_3;
 
         // The flag has to be defaulted explicitly: an unregistered boolean property defaults to true (its
         // first possible value), so without this every freshly placed or loaded addon claims a stored
         // control unit and the machine shows its redstone panel without one. Same reason
         // WirelessExtensionAddonBlock registers its own control unit flag as false.
-        var state = defaultBlockState().setValue(HAS_CONTROL_UNIT, false);
-        if (paintable) state = state.setValue(COLOR, ColorVariant.ORANGE);
-        registerDefaultState(state);
+        registerDefaultState(defaultBlockState().setValue(HAS_CONTROL_UNIT, false));
     }
 
     /** Which Extension Addon this block is (decides slot count, accepted plugins and GUI). */
@@ -122,7 +115,6 @@ public class ExtensionAddonBlock extends MachineAddonBlock implements PaintableB
         builder.add(PLACEMENT);
         builder.add(HORIZONTAL_FACING);
         builder.add(HAS_CONTROL_UNIT);
-        if (paintable) builder.add(COLOR);
     }
 
     @Nullable
