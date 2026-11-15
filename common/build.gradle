@@ -54,6 +54,10 @@ dependencies {
         compileOnly "fuzs.forgeconfigapiport:forgeconfigapiport-common-neoforgeapi:${forge_config_api_port_version}"
     }
 
+    // Jade：可选兼容，仅编译期需要（compat.jade 里的插件在两个加载器上共用同一套 snownee.jade.api）。
+    // 运行期没有 Jade 时这些类不会被加载，所以不需要声明为必需依赖。
+    compileOnly "curse.maven:jade-324717:${jade_curse_file}"
+
     // Mixin 注解与 ASM
     compileOnly 'org.spongepowered:mixin:0.8.5'
     compileOnly 'org.ow2.asm:asm-tree:9.8'

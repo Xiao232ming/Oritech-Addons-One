@@ -55,6 +55,8 @@ dependencies {
     compileOnly "software.bernie.geckolib:geckolib-neoforge-${minecraft_version}:${geckolib_version}"
     // Oritech 的 NeoForge 模块（Mojmap 发布物）
     compileOnly "rearth.oritech:oritech-neoforge-${minecraft_version}:${oritech_version}"
+    // Jade：common 里的兼容插件在 NeoForge 侧也要编译（本土以 @WailaPlugin 注解被发现）
+    compileOnly "curse.maven:jade-324717:${jade_curse_file}"
 
     localRuntime "rearth.oritech:oritech-neoforge-${minecraft_version}:${oritech_version}"
     localRuntime "dev.architectury:architectury-neoforge:${architectury_version}"

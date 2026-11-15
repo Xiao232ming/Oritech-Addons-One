@@ -23,6 +23,9 @@
     ],
     "modmenu": [
       "io.github.xiao232ming.oritechaddonsone.fabric.client.OritechAddonsOneModMenu"
+    ],
+    "jade": [
+      "io.github.xiao232ming.oritechaddonsone.compat.jade.OritechAddonsOneJadePlugin"
     ]
   },
   "accessWidener": "oritechaddonsone.accesswidener",
@@ -41,6 +44,7 @@
     "forgeconfigapiport": "*"
   },
   "suggests": {
-    "modmenu": "*"
+    "modmenu": "*",
+    "jade": "*"
   }
 }

@@ -49,6 +49,9 @@ dependencies {
     modImplementation "software.bernie.geckolib:geckolib-fabric-${minecraft_version}:${geckolib_version}"
     modImplementation "fuzs.forgeconfigapiport:forgeconfigapiport-fabric:${forge_config_api_port_version}"
 
+    // Jade：可选兼容，common 里的插件在 Fabric 侧也要编译（运行期由 fabric.mod.json 的 jade 入口点发现）
+    modCompileOnly "maven.modrinth:jade:${jade_modrinth_version}"
+
     // 配置界面：Fabric 侧用 Mod Menu 替代 NeoForge 的 ConfigurationScreen
     modCompileOnly "com.terraformersmc:modmenu:${modmenu_version}"
 
