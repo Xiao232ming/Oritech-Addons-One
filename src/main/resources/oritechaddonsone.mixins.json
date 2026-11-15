@@ -5,6 +5,7 @@
   "mixins": [
     "AddonSplicerBlockEntityMixin",
     "AtomicForgeBlockEntityMixin",
+    "DronePortEntityMixin",
     "FluidStacksResourceHandlerMixin",
     "InOutFluidStorageMixin",
     "ItemStacksResourceHandlerMixin",
