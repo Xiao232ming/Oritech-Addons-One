@@ -6,7 +6,7 @@
       "item": "minecraft:piston"
     },
     "B": {
-      "item": "oritech:plastic_sheet"
+      "tag": "c:plates/plastic"
     },
     "C": {
       "item": "oritech:processing_unit"

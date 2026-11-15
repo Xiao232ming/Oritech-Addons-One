@@ -3,13 +3,13 @@
   "category": "misc",
   "key": {
     "A": {
-      "item": "oritech:plastic_sheet"
+      "tag": "c:plates/plastic"
     },
     "B": {
       "item": "oritech:small_tank_block"
     },
     "C": {
-      "item": "oritech:silicon"
+      "tag": "c:silicon"
     },
     "D": {
       "tag": "oritech:plating"

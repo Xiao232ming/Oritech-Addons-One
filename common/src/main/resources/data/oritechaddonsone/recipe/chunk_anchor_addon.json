@@ -3,10 +3,10 @@
   "category": "misc",
   "key": {
     "A": {
-      "item": "oritech:plastic_sheet"
+      "tag": "c:plates/plastic"
     },
     "B": {
-      "item": "oritech:platinum_ingot"
+      "tag": "c:ingots/platinum"
     },
     "C": {
       "item": "minecraft:ender_eye"
