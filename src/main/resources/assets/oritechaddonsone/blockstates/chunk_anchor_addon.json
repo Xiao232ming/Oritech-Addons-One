@@ -1,28 +1,958 @@
 {
   "variants": {
-    "face=wall,facing=north,addon_used=true": {"model": "oritechaddonsone:block/chunk_anchor_addon_on", "x": 270, "y": 180},
-    "face=wall,facing=north,addon_used=false": {"model": "oritechaddonsone:block/chunk_anchor_addon", "x": 270, "y": 180},
-    "face=wall,facing=south,addon_used=true": {"model": "oritechaddonsone:block/chunk_anchor_addon_on", "x": 270},
-    "face=wall,facing=south,addon_used=false": {"model": "oritechaddonsone:block/chunk_anchor_addon", "x": 270},
-    "face=wall,facing=west,addon_used=true": {"model": "oritechaddonsone:block/chunk_anchor_addon_on", "x": 270, "y": 90},
-    "face=wall,facing=west,addon_used=false": {"model": "oritechaddonsone:block/chunk_anchor_addon", "x": 270, "y": 90},
-    "face=wall,facing=east,addon_used=true": {"model": "oritechaddonsone:block/chunk_anchor_addon_on", "x": 270, "y": 270},
-    "face=wall,facing=east,addon_used=false": {"model": "oritechaddonsone:block/chunk_anchor_addon", "x": 270, "y": 270},
-    "face=floor,facing=north,addon_used=true": {"model": "oritechaddonsone:block/chunk_anchor_addon_on"},
-    "face=floor,facing=north,addon_used=false": {"model": "oritechaddonsone:block/chunk_anchor_addon"},
-    "face=floor,facing=south,addon_used=true": {"model": "oritechaddonsone:block/chunk_anchor_addon_on", "y": 180},
-    "face=floor,facing=south,addon_used=false": {"model": "oritechaddonsone:block/chunk_anchor_addon", "y": 180},
-    "face=floor,facing=west,addon_used=true": {"model": "oritechaddonsone:block/chunk_anchor_addon_on", "y": 270},
-    "face=floor,facing=west,addon_used=false": {"model": "oritechaddonsone:block/chunk_anchor_addon", "y": 270},
-    "face=floor,facing=east,addon_used=true": {"model": "oritechaddonsone:block/chunk_anchor_addon_on", "y": 90},
-    "face=floor,facing=east,addon_used=false": {"model": "oritechaddonsone:block/chunk_anchor_addon", "y": 90},
-    "face=ceiling,facing=north,addon_used=true": {"model": "oritechaddonsone:block/chunk_anchor_addon_on", "x": 180},
-    "face=ceiling,facing=north,addon_used=false": {"model": "oritechaddonsone:block/chunk_anchor_addon", "x": 180},
-    "face=ceiling,facing=south,addon_used=true": {"model": "oritechaddonsone:block/chunk_anchor_addon_on", "x": 180, "y": 180},
-    "face=ceiling,facing=south,addon_used=false": {"model": "oritechaddonsone:block/chunk_anchor_addon", "x": 180, "y": 180},
-    "face=ceiling,facing=west,addon_used=true": {"model": "oritechaddonsone:block/chunk_anchor_addon_on", "x": 180, "y": 270},
-    "face=ceiling,facing=west,addon_used=false": {"model": "oritechaddonsone:block/chunk_anchor_addon", "x": 180, "y": 270},
-    "face=ceiling,facing=east,addon_used=true": {"model": "oritechaddonsone:block/chunk_anchor_addon_on", "x": 180, "y": 90},
-    "face=ceiling,facing=east,addon_used=false": {"model": "oritechaddonsone:block/chunk_anchor_addon", "x": 180, "y": 90}
+    "face=wall,facing=north,addon_used=true,color=orange": {
+      "model": "oritechaddonsone:block/chunk_anchor_addon_on",
+      "x": 270,
+      "y": 180
+    },
+    "face=wall,facing=north,addon_used=true,color=diamond": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_diamond",
+      "x": 270,
+      "y": 180
+    },
+    "face=wall,facing=north,addon_used=true,color=camo": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_camo",
+      "x": 270,
+      "y": 180
+    },
+    "face=wall,facing=north,addon_used=true,color=fluxite": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_fluxite",
+      "x": 270,
+      "y": 180
+    },
+    "face=wall,facing=north,addon_used=true,color=white": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_white",
+      "x": 270,
+      "y": 180
+    },
+    "face=wall,facing=north,addon_used=true,color=industrial": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_industrial",
+      "x": 270,
+      "y": 180
+    },
+    "face=wall,facing=north,addon_used=true,color=netherite": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_netherite",
+      "x": 270,
+      "y": 180
+    },
+    "face=wall,facing=north,addon_used=true,color=redstone": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_redstone",
+      "x": 270,
+      "y": 180
+    },
+    "face=wall,facing=north,addon_used=true,color=sculk": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_sculk",
+      "x": 270,
+      "y": 180
+    },
+    "face=wall,facing=north,addon_used=false,color=orange": {
+      "model": "oritechaddonsone:block/chunk_anchor_addon",
+      "x": 270,
+      "y": 180
+    },
+    "face=wall,facing=north,addon_used=false,color=diamond": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_diamond",
+      "x": 270,
+      "y": 180
+    },
+    "face=wall,facing=north,addon_used=false,color=camo": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_camo",
+      "x": 270,
+      "y": 180
+    },
+    "face=wall,facing=north,addon_used=false,color=fluxite": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_fluxite",
+      "x": 270,
+      "y": 180
+    },
+    "face=wall,facing=north,addon_used=false,color=white": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_white",
+      "x": 270,
+      "y": 180
+    },
+    "face=wall,facing=north,addon_used=false,color=industrial": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_industrial",
+      "x": 270,
+      "y": 180
+    },
+    "face=wall,facing=north,addon_used=false,color=netherite": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_netherite",
+      "x": 270,
+      "y": 180
+    },
+    "face=wall,facing=north,addon_used=false,color=redstone": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_redstone",
+      "x": 270,
+      "y": 180
+    },
+    "face=wall,facing=north,addon_used=false,color=sculk": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_sculk",
+      "x": 270,
+      "y": 180
+    },
+    "face=wall,facing=south,addon_used=true,color=orange": {
+      "model": "oritechaddonsone:block/chunk_anchor_addon_on",
+      "x": 270
+    },
+    "face=wall,facing=south,addon_used=true,color=diamond": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_diamond",
+      "x": 270
+    },
+    "face=wall,facing=south,addon_used=true,color=camo": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_camo",
+      "x": 270
+    },
+    "face=wall,facing=south,addon_used=true,color=fluxite": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_fluxite",
+      "x": 270
+    },
+    "face=wall,facing=south,addon_used=true,color=white": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_white",
+      "x": 270
+    },
+    "face=wall,facing=south,addon_used=true,color=industrial": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_industrial",
+      "x": 270
+    },
+    "face=wall,facing=south,addon_used=true,color=netherite": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_netherite",
+      "x": 270
+    },
+    "face=wall,facing=south,addon_used=true,color=redstone": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_redstone",
+      "x": 270
+    },
+    "face=wall,facing=south,addon_used=true,color=sculk": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_sculk",
+      "x": 270
+    },
+    "face=wall,facing=south,addon_used=false,color=orange": {
+      "model": "oritechaddonsone:block/chunk_anchor_addon",
+      "x": 270
+    },
+    "face=wall,facing=south,addon_used=false,color=diamond": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_diamond",
+      "x": 270
+    },
+    "face=wall,facing=south,addon_used=false,color=camo": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_camo",
+      "x": 270
+    },
+    "face=wall,facing=south,addon_used=false,color=fluxite": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_fluxite",
+      "x": 270
+    },
+    "face=wall,facing=south,addon_used=false,color=white": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_white",
+      "x": 270
+    },
+    "face=wall,facing=south,addon_used=false,color=industrial": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_industrial",
+      "x": 270
+    },
+    "face=wall,facing=south,addon_used=false,color=netherite": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_netherite",
+      "x": 270
+    },
+    "face=wall,facing=south,addon_used=false,color=redstone": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_redstone",
+      "x": 270
+    },
+    "face=wall,facing=south,addon_used=false,color=sculk": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_sculk",
+      "x": 270
+    },
+    "face=wall,facing=west,addon_used=true,color=orange": {
+      "model": "oritechaddonsone:block/chunk_anchor_addon_on",
+      "x": 270,
+      "y": 90
+    },
+    "face=wall,facing=west,addon_used=true,color=diamond": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_diamond",
+      "x": 270,
+      "y": 90
+    },
+    "face=wall,facing=west,addon_used=true,color=camo": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_camo",
+      "x": 270,
+      "y": 90
+    },
+    "face=wall,facing=west,addon_used=true,color=fluxite": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_fluxite",
+      "x": 270,
+      "y": 90
+    },
+    "face=wall,facing=west,addon_used=true,color=white": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_white",
+      "x": 270,
+      "y": 90
+    },
+    "face=wall,facing=west,addon_used=true,color=industrial": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_industrial",
+      "x": 270,
+      "y": 90
+    },
+    "face=wall,facing=west,addon_used=true,color=netherite": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_netherite",
+      "x": 270,
+      "y": 90
+    },
+    "face=wall,facing=west,addon_used=true,color=redstone": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_redstone",
+      "x": 270,
+      "y": 90
+    },
+    "face=wall,facing=west,addon_used=true,color=sculk": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_sculk",
+      "x": 270,
+      "y": 90
+    },
+    "face=wall,facing=west,addon_used=false,color=orange": {
+      "model": "oritechaddonsone:block/chunk_anchor_addon",
+      "x": 270,
+      "y": 90
+    },
+    "face=wall,facing=west,addon_used=false,color=diamond": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_diamond",
+      "x": 270,
+      "y": 90
+    },
+    "face=wall,facing=west,addon_used=false,color=camo": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_camo",
+      "x": 270,
+      "y": 90
+    },
+    "face=wall,facing=west,addon_used=false,color=fluxite": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_fluxite",
+      "x": 270,
+      "y": 90
+    },
+    "face=wall,facing=west,addon_used=false,color=white": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_white",
+      "x": 270,
+      "y": 90
+    },
+    "face=wall,facing=west,addon_used=false,color=industrial": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_industrial",
+      "x": 270,
+      "y": 90
+    },
+    "face=wall,facing=west,addon_used=false,color=netherite": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_netherite",
+      "x": 270,
+      "y": 90
+    },
+    "face=wall,facing=west,addon_used=false,color=redstone": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_redstone",
+      "x": 270,
+      "y": 90
+    },
+    "face=wall,facing=west,addon_used=false,color=sculk": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_sculk",
+      "x": 270,
+      "y": 90
+    },
+    "face=wall,facing=east,addon_used=true,color=orange": {
+      "model": "oritechaddonsone:block/chunk_anchor_addon_on",
+      "x": 270,
+      "y": 270
+    },
+    "face=wall,facing=east,addon_used=true,color=diamond": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_diamond",
+      "x": 270,
+      "y": 270
+    },
+    "face=wall,facing=east,addon_used=true,color=camo": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_camo",
+      "x": 270,
+      "y": 270
+    },
+    "face=wall,facing=east,addon_used=true,color=fluxite": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_fluxite",
+      "x": 270,
+      "y": 270
+    },
+    "face=wall,facing=east,addon_used=true,color=white": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_white",
+      "x": 270,
+      "y": 270
+    },
+    "face=wall,facing=east,addon_used=true,color=industrial": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_industrial",
+      "x": 270,
+      "y": 270
+    },
+    "face=wall,facing=east,addon_used=true,color=netherite": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_netherite",
+      "x": 270,
+      "y": 270
+    },
+    "face=wall,facing=east,addon_used=true,color=redstone": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_redstone",
+      "x": 270,
+      "y": 270
+    },
+    "face=wall,facing=east,addon_used=true,color=sculk": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_sculk",
+      "x": 270,
+      "y": 270
+    },
+    "face=wall,facing=east,addon_used=false,color=orange": {
+      "model": "oritechaddonsone:block/chunk_anchor_addon",
+      "x": 270,
+      "y": 270
+    },
+    "face=wall,facing=east,addon_used=false,color=diamond": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_diamond",
+      "x": 270,
+      "y": 270
+    },
+    "face=wall,facing=east,addon_used=false,color=camo": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_camo",
+      "x": 270,
+      "y": 270
+    },
+    "face=wall,facing=east,addon_used=false,color=fluxite": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_fluxite",
+      "x": 270,
+      "y": 270
+    },
+    "face=wall,facing=east,addon_used=false,color=white": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_white",
+      "x": 270,
+      "y": 270
+    },
+    "face=wall,facing=east,addon_used=false,color=industrial": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_industrial",
+      "x": 270,
+      "y": 270
+    },
+    "face=wall,facing=east,addon_used=false,color=netherite": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_netherite",
+      "x": 270,
+      "y": 270
+    },
+    "face=wall,facing=east,addon_used=false,color=redstone": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_redstone",
+      "x": 270,
+      "y": 270
+    },
+    "face=wall,facing=east,addon_used=false,color=sculk": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_sculk",
+      "x": 270,
+      "y": 270
+    },
+    "face=floor,facing=north,addon_used=true,color=orange": {
+      "model": "oritechaddonsone:block/chunk_anchor_addon_on"
+    },
+    "face=floor,facing=north,addon_used=true,color=diamond": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_diamond"
+    },
+    "face=floor,facing=north,addon_used=true,color=camo": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_camo"
+    },
+    "face=floor,facing=north,addon_used=true,color=fluxite": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_fluxite"
+    },
+    "face=floor,facing=north,addon_used=true,color=white": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_white"
+    },
+    "face=floor,facing=north,addon_used=true,color=industrial": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_industrial"
+    },
+    "face=floor,facing=north,addon_used=true,color=netherite": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_netherite"
+    },
+    "face=floor,facing=north,addon_used=true,color=redstone": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_redstone"
+    },
+    "face=floor,facing=north,addon_used=true,color=sculk": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_sculk"
+    },
+    "face=floor,facing=north,addon_used=false,color=orange": {
+      "model": "oritechaddonsone:block/chunk_anchor_addon"
+    },
+    "face=floor,facing=north,addon_used=false,color=diamond": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_diamond"
+    },
+    "face=floor,facing=north,addon_used=false,color=camo": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_camo"
+    },
+    "face=floor,facing=north,addon_used=false,color=fluxite": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_fluxite"
+    },
+    "face=floor,facing=north,addon_used=false,color=white": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_white"
+    },
+    "face=floor,facing=north,addon_used=false,color=industrial": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_industrial"
+    },
+    "face=floor,facing=north,addon_used=false,color=netherite": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_netherite"
+    },
+    "face=floor,facing=north,addon_used=false,color=redstone": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_redstone"
+    },
+    "face=floor,facing=north,addon_used=false,color=sculk": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_sculk"
+    },
+    "face=floor,facing=south,addon_used=true,color=orange": {
+      "model": "oritechaddonsone:block/chunk_anchor_addon_on",
+      "y": 180
+    },
+    "face=floor,facing=south,addon_used=true,color=diamond": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_diamond",
+      "y": 180
+    },
+    "face=floor,facing=south,addon_used=true,color=camo": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_camo",
+      "y": 180
+    },
+    "face=floor,facing=south,addon_used=true,color=fluxite": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_fluxite",
+      "y": 180
+    },
+    "face=floor,facing=south,addon_used=true,color=white": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_white",
+      "y": 180
+    },
+    "face=floor,facing=south,addon_used=true,color=industrial": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_industrial",
+      "y": 180
+    },
+    "face=floor,facing=south,addon_used=true,color=netherite": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_netherite",
+      "y": 180
+    },
+    "face=floor,facing=south,addon_used=true,color=redstone": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_redstone",
+      "y": 180
+    },
+    "face=floor,facing=south,addon_used=true,color=sculk": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_sculk",
+      "y": 180
+    },
+    "face=floor,facing=south,addon_used=false,color=orange": {
+      "model": "oritechaddonsone:block/chunk_anchor_addon",
+      "y": 180
+    },
+    "face=floor,facing=south,addon_used=false,color=diamond": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_diamond",
+      "y": 180
+    },
+    "face=floor,facing=south,addon_used=false,color=camo": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_camo",
+      "y": 180
+    },
+    "face=floor,facing=south,addon_used=false,color=fluxite": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_fluxite",
+      "y": 180
+    },
+    "face=floor,facing=south,addon_used=false,color=white": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_white",
+      "y": 180
+    },
+    "face=floor,facing=south,addon_used=false,color=industrial": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_industrial",
+      "y": 180
+    },
+    "face=floor,facing=south,addon_used=false,color=netherite": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_netherite",
+      "y": 180
+    },
+    "face=floor,facing=south,addon_used=false,color=redstone": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_redstone",
+      "y": 180
+    },
+    "face=floor,facing=south,addon_used=false,color=sculk": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_sculk",
+      "y": 180
+    },
+    "face=floor,facing=west,addon_used=true,color=orange": {
+      "model": "oritechaddonsone:block/chunk_anchor_addon_on",
+      "y": 270
+    },
+    "face=floor,facing=west,addon_used=true,color=diamond": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_diamond",
+      "y": 270
+    },
+    "face=floor,facing=west,addon_used=true,color=camo": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_camo",
+      "y": 270
+    },
+    "face=floor,facing=west,addon_used=true,color=fluxite": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_fluxite",
+      "y": 270
+    },
+    "face=floor,facing=west,addon_used=true,color=white": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_white",
+      "y": 270
+    },
+    "face=floor,facing=west,addon_used=true,color=industrial": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_industrial",
+      "y": 270
+    },
+    "face=floor,facing=west,addon_used=true,color=netherite": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_netherite",
+      "y": 270
+    },
+    "face=floor,facing=west,addon_used=true,color=redstone": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_redstone",
+      "y": 270
+    },
+    "face=floor,facing=west,addon_used=true,color=sculk": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_sculk",
+      "y": 270
+    },
+    "face=floor,facing=west,addon_used=false,color=orange": {
+      "model": "oritechaddonsone:block/chunk_anchor_addon",
+      "y": 270
+    },
+    "face=floor,facing=west,addon_used=false,color=diamond": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_diamond",
+      "y": 270
+    },
+    "face=floor,facing=west,addon_used=false,color=camo": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_camo",
+      "y": 270
+    },
+    "face=floor,facing=west,addon_used=false,color=fluxite": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_fluxite",
+      "y": 270
+    },
+    "face=floor,facing=west,addon_used=false,color=white": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_white",
+      "y": 270
+    },
+    "face=floor,facing=west,addon_used=false,color=industrial": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_industrial",
+      "y": 270
+    },
+    "face=floor,facing=west,addon_used=false,color=netherite": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_netherite",
+      "y": 270
+    },
+    "face=floor,facing=west,addon_used=false,color=redstone": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_redstone",
+      "y": 270
+    },
+    "face=floor,facing=west,addon_used=false,color=sculk": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_sculk",
+      "y": 270
+    },
+    "face=floor,facing=east,addon_used=true,color=orange": {
+      "model": "oritechaddonsone:block/chunk_anchor_addon_on",
+      "y": 90
+    },
+    "face=floor,facing=east,addon_used=true,color=diamond": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_diamond",
+      "y": 90
+    },
+    "face=floor,facing=east,addon_used=true,color=camo": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_camo",
+      "y": 90
+    },
+    "face=floor,facing=east,addon_used=true,color=fluxite": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_fluxite",
+      "y": 90
+    },
+    "face=floor,facing=east,addon_used=true,color=white": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_white",
+      "y": 90
+    },
+    "face=floor,facing=east,addon_used=true,color=industrial": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_industrial",
+      "y": 90
+    },
+    "face=floor,facing=east,addon_used=true,color=netherite": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_netherite",
+      "y": 90
+    },
+    "face=floor,facing=east,addon_used=true,color=redstone": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_redstone",
+      "y": 90
+    },
+    "face=floor,facing=east,addon_used=true,color=sculk": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_sculk",
+      "y": 90
+    },
+    "face=floor,facing=east,addon_used=false,color=orange": {
+      "model": "oritechaddonsone:block/chunk_anchor_addon",
+      "y": 90
+    },
+    "face=floor,facing=east,addon_used=false,color=diamond": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_diamond",
+      "y": 90
+    },
+    "face=floor,facing=east,addon_used=false,color=camo": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_camo",
+      "y": 90
+    },
+    "face=floor,facing=east,addon_used=false,color=fluxite": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_fluxite",
+      "y": 90
+    },
+    "face=floor,facing=east,addon_used=false,color=white": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_white",
+      "y": 90
+    },
+    "face=floor,facing=east,addon_used=false,color=industrial": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_industrial",
+      "y": 90
+    },
+    "face=floor,facing=east,addon_used=false,color=netherite": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_netherite",
+      "y": 90
+    },
+    "face=floor,facing=east,addon_used=false,color=redstone": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_redstone",
+      "y": 90
+    },
+    "face=floor,facing=east,addon_used=false,color=sculk": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_sculk",
+      "y": 90
+    },
+    "face=ceiling,facing=north,addon_used=true,color=orange": {
+      "model": "oritechaddonsone:block/chunk_anchor_addon_on",
+      "x": 180
+    },
+    "face=ceiling,facing=north,addon_used=true,color=diamond": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_diamond",
+      "x": 180
+    },
+    "face=ceiling,facing=north,addon_used=true,color=camo": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_camo",
+      "x": 180
+    },
+    "face=ceiling,facing=north,addon_used=true,color=fluxite": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_fluxite",
+      "x": 180
+    },
+    "face=ceiling,facing=north,addon_used=true,color=white": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_white",
+      "x": 180
+    },
+    "face=ceiling,facing=north,addon_used=true,color=industrial": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_industrial",
+      "x": 180
+    },
+    "face=ceiling,facing=north,addon_used=true,color=netherite": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_netherite",
+      "x": 180
+    },
+    "face=ceiling,facing=north,addon_used=true,color=redstone": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_redstone",
+      "x": 180
+    },
+    "face=ceiling,facing=north,addon_used=true,color=sculk": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_sculk",
+      "x": 180
+    },
+    "face=ceiling,facing=north,addon_used=false,color=orange": {
+      "model": "oritechaddonsone:block/chunk_anchor_addon",
+      "x": 180
+    },
+    "face=ceiling,facing=north,addon_used=false,color=diamond": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_diamond",
+      "x": 180
+    },
+    "face=ceiling,facing=north,addon_used=false,color=camo": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_camo",
+      "x": 180
+    },
+    "face=ceiling,facing=north,addon_used=false,color=fluxite": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_fluxite",
+      "x": 180
+    },
+    "face=ceiling,facing=north,addon_used=false,color=white": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_white",
+      "x": 180
+    },
+    "face=ceiling,facing=north,addon_used=false,color=industrial": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_industrial",
+      "x": 180
+    },
+    "face=ceiling,facing=north,addon_used=false,color=netherite": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_netherite",
+      "x": 180
+    },
+    "face=ceiling,facing=north,addon_used=false,color=redstone": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_redstone",
+      "x": 180
+    },
+    "face=ceiling,facing=north,addon_used=false,color=sculk": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_sculk",
+      "x": 180
+    },
+    "face=ceiling,facing=south,addon_used=true,color=orange": {
+      "model": "oritechaddonsone:block/chunk_anchor_addon_on",
+      "x": 180,
+      "y": 180
+    },
+    "face=ceiling,facing=south,addon_used=true,color=diamond": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_diamond",
+      "x": 180,
+      "y": 180
+    },
+    "face=ceiling,facing=south,addon_used=true,color=camo": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_camo",
+      "x": 180,
+      "y": 180
+    },
+    "face=ceiling,facing=south,addon_used=true,color=fluxite": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_fluxite",
+      "x": 180,
+      "y": 180
+    },
+    "face=ceiling,facing=south,addon_used=true,color=white": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_white",
+      "x": 180,
+      "y": 180
+    },
+    "face=ceiling,facing=south,addon_used=true,color=industrial": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_industrial",
+      "x": 180,
+      "y": 180
+    },
+    "face=ceiling,facing=south,addon_used=true,color=netherite": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_netherite",
+      "x": 180,
+      "y": 180
+    },
+    "face=ceiling,facing=south,addon_used=true,color=redstone": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_redstone",
+      "x": 180,
+      "y": 180
+    },
+    "face=ceiling,facing=south,addon_used=true,color=sculk": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_sculk",
+      "x": 180,
+      "y": 180
+    },
+    "face=ceiling,facing=south,addon_used=false,color=orange": {
+      "model": "oritechaddonsone:block/chunk_anchor_addon",
+      "x": 180,
+      "y": 180
+    },
+    "face=ceiling,facing=south,addon_used=false,color=diamond": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_diamond",
+      "x": 180,
+      "y": 180
+    },
+    "face=ceiling,facing=south,addon_used=false,color=camo": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_camo",
+      "x": 180,
+      "y": 180
+    },
+    "face=ceiling,facing=south,addon_used=false,color=fluxite": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_fluxite",
+      "x": 180,
+      "y": 180
+    },
+    "face=ceiling,facing=south,addon_used=false,color=white": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_white",
+      "x": 180,
+      "y": 180
+    },
+    "face=ceiling,facing=south,addon_used=false,color=industrial": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_industrial",
+      "x": 180,
+      "y": 180
+    },
+    "face=ceiling,facing=south,addon_used=false,color=netherite": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_netherite",
+      "x": 180,
+      "y": 180
+    },
+    "face=ceiling,facing=south,addon_used=false,color=redstone": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_redstone",
+      "x": 180,
+      "y": 180
+    },
+    "face=ceiling,facing=south,addon_used=false,color=sculk": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_sculk",
+      "x": 180,
+      "y": 180
+    },
+    "face=ceiling,facing=west,addon_used=true,color=orange": {
+      "model": "oritechaddonsone:block/chunk_anchor_addon_on",
+      "x": 180,
+      "y": 270
+    },
+    "face=ceiling,facing=west,addon_used=true,color=diamond": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_diamond",
+      "x": 180,
+      "y": 270
+    },
+    "face=ceiling,facing=west,addon_used=true,color=camo": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_camo",
+      "x": 180,
+      "y": 270
+    },
+    "face=ceiling,facing=west,addon_used=true,color=fluxite": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_fluxite",
+      "x": 180,
+      "y": 270
+    },
+    "face=ceiling,facing=west,addon_used=true,color=white": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_white",
+      "x": 180,
+      "y": 270
+    },
+    "face=ceiling,facing=west,addon_used=true,color=industrial": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_industrial",
+      "x": 180,
+      "y": 270
+    },
+    "face=ceiling,facing=west,addon_used=true,color=netherite": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_netherite",
+      "x": 180,
+      "y": 270
+    },
+    "face=ceiling,facing=west,addon_used=true,color=redstone": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_redstone",
+      "x": 180,
+      "y": 270
+    },
+    "face=ceiling,facing=west,addon_used=true,color=sculk": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_sculk",
+      "x": 180,
+      "y": 270
+    },
+    "face=ceiling,facing=west,addon_used=false,color=orange": {
+      "model": "oritechaddonsone:block/chunk_anchor_addon",
+      "x": 180,
+      "y": 270
+    },
+    "face=ceiling,facing=west,addon_used=false,color=diamond": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_diamond",
+      "x": 180,
+      "y": 270
+    },
+    "face=ceiling,facing=west,addon_used=false,color=camo": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_camo",
+      "x": 180,
+      "y": 270
+    },
+    "face=ceiling,facing=west,addon_used=false,color=fluxite": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_fluxite",
+      "x": 180,
+      "y": 270
+    },
+    "face=ceiling,facing=west,addon_used=false,color=white": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_white",
+      "x": 180,
+      "y": 270
+    },
+    "face=ceiling,facing=west,addon_used=false,color=industrial": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_industrial",
+      "x": 180,
+      "y": 270
+    },
+    "face=ceiling,facing=west,addon_used=false,color=netherite": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_netherite",
+      "x": 180,
+      "y": 270
+    },
+    "face=ceiling,facing=west,addon_used=false,color=redstone": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_redstone",
+      "x": 180,
+      "y": 270
+    },
+    "face=ceiling,facing=west,addon_used=false,color=sculk": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_sculk",
+      "x": 180,
+      "y": 270
+    },
+    "face=ceiling,facing=east,addon_used=true,color=orange": {
+      "model": "oritechaddonsone:block/chunk_anchor_addon_on",
+      "x": 180,
+      "y": 90
+    },
+    "face=ceiling,facing=east,addon_used=true,color=diamond": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_diamond",
+      "x": 180,
+      "y": 90
+    },
+    "face=ceiling,facing=east,addon_used=true,color=camo": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_camo",
+      "x": 180,
+      "y": 90
+    },
+    "face=ceiling,facing=east,addon_used=true,color=fluxite": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_fluxite",
+      "x": 180,
+      "y": 90
+    },
+    "face=ceiling,facing=east,addon_used=true,color=white": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_white",
+      "x": 180,
+      "y": 90
+    },
+    "face=ceiling,facing=east,addon_used=true,color=industrial": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_industrial",
+      "x": 180,
+      "y": 90
+    },
+    "face=ceiling,facing=east,addon_used=true,color=netherite": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_netherite",
+      "x": 180,
+      "y": 90
+    },
+    "face=ceiling,facing=east,addon_used=true,color=redstone": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_redstone",
+      "x": 180,
+      "y": 90
+    },
+    "face=ceiling,facing=east,addon_used=true,color=sculk": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_on_sculk",
+      "x": 180,
+      "y": 90
+    },
+    "face=ceiling,facing=east,addon_used=false,color=orange": {
+      "model": "oritechaddonsone:block/chunk_anchor_addon",
+      "x": 180,
+      "y": 90
+    },
+    "face=ceiling,facing=east,addon_used=false,color=diamond": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_diamond",
+      "x": 180,
+      "y": 90
+    },
+    "face=ceiling,facing=east,addon_used=false,color=camo": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_camo",
+      "x": 180,
+      "y": 90
+    },
+    "face=ceiling,facing=east,addon_used=false,color=fluxite": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_fluxite",
+      "x": 180,
+      "y": 90
+    },
+    "face=ceiling,facing=east,addon_used=false,color=white": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_white",
+      "x": 180,
+      "y": 90
+    },
+    "face=ceiling,facing=east,addon_used=false,color=industrial": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_industrial",
+      "x": 180,
+      "y": 90
+    },
+    "face=ceiling,facing=east,addon_used=false,color=netherite": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_netherite",
+      "x": 180,
+      "y": 90
+    },
+    "face=ceiling,facing=east,addon_used=false,color=redstone": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_redstone",
+      "x": 180,
+      "y": 90
+    },
+    "face=ceiling,facing=east,addon_used=false,color=sculk": {
+      "model": "oritechaddonsone:block/colored/chunk_anchor_addon_sculk",
+      "x": 180,
+      "y": 90
+    }
   }
 }

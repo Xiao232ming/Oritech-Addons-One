@@ -39,6 +39,8 @@ import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 import rearth.oritech.block.blocks.addons.MachineAddonBlock;
+import rearth.oritech.util.ColorableMachine.ColorVariant;
+import rearth.oritech.util.PaintableBlock;
 
 import io.github.xiao232ming.oritechaddonsone.Config;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEntity;
@@ -56,7 +58,7 @@ import io.github.xiao232ming.oritechaddonsone.block.entity.WirelessExtensionAddo
  * Its facing decides which of the six faces carries the connector port texture, the other five faces use
  * the side texture of the matching wired addon.
  */
-public class WirelessExtensionAddonBlock extends Block implements EntityBlock, TooltipProvider {
+public class WirelessExtensionAddonBlock extends Block implements EntityBlock, TooltipProvider, PaintableBlock {
 
     /** Which face carries the connector port. Set from the face the player clicked. */
     public static final EnumProperty<Direction> FACING = BlockStateProperties.FACING;
@@ -71,18 +73,23 @@ public class WirelessExtensionAddonBlock extends Block implements EntityBlock, T
     public static final BooleanProperty HAS_CONTROL_UNIT = BooleanProperty.create("control_unit");
 
     private final ExtensionAddonType type;
+    /** Type III keeps its single orange texture, so it never carries Oritech's color property. */
+    private final boolean paintable;
 
     public WirelessExtensionAddonBlock(Properties properties, ExtensionAddonType type) {
         super(properties);
         this.type = type;
+        this.paintable = type != ExtensionAddonType.TYPE_3;
 
         // A BooleanProperty defaults to its *first* possible value, which is true - so the unlinked state
         // has to be set explicitly, otherwise a freshly placed dock would show the active port texture.
-        registerDefaultState(stateDefinition.any()
+        var state = stateDefinition.any()
                 .setValue(FACING, Direction.NORTH)
                 .setValue(LINKED, false)
                 .setValue(HAS_CONTROL_UNIT, false)
-                .setValue(MachineAddonBlock.ADDON_USED, false));
+                .setValue(MachineAddonBlock.ADDON_USED, false);
+        if (paintable) state = state.setValue(COLOR, ColorVariant.ORANGE);
+        registerDefaultState(state);
     }
 
     /** Which Extension Addon this block is (decides slot count, accepted plugins and GUI). */
@@ -100,6 +107,7 @@ public class WirelessExtensionAddonBlock extends Block implements EntityBlock, T
         // property here that read throws and every addon placed next to a dock fails on the server. The dock is
         // never claimed by a machine, so the value stays false and is never written.
         builder.add(MachineAddonBlock.ADDON_USED);
+        if (paintable) builder.add(COLOR);
     }
 
     /** The clicked face becomes the port face, so the port can be aimed in all six directions. */

@@ -1,0 +1,6 @@
+{
+  "parent": "oritechaddonsone:block/extension_transfer_addon_off",
+  "textures": {
+    "0": "oritechaddonsone:block/colored/extension_transfer_addon_off_white"
+  }
+}

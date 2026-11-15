@@ -50,7 +50,7 @@ import io.github.xiao232ming.oritechaddonsone.network.TransferNetworking;
 public class TransferAddonBlock extends PluginAddonBlock {
 
     public TransferAddonBlock(Properties properties, AddonSettings addonSettings) {
-        super(properties, addonSettings);
+        super(properties, addonSettings, false);
     }
 
     /**

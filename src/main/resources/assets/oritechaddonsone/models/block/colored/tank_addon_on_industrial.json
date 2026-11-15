@@ -1,0 +1,7 @@
+{
+  "parent": "oritechaddonsone:block/tank_addon_on",
+  "textures": {
+    "0": "oritech:block/colored/machine_speed_addon_on_industrial",
+    "1": "oritechaddonsone:block/colored/tank_addon_on_industrial"
+  }
+}

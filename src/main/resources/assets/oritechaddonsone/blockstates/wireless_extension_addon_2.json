@@ -1,16 +1,418 @@
 {
   "variants": {
-    "facing=north,linked=true": { "model": "oritechaddonsone:block/wireless_extension_addon_2_on" },
-    "facing=north,linked=false": { "model": "oritechaddonsone:block/wireless_extension_addon_2_off" },
-    "facing=east,linked=true": { "model": "oritechaddonsone:block/wireless_extension_addon_2_on", "y": 90 },
-    "facing=east,linked=false": { "model": "oritechaddonsone:block/wireless_extension_addon_2_off", "y": 90 },
-    "facing=south,linked=true": { "model": "oritechaddonsone:block/wireless_extension_addon_2_on", "y": 180 },
-    "facing=south,linked=false": { "model": "oritechaddonsone:block/wireless_extension_addon_2_off", "y": 180 },
-    "facing=west,linked=true": { "model": "oritechaddonsone:block/wireless_extension_addon_2_on", "y": 270 },
-    "facing=west,linked=false": { "model": "oritechaddonsone:block/wireless_extension_addon_2_off", "y": 270 },
-    "facing=up,linked=true": { "model": "oritechaddonsone:block/wireless_extension_addon_2_on", "x": 270 },
-    "facing=up,linked=false": { "model": "oritechaddonsone:block/wireless_extension_addon_2_off", "x": 270 },
-    "facing=down,linked=true": { "model": "oritechaddonsone:block/wireless_extension_addon_2_on", "x": 90 },
-    "facing=down,linked=false": { "model": "oritechaddonsone:block/wireless_extension_addon_2_off", "x": 90 }
+    "facing=north,linked=true,color=orange": {
+      "model": "oritechaddonsone:block/wireless_extension_addon_2_on"
+    },
+    "facing=north,linked=true,color=diamond": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_on_diamond"
+    },
+    "facing=north,linked=true,color=camo": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_on_camo"
+    },
+    "facing=north,linked=true,color=fluxite": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_on_fluxite"
+    },
+    "facing=north,linked=true,color=white": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_on_white"
+    },
+    "facing=north,linked=true,color=industrial": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_on_industrial"
+    },
+    "facing=north,linked=true,color=netherite": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_on_netherite"
+    },
+    "facing=north,linked=true,color=redstone": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_on_redstone"
+    },
+    "facing=north,linked=true,color=sculk": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_on_sculk"
+    },
+    "facing=north,linked=false,color=orange": {
+      "model": "oritechaddonsone:block/wireless_extension_addon_2_off"
+    },
+    "facing=north,linked=false,color=diamond": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_off_diamond"
+    },
+    "facing=north,linked=false,color=camo": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_off_camo"
+    },
+    "facing=north,linked=false,color=fluxite": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_off_fluxite"
+    },
+    "facing=north,linked=false,color=white": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_off_white"
+    },
+    "facing=north,linked=false,color=industrial": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_off_industrial"
+    },
+    "facing=north,linked=false,color=netherite": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_off_netherite"
+    },
+    "facing=north,linked=false,color=redstone": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_off_redstone"
+    },
+    "facing=north,linked=false,color=sculk": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_off_sculk"
+    },
+    "facing=east,linked=true,color=orange": {
+      "model": "oritechaddonsone:block/wireless_extension_addon_2_on",
+      "y": 90
+    },
+    "facing=east,linked=true,color=diamond": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_on_diamond",
+      "y": 90
+    },
+    "facing=east,linked=true,color=camo": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_on_camo",
+      "y": 90
+    },
+    "facing=east,linked=true,color=fluxite": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_on_fluxite",
+      "y": 90
+    },
+    "facing=east,linked=true,color=white": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_on_white",
+      "y": 90
+    },
+    "facing=east,linked=true,color=industrial": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_on_industrial",
+      "y": 90
+    },
+    "facing=east,linked=true,color=netherite": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_on_netherite",
+      "y": 90
+    },
+    "facing=east,linked=true,color=redstone": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_on_redstone",
+      "y": 90
+    },
+    "facing=east,linked=true,color=sculk": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_on_sculk",
+      "y": 90
+    },
+    "facing=east,linked=false,color=orange": {
+      "model": "oritechaddonsone:block/wireless_extension_addon_2_off",
+      "y": 90
+    },
+    "facing=east,linked=false,color=diamond": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_off_diamond",
+      "y": 90
+    },
+    "facing=east,linked=false,color=camo": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_off_camo",
+      "y": 90
+    },
+    "facing=east,linked=false,color=fluxite": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_off_fluxite",
+      "y": 90
+    },
+    "facing=east,linked=false,color=white": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_off_white",
+      "y": 90
+    },
+    "facing=east,linked=false,color=industrial": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_off_industrial",
+      "y": 90
+    },
+    "facing=east,linked=false,color=netherite": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_off_netherite",
+      "y": 90
+    },
+    "facing=east,linked=false,color=redstone": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_off_redstone",
+      "y": 90
+    },
+    "facing=east,linked=false,color=sculk": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_off_sculk",
+      "y": 90
+    },
+    "facing=south,linked=true,color=orange": {
+      "model": "oritechaddonsone:block/wireless_extension_addon_2_on",
+      "y": 180
+    },
+    "facing=south,linked=true,color=diamond": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_on_diamond",
+      "y": 180
+    },
+    "facing=south,linked=true,color=camo": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_on_camo",
+      "y": 180
+    },
+    "facing=south,linked=true,color=fluxite": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_on_fluxite",
+      "y": 180
+    },
+    "facing=south,linked=true,color=white": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_on_white",
+      "y": 180
+    },
+    "facing=south,linked=true,color=industrial": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_on_industrial",
+      "y": 180
+    },
+    "facing=south,linked=true,color=netherite": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_on_netherite",
+      "y": 180
+    },
+    "facing=south,linked=true,color=redstone": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_on_redstone",
+      "y": 180
+    },
+    "facing=south,linked=true,color=sculk": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_on_sculk",
+      "y": 180
+    },
+    "facing=south,linked=false,color=orange": {
+      "model": "oritechaddonsone:block/wireless_extension_addon_2_off",
+      "y": 180
+    },
+    "facing=south,linked=false,color=diamond": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_off_diamond",
+      "y": 180
+    },
+    "facing=south,linked=false,color=camo": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_off_camo",
+      "y": 180
+    },
+    "facing=south,linked=false,color=fluxite": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_off_fluxite",
+      "y": 180
+    },
+    "facing=south,linked=false,color=white": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_off_white",
+      "y": 180
+    },
+    "facing=south,linked=false,color=industrial": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_off_industrial",
+      "y": 180
+    },
+    "facing=south,linked=false,color=netherite": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_off_netherite",
+      "y": 180
+    },
+    "facing=south,linked=false,color=redstone": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_off_redstone",
+      "y": 180
+    },
+    "facing=south,linked=false,color=sculk": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_off_sculk",
+      "y": 180
+    },
+    "facing=west,linked=true,color=orange": {
+      "model": "oritechaddonsone:block/wireless_extension_addon_2_on",
+      "y": 270
+    },
+    "facing=west,linked=true,color=diamond": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_on_diamond",
+      "y": 270
+    },
+    "facing=west,linked=true,color=camo": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_on_camo",
+      "y": 270
+    },
+    "facing=west,linked=true,color=fluxite": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_on_fluxite",
+      "y": 270
+    },
+    "facing=west,linked=true,color=white": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_on_white",
+      "y": 270
+    },
+    "facing=west,linked=true,color=industrial": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_on_industrial",
+      "y": 270
+    },
+    "facing=west,linked=true,color=netherite": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_on_netherite",
+      "y": 270
+    },
+    "facing=west,linked=true,color=redstone": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_on_redstone",
+      "y": 270
+    },
+    "facing=west,linked=true,color=sculk": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_on_sculk",
+      "y": 270
+    },
+    "facing=west,linked=false,color=orange": {
+      "model": "oritechaddonsone:block/wireless_extension_addon_2_off",
+      "y": 270
+    },
+    "facing=west,linked=false,color=diamond": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_off_diamond",
+      "y": 270
+    },
+    "facing=west,linked=false,color=camo": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_off_camo",
+      "y": 270
+    },
+    "facing=west,linked=false,color=fluxite": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_off_fluxite",
+      "y": 270
+    },
+    "facing=west,linked=false,color=white": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_off_white",
+      "y": 270
+    },
+    "facing=west,linked=false,color=industrial": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_off_industrial",
+      "y": 270
+    },
+    "facing=west,linked=false,color=netherite": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_off_netherite",
+      "y": 270
+    },
+    "facing=west,linked=false,color=redstone": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_off_redstone",
+      "y": 270
+    },
+    "facing=west,linked=false,color=sculk": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_off_sculk",
+      "y": 270
+    },
+    "facing=up,linked=true,color=orange": {
+      "model": "oritechaddonsone:block/wireless_extension_addon_2_on",
+      "x": 270
+    },
+    "facing=up,linked=true,color=diamond": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_on_diamond",
+      "x": 270
+    },
+    "facing=up,linked=true,color=camo": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_on_camo",
+      "x": 270
+    },
+    "facing=up,linked=true,color=fluxite": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_on_fluxite",
+      "x": 270
+    },
+    "facing=up,linked=true,color=white": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_on_white",
+      "x": 270
+    },
+    "facing=up,linked=true,color=industrial": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_on_industrial",
+      "x": 270
+    },
+    "facing=up,linked=true,color=netherite": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_on_netherite",
+      "x": 270
+    },
+    "facing=up,linked=true,color=redstone": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_on_redstone",
+      "x": 270
+    },
+    "facing=up,linked=true,color=sculk": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_on_sculk",
+      "x": 270
+    },
+    "facing=up,linked=false,color=orange": {
+      "model": "oritechaddonsone:block/wireless_extension_addon_2_off",
+      "x": 270
+    },
+    "facing=up,linked=false,color=diamond": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_off_diamond",
+      "x": 270
+    },
+    "facing=up,linked=false,color=camo": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_off_camo",
+      "x": 270
+    },
+    "facing=up,linked=false,color=fluxite": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_off_fluxite",
+      "x": 270
+    },
+    "facing=up,linked=false,color=white": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_off_white",
+      "x": 270
+    },
+    "facing=up,linked=false,color=industrial": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_off_industrial",
+      "x": 270
+    },
+    "facing=up,linked=false,color=netherite": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_off_netherite",
+      "x": 270
+    },
+    "facing=up,linked=false,color=redstone": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_off_redstone",
+      "x": 270
+    },
+    "facing=up,linked=false,color=sculk": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_off_sculk",
+      "x": 270
+    },
+    "facing=down,linked=true,color=orange": {
+      "model": "oritechaddonsone:block/wireless_extension_addon_2_on",
+      "x": 90
+    },
+    "facing=down,linked=true,color=diamond": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_on_diamond",
+      "x": 90
+    },
+    "facing=down,linked=true,color=camo": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_on_camo",
+      "x": 90
+    },
+    "facing=down,linked=true,color=fluxite": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_on_fluxite",
+      "x": 90
+    },
+    "facing=down,linked=true,color=white": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_on_white",
+      "x": 90
+    },
+    "facing=down,linked=true,color=industrial": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_on_industrial",
+      "x": 90
+    },
+    "facing=down,linked=true,color=netherite": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_on_netherite",
+      "x": 90
+    },
+    "facing=down,linked=true,color=redstone": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_on_redstone",
+      "x": 90
+    },
+    "facing=down,linked=true,color=sculk": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_on_sculk",
+      "x": 90
+    },
+    "facing=down,linked=false,color=orange": {
+      "model": "oritechaddonsone:block/wireless_extension_addon_2_off",
+      "x": 90
+    },
+    "facing=down,linked=false,color=diamond": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_off_diamond",
+      "x": 90
+    },
+    "facing=down,linked=false,color=camo": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_off_camo",
+      "x": 90
+    },
+    "facing=down,linked=false,color=fluxite": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_off_fluxite",
+      "x": 90
+    },
+    "facing=down,linked=false,color=white": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_off_white",
+      "x": 90
+    },
+    "facing=down,linked=false,color=industrial": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_off_industrial",
+      "x": 90
+    },
+    "facing=down,linked=false,color=netherite": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_off_netherite",
+      "x": 90
+    },
+    "facing=down,linked=false,color=redstone": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_off_redstone",
+      "x": 90
+    },
+    "facing=down,linked=false,color=sculk": {
+      "model": "oritechaddonsone:block/colored/wireless_extension_addon_2_off_sculk",
+      "x": 90
+    }
   }
 }

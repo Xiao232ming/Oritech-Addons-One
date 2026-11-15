@@ -5,7 +5,8 @@
         "facing": "north",
         "addon_used": "false",
         "placement": "vertical",
-        "control_unit": "false"
+        "control_unit": "false",
+        "color": "orange"
       },
       "apply": {
         "model": "oritechaddonsone:block/extension_addon_2_off"
@@ -16,7 +17,104 @@
         "facing": "north",
         "addon_used": "false",
         "placement": "vertical",
-        "control_unit": "true"
+        "control_unit": "false",
+        "color": "diamond"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_diamond"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "camo"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_camo"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "fluxite"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_fluxite"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "white"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_white"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "industrial"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_industrial"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "netherite"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_netherite"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "redstone"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_redstone"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "sculk"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_sculk"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "orange"
       },
       "apply": {
         "model": "oritechaddonsone:block/extension_addon_2_off"
@@ -25,9 +123,106 @@
     {
       "when": {
         "facing": "north",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "diamond"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_diamond"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "camo"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_camo"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "fluxite"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_fluxite"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "white"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_white"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "industrial"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_industrial"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "netherite"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_netherite"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "redstone"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_redstone"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "sculk"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_sculk"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
         "addon_used": "true",
         "placement": "vertical",
-        "control_unit": "false"
+        "control_unit": "false",
+        "color": "orange"
       },
       "apply": {
         "model": "oritechaddonsone:block/extension_addon_2_on"
@@ -38,7 +233,104 @@
         "facing": "north",
         "addon_used": "true",
         "placement": "vertical",
-        "control_unit": "true"
+        "control_unit": "false",
+        "color": "diamond"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_diamond"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "camo"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_camo"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "fluxite"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_fluxite"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "white"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_white"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "industrial"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_industrial"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "netherite"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_netherite"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "redstone"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_redstone"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "sculk"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_sculk"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "orange"
       },
       "apply": {
         "model": "oritechaddonsone:block/extension_addon_2_on"
@@ -46,10 +338,107 @@
     },
     {
       "when": {
+        "facing": "north",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "diamond"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_diamond"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "camo"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_camo"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "fluxite"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_fluxite"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "white"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_white"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "industrial"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_industrial"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "netherite"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_netherite"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "redstone"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_redstone"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "sculk"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_sculk"
+      }
+    },
+    {
+      "when": {
         "facing": "east",
         "addon_used": "false",
         "placement": "vertical",
-        "control_unit": "false"
+        "control_unit": "false",
+        "color": "orange"
       },
       "apply": {
         "model": "oritechaddonsone:block/extension_addon_2_off",
@@ -61,7 +450,112 @@
         "facing": "east",
         "addon_used": "false",
         "placement": "vertical",
-        "control_unit": "true"
+        "control_unit": "false",
+        "color": "diamond"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_diamond",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "camo"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_camo",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "fluxite"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_fluxite",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "white"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_white",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "industrial"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_industrial",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "netherite"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_netherite",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "redstone"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_redstone",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "sculk"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_sculk",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "orange"
       },
       "apply": {
         "model": "oritechaddonsone:block/extension_addon_2_off",
@@ -71,9 +565,114 @@
     {
       "when": {
         "facing": "east",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "diamond"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_diamond",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "camo"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_camo",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "fluxite"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_fluxite",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "white"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_white",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "industrial"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_industrial",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "netherite"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_netherite",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "redstone"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_redstone",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "sculk"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_sculk",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
         "addon_used": "true",
         "placement": "vertical",
-        "control_unit": "false"
+        "control_unit": "false",
+        "color": "orange"
       },
       "apply": {
         "model": "oritechaddonsone:block/extension_addon_2_on",
@@ -85,7 +684,112 @@
         "facing": "east",
         "addon_used": "true",
         "placement": "vertical",
-        "control_unit": "true"
+        "control_unit": "false",
+        "color": "diamond"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_diamond",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "camo"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_camo",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "fluxite"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_fluxite",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "white"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_white",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "industrial"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_industrial",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "netherite"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_netherite",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "redstone"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_redstone",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "sculk"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_sculk",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "orange"
       },
       "apply": {
         "model": "oritechaddonsone:block/extension_addon_2_on",
@@ -94,10 +798,115 @@
     },
     {
       "when": {
+        "facing": "east",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "diamond"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_diamond",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "camo"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_camo",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "fluxite"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_fluxite",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "white"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_white",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "industrial"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_industrial",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "netherite"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_netherite",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "redstone"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_redstone",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "sculk"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_sculk",
+        "y": 90
+      }
+    },
+    {
+      "when": {
         "facing": "south",
         "addon_used": "false",
         "placement": "vertical",
-        "control_unit": "false"
+        "control_unit": "false",
+        "color": "orange"
       },
       "apply": {
         "model": "oritechaddonsone:block/extension_addon_2_off",
@@ -109,7 +918,112 @@
         "facing": "south",
         "addon_used": "false",
         "placement": "vertical",
-        "control_unit": "true"
+        "control_unit": "false",
+        "color": "diamond"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_diamond",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "camo"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_camo",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "fluxite"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_fluxite",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "white"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_white",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "industrial"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_industrial",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "netherite"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_netherite",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "redstone"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_redstone",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "sculk"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_sculk",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "orange"
       },
       "apply": {
         "model": "oritechaddonsone:block/extension_addon_2_off",
@@ -119,9 +1033,114 @@
     {
       "when": {
         "facing": "south",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "diamond"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_diamond",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "camo"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_camo",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "fluxite"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_fluxite",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "white"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_white",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "industrial"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_industrial",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "netherite"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_netherite",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "redstone"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_redstone",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "sculk"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_sculk",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
         "addon_used": "true",
         "placement": "vertical",
-        "control_unit": "false"
+        "control_unit": "false",
+        "color": "orange"
       },
       "apply": {
         "model": "oritechaddonsone:block/extension_addon_2_on",
@@ -133,7 +1152,112 @@
         "facing": "south",
         "addon_used": "true",
         "placement": "vertical",
-        "control_unit": "true"
+        "control_unit": "false",
+        "color": "diamond"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_diamond",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "camo"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_camo",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "fluxite"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_fluxite",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "white"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_white",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "industrial"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_industrial",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "netherite"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_netherite",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "redstone"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_redstone",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "sculk"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_sculk",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "orange"
       },
       "apply": {
         "model": "oritechaddonsone:block/extension_addon_2_on",
@@ -142,10 +1266,115 @@
     },
     {
       "when": {
+        "facing": "south",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "diamond"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_diamond",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "camo"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_camo",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "fluxite"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_fluxite",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "white"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_white",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "industrial"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_industrial",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "netherite"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_netherite",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "redstone"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_redstone",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "sculk"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_sculk",
+        "y": 180
+      }
+    },
+    {
+      "when": {
         "facing": "west",
         "addon_used": "false",
         "placement": "vertical",
-        "control_unit": "false"
+        "control_unit": "false",
+        "color": "orange"
       },
       "apply": {
         "model": "oritechaddonsone:block/extension_addon_2_off",
@@ -157,7 +1386,112 @@
         "facing": "west",
         "addon_used": "false",
         "placement": "vertical",
-        "control_unit": "true"
+        "control_unit": "false",
+        "color": "diamond"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_diamond",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "camo"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_camo",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "fluxite"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_fluxite",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "white"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_white",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "industrial"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_industrial",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "netherite"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_netherite",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "redstone"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_redstone",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "sculk"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_sculk",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "orange"
       },
       "apply": {
         "model": "oritechaddonsone:block/extension_addon_2_off",
@@ -167,9 +1501,114 @@
     {
       "when": {
         "facing": "west",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "diamond"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_diamond",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "camo"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_camo",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "fluxite"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_fluxite",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "white"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_white",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "industrial"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_industrial",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "netherite"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_netherite",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "redstone"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_redstone",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "addon_used": "false",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "sculk"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_off_sculk",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
         "addon_used": "true",
         "placement": "vertical",
-        "control_unit": "false"
+        "control_unit": "false",
+        "color": "orange"
       },
       "apply": {
         "model": "oritechaddonsone:block/extension_addon_2_on",
@@ -181,7 +1620,112 @@
         "facing": "west",
         "addon_used": "true",
         "placement": "vertical",
-        "control_unit": "true"
+        "control_unit": "false",
+        "color": "diamond"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_diamond",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "camo"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_camo",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "fluxite"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_fluxite",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "white"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_white",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "industrial"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_industrial",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "netherite"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_netherite",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "redstone"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_redstone",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "false",
+        "color": "sculk"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_sculk",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "orange"
       },
       "apply": {
         "model": "oritechaddonsone:block/extension_addon_2_on",
@@ -190,9 +1734,114 @@
     },
     {
       "when": {
+        "facing": "west",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "diamond"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_diamond",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "camo"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_camo",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "fluxite"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_fluxite",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "white"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_white",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "industrial"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_industrial",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "netherite"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_netherite",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "redstone"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_redstone",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "addon_used": "true",
+        "placement": "vertical",
+        "control_unit": "true",
+        "color": "sculk"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_on_sculk",
+        "y": 270
+      }
+    },
+    {
+      "when": {
         "placement": "bottom",
         "addon_used": "false",
-        "control_unit": "false"
+        "control_unit": "false",
+        "color": "orange"
       },
       "apply": {
         "model": "oritechaddonsone:block/extension_addon_2_flat_off"
@@ -202,7 +1851,96 @@
       "when": {
         "placement": "bottom",
         "addon_used": "false",
-        "control_unit": "true"
+        "control_unit": "false",
+        "color": "diamond"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_off_diamond"
+      }
+    },
+    {
+      "when": {
+        "placement": "bottom",
+        "addon_used": "false",
+        "control_unit": "false",
+        "color": "camo"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_off_camo"
+      }
+    },
+    {
+      "when": {
+        "placement": "bottom",
+        "addon_used": "false",
+        "control_unit": "false",
+        "color": "fluxite"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_off_fluxite"
+      }
+    },
+    {
+      "when": {
+        "placement": "bottom",
+        "addon_used": "false",
+        "control_unit": "false",
+        "color": "white"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_off_white"
+      }
+    },
+    {
+      "when": {
+        "placement": "bottom",
+        "addon_used": "false",
+        "control_unit": "false",
+        "color": "industrial"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_off_industrial"
+      }
+    },
+    {
+      "when": {
+        "placement": "bottom",
+        "addon_used": "false",
+        "control_unit": "false",
+        "color": "netherite"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_off_netherite"
+      }
+    },
+    {
+      "when": {
+        "placement": "bottom",
+        "addon_used": "false",
+        "control_unit": "false",
+        "color": "redstone"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_off_redstone"
+      }
+    },
+    {
+      "when": {
+        "placement": "bottom",
+        "addon_used": "false",
+        "control_unit": "false",
+        "color": "sculk"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_off_sculk"
+      }
+    },
+    {
+      "when": {
+        "placement": "bottom",
+        "addon_used": "false",
+        "control_unit": "true",
+        "color": "orange"
       },
       "apply": {
         "model": "oritechaddonsone:block/extension_addon_2_flat_off"
@@ -211,8 +1949,97 @@
     {
       "when": {
         "placement": "bottom",
+        "addon_used": "false",
+        "control_unit": "true",
+        "color": "diamond"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_off_diamond"
+      }
+    },
+    {
+      "when": {
+        "placement": "bottom",
+        "addon_used": "false",
+        "control_unit": "true",
+        "color": "camo"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_off_camo"
+      }
+    },
+    {
+      "when": {
+        "placement": "bottom",
+        "addon_used": "false",
+        "control_unit": "true",
+        "color": "fluxite"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_off_fluxite"
+      }
+    },
+    {
+      "when": {
+        "placement": "bottom",
+        "addon_used": "false",
+        "control_unit": "true",
+        "color": "white"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_off_white"
+      }
+    },
+    {
+      "when": {
+        "placement": "bottom",
+        "addon_used": "false",
+        "control_unit": "true",
+        "color": "industrial"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_off_industrial"
+      }
+    },
+    {
+      "when": {
+        "placement": "bottom",
+        "addon_used": "false",
+        "control_unit": "true",
+        "color": "netherite"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_off_netherite"
+      }
+    },
+    {
+      "when": {
+        "placement": "bottom",
+        "addon_used": "false",
+        "control_unit": "true",
+        "color": "redstone"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_off_redstone"
+      }
+    },
+    {
+      "when": {
+        "placement": "bottom",
+        "addon_used": "false",
+        "control_unit": "true",
+        "color": "sculk"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_off_sculk"
+      }
+    },
+    {
+      "when": {
+        "placement": "bottom",
         "addon_used": "true",
-        "control_unit": "false"
+        "control_unit": "false",
+        "color": "orange"
       },
       "apply": {
         "model": "oritechaddonsone:block/extension_addon_2_flat_on"
@@ -222,17 +2049,195 @@
       "when": {
         "placement": "bottom",
         "addon_used": "true",
-        "control_unit": "true"
+        "control_unit": "false",
+        "color": "diamond"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_on_diamond"
+      }
+    },
+    {
+      "when": {
+        "placement": "bottom",
+        "addon_used": "true",
+        "control_unit": "false",
+        "color": "camo"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_on_camo"
+      }
+    },
+    {
+      "when": {
+        "placement": "bottom",
+        "addon_used": "true",
+        "control_unit": "false",
+        "color": "fluxite"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_on_fluxite"
+      }
+    },
+    {
+      "when": {
+        "placement": "bottom",
+        "addon_used": "true",
+        "control_unit": "false",
+        "color": "white"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_on_white"
+      }
+    },
+    {
+      "when": {
+        "placement": "bottom",
+        "addon_used": "true",
+        "control_unit": "false",
+        "color": "industrial"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_on_industrial"
+      }
+    },
+    {
+      "when": {
+        "placement": "bottom",
+        "addon_used": "true",
+        "control_unit": "false",
+        "color": "netherite"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_on_netherite"
+      }
+    },
+    {
+      "when": {
+        "placement": "bottom",
+        "addon_used": "true",
+        "control_unit": "false",
+        "color": "redstone"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_on_redstone"
+      }
+    },
+    {
+      "when": {
+        "placement": "bottom",
+        "addon_used": "true",
+        "control_unit": "false",
+        "color": "sculk"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_on_sculk"
+      }
+    },
+    {
+      "when": {
+        "placement": "bottom",
+        "addon_used": "true",
+        "control_unit": "true",
+        "color": "orange"
       },
       "apply": {
         "model": "oritechaddonsone:block/extension_addon_2_flat_on"
+      }
+    },
+    {
+      "when": {
+        "placement": "bottom",
+        "addon_used": "true",
+        "control_unit": "true",
+        "color": "diamond"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_on_diamond"
+      }
+    },
+    {
+      "when": {
+        "placement": "bottom",
+        "addon_used": "true",
+        "control_unit": "true",
+        "color": "camo"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_on_camo"
+      }
+    },
+    {
+      "when": {
+        "placement": "bottom",
+        "addon_used": "true",
+        "control_unit": "true",
+        "color": "fluxite"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_on_fluxite"
+      }
+    },
+    {
+      "when": {
+        "placement": "bottom",
+        "addon_used": "true",
+        "control_unit": "true",
+        "color": "white"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_on_white"
+      }
+    },
+    {
+      "when": {
+        "placement": "bottom",
+        "addon_used": "true",
+        "control_unit": "true",
+        "color": "industrial"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_on_industrial"
+      }
+    },
+    {
+      "when": {
+        "placement": "bottom",
+        "addon_used": "true",
+        "control_unit": "true",
+        "color": "netherite"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_on_netherite"
+      }
+    },
+    {
+      "when": {
+        "placement": "bottom",
+        "addon_used": "true",
+        "control_unit": "true",
+        "color": "redstone"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_on_redstone"
+      }
+    },
+    {
+      "when": {
+        "placement": "bottom",
+        "addon_used": "true",
+        "control_unit": "true",
+        "color": "sculk"
+      },
+      "apply": {
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_on_sculk"
       }
     },
     {
       "when": {
         "placement": "top",
         "addon_used": "false",
-        "control_unit": "false"
+        "control_unit": "false",
+        "color": "orange"
       },
       "apply": {
         "x": 180,
@@ -243,7 +2248,104 @@
       "when": {
         "placement": "top",
         "addon_used": "false",
-        "control_unit": "true"
+        "control_unit": "false",
+        "color": "diamond"
+      },
+      "apply": {
+        "x": 180,
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_off_diamond"
+      }
+    },
+    {
+      "when": {
+        "placement": "top",
+        "addon_used": "false",
+        "control_unit": "false",
+        "color": "camo"
+      },
+      "apply": {
+        "x": 180,
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_off_camo"
+      }
+    },
+    {
+      "when": {
+        "placement": "top",
+        "addon_used": "false",
+        "control_unit": "false",
+        "color": "fluxite"
+      },
+      "apply": {
+        "x": 180,
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_off_fluxite"
+      }
+    },
+    {
+      "when": {
+        "placement": "top",
+        "addon_used": "false",
+        "control_unit": "false",
+        "color": "white"
+      },
+      "apply": {
+        "x": 180,
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_off_white"
+      }
+    },
+    {
+      "when": {
+        "placement": "top",
+        "addon_used": "false",
+        "control_unit": "false",
+        "color": "industrial"
+      },
+      "apply": {
+        "x": 180,
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_off_industrial"
+      }
+    },
+    {
+      "when": {
+        "placement": "top",
+        "addon_used": "false",
+        "control_unit": "false",
+        "color": "netherite"
+      },
+      "apply": {
+        "x": 180,
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_off_netherite"
+      }
+    },
+    {
+      "when": {
+        "placement": "top",
+        "addon_used": "false",
+        "control_unit": "false",
+        "color": "redstone"
+      },
+      "apply": {
+        "x": 180,
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_off_redstone"
+      }
+    },
+    {
+      "when": {
+        "placement": "top",
+        "addon_used": "false",
+        "control_unit": "false",
+        "color": "sculk"
+      },
+      "apply": {
+        "x": 180,
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_off_sculk"
+      }
+    },
+    {
+      "when": {
+        "placement": "top",
+        "addon_used": "false",
+        "control_unit": "true",
+        "color": "orange"
       },
       "apply": {
         "x": 180,
@@ -253,8 +2355,105 @@
     {
       "when": {
         "placement": "top",
+        "addon_used": "false",
+        "control_unit": "true",
+        "color": "diamond"
+      },
+      "apply": {
+        "x": 180,
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_off_diamond"
+      }
+    },
+    {
+      "when": {
+        "placement": "top",
+        "addon_used": "false",
+        "control_unit": "true",
+        "color": "camo"
+      },
+      "apply": {
+        "x": 180,
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_off_camo"
+      }
+    },
+    {
+      "when": {
+        "placement": "top",
+        "addon_used": "false",
+        "control_unit": "true",
+        "color": "fluxite"
+      },
+      "apply": {
+        "x": 180,
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_off_fluxite"
+      }
+    },
+    {
+      "when": {
+        "placement": "top",
+        "addon_used": "false",
+        "control_unit": "true",
+        "color": "white"
+      },
+      "apply": {
+        "x": 180,
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_off_white"
+      }
+    },
+    {
+      "when": {
+        "placement": "top",
+        "addon_used": "false",
+        "control_unit": "true",
+        "color": "industrial"
+      },
+      "apply": {
+        "x": 180,
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_off_industrial"
+      }
+    },
+    {
+      "when": {
+        "placement": "top",
+        "addon_used": "false",
+        "control_unit": "true",
+        "color": "netherite"
+      },
+      "apply": {
+        "x": 180,
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_off_netherite"
+      }
+    },
+    {
+      "when": {
+        "placement": "top",
+        "addon_used": "false",
+        "control_unit": "true",
+        "color": "redstone"
+      },
+      "apply": {
+        "x": 180,
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_off_redstone"
+      }
+    },
+    {
+      "when": {
+        "placement": "top",
+        "addon_used": "false",
+        "control_unit": "true",
+        "color": "sculk"
+      },
+      "apply": {
+        "x": 180,
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_off_sculk"
+      }
+    },
+    {
+      "when": {
+        "placement": "top",
         "addon_used": "true",
-        "control_unit": "false"
+        "control_unit": "false",
+        "color": "orange"
       },
       "apply": {
         "x": 180,
@@ -265,11 +2464,204 @@
       "when": {
         "placement": "top",
         "addon_used": "true",
-        "control_unit": "true"
+        "control_unit": "false",
+        "color": "diamond"
+      },
+      "apply": {
+        "x": 180,
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_on_diamond"
+      }
+    },
+    {
+      "when": {
+        "placement": "top",
+        "addon_used": "true",
+        "control_unit": "false",
+        "color": "camo"
+      },
+      "apply": {
+        "x": 180,
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_on_camo"
+      }
+    },
+    {
+      "when": {
+        "placement": "top",
+        "addon_used": "true",
+        "control_unit": "false",
+        "color": "fluxite"
+      },
+      "apply": {
+        "x": 180,
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_on_fluxite"
+      }
+    },
+    {
+      "when": {
+        "placement": "top",
+        "addon_used": "true",
+        "control_unit": "false",
+        "color": "white"
+      },
+      "apply": {
+        "x": 180,
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_on_white"
+      }
+    },
+    {
+      "when": {
+        "placement": "top",
+        "addon_used": "true",
+        "control_unit": "false",
+        "color": "industrial"
+      },
+      "apply": {
+        "x": 180,
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_on_industrial"
+      }
+    },
+    {
+      "when": {
+        "placement": "top",
+        "addon_used": "true",
+        "control_unit": "false",
+        "color": "netherite"
+      },
+      "apply": {
+        "x": 180,
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_on_netherite"
+      }
+    },
+    {
+      "when": {
+        "placement": "top",
+        "addon_used": "true",
+        "control_unit": "false",
+        "color": "redstone"
+      },
+      "apply": {
+        "x": 180,
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_on_redstone"
+      }
+    },
+    {
+      "when": {
+        "placement": "top",
+        "addon_used": "true",
+        "control_unit": "false",
+        "color": "sculk"
+      },
+      "apply": {
+        "x": 180,
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_on_sculk"
+      }
+    },
+    {
+      "when": {
+        "placement": "top",
+        "addon_used": "true",
+        "control_unit": "true",
+        "color": "orange"
       },
       "apply": {
         "x": 180,
         "model": "oritechaddonsone:block/extension_addon_2_flat_on"
+      }
+    },
+    {
+      "when": {
+        "placement": "top",
+        "addon_used": "true",
+        "control_unit": "true",
+        "color": "diamond"
+      },
+      "apply": {
+        "x": 180,
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_on_diamond"
+      }
+    },
+    {
+      "when": {
+        "placement": "top",
+        "addon_used": "true",
+        "control_unit": "true",
+        "color": "camo"
+      },
+      "apply": {
+        "x": 180,
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_on_camo"
+      }
+    },
+    {
+      "when": {
+        "placement": "top",
+        "addon_used": "true",
+        "control_unit": "true",
+        "color": "fluxite"
+      },
+      "apply": {
+        "x": 180,
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_on_fluxite"
+      }
+    },
+    {
+      "when": {
+        "placement": "top",
+        "addon_used": "true",
+        "control_unit": "true",
+        "color": "white"
+      },
+      "apply": {
+        "x": 180,
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_on_white"
+      }
+    },
+    {
+      "when": {
+        "placement": "top",
+        "addon_used": "true",
+        "control_unit": "true",
+        "color": "industrial"
+      },
+      "apply": {
+        "x": 180,
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_on_industrial"
+      }
+    },
+    {
+      "when": {
+        "placement": "top",
+        "addon_used": "true",
+        "control_unit": "true",
+        "color": "netherite"
+      },
+      "apply": {
+        "x": 180,
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_on_netherite"
+      }
+    },
+    {
+      "when": {
+        "placement": "top",
+        "addon_used": "true",
+        "control_unit": "true",
+        "color": "redstone"
+      },
+      "apply": {
+        "x": 180,
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_on_redstone"
+      }
+    },
+    {
+      "when": {
+        "placement": "top",
+        "addon_used": "true",
+        "control_unit": "true",
+        "color": "sculk"
+      },
+      "apply": {
+        "x": 180,
+        "model": "oritechaddonsone:block/colored/extension_addon_2_flat_on_sculk"
       }
     }
   ]

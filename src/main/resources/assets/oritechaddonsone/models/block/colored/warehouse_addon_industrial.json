@@ -1,0 +1,7 @@
+{
+  "parent": "oritechaddonsone:block/warehouse_addon",
+  "textures": {
+    "0": "oritech:block/colored/machine_speed_addon_off_industrial",
+    "1": "oritechaddonsone:block/colored/warehouse_addon_industrial"
+  }
+}

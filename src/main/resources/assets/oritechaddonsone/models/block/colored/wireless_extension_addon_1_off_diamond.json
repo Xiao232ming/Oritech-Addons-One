@@ -1,0 +1,7 @@
+{
+  "parent": "oritechaddonsone:block/wireless_extension_addon_1_off",
+  "textures": {
+    "port": "oritech:block/colored/machine_extender_off_diamond",
+    "side": "oritechaddonsone:block/colored/extension_addon_1_side_diamond"
+  }
+}

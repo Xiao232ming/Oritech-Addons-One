@@ -1,0 +1,7 @@
+{
+  "parent": "oritechaddonsone:block/extension_addon_1_on",
+  "textures": {
+    "port": "oritech:block/colored/machine_extender_redstone",
+    "side": "oritechaddonsone:block/colored/extension_addon_1_side_redstone"
+  }
+}

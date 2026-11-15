@@ -4,14 +4,18 @@ import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.AttachFace;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import rearth.oritech.block.blocks.addons.MachineAddonBlock;
 import rearth.oritech.block.entity.addons.AddonBlockEntity;
+import rearth.oritech.util.ColorableMachine.ColorVariant;
 import rearth.oritech.util.Geometry;
+import rearth.oritech.util.PaintableBlock;
 
 import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 
@@ -35,7 +39,10 @@ import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
  * <p>
  * The outline of the blocks is narrower than a full block, see {@link #PLUGIN_ADDON_SHAPE}.
  */
-public class PluginAddonBlock extends MachineAddonBlock {
+public class PluginAddonBlock extends MachineAddonBlock implements PaintableBlock {
+
+    /** False for plugins that keep their single orange texture (the transfer addon). */
+    private final boolean paintable;
 
     /**
      * Outline and collision shape of every plugin block, one box per facing/face pair.
@@ -79,7 +86,19 @@ public class PluginAddonBlock extends MachineAddonBlock {
     }
 
     public PluginAddonBlock(Properties properties, AddonSettings addonSettings) {
+        this(properties, addonSettings, true);
+    }
+
+    public PluginAddonBlock(Properties properties, AddonSettings addonSettings, boolean paintable) {
         super(properties, addonSettings);
+        this.paintable = paintable;
+        if (paintable) registerDefaultState(defaultBlockState().setValue(COLOR, ColorVariant.ORANGE));
+    }
+
+    @Override
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+        super.createBlockStateDefinition(builder);
+        if (paintable) builder.add(COLOR);
     }
 
     @Nullable

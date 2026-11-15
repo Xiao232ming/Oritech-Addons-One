@@ -1,0 +1,6 @@
+{
+  "parent": "oritechaddonsone:block/chunk_anchor_addon",
+  "textures": {
+    "0": "oritechaddonsone:block/colored/chunk_anchor_addon_netherite"
+  }
+}
