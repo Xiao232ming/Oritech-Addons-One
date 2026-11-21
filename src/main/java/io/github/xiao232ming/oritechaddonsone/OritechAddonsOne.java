@@ -38,6 +38,7 @@ import rearth.oritech.block.blocks.addons.MachineAddonBlock;
 import rearth.oritech.block.entity.addons.AddonBlockEntity;
 import rearth.oritech.init.BlockEntitiesContent;
 
+import io.github.xiao232ming.oritechaddonsone.addon.MachineStorageBonuses;
 import io.github.xiao232ming.oritechaddonsone.addon.StorageBonusHolder;
 import io.github.xiao232ming.oritechaddonsone.block.ChunkAnchorAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonBlock;
@@ -61,6 +62,7 @@ import io.github.xiao232ming.oritechaddonsone.block.entity.MachineFaceConfigs;
 import io.github.xiao232ming.oritechaddonsone.block.entity.MachineSlotRoles;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.WirelessExtensionAddonBlockEntity;
+import io.github.xiao232ming.oritechaddonsone.forge.LaserAimIndex;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonLayout;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonMenu;
 import io.github.xiao232ming.oritechaddonsone.menu.FaceFilterMenu;
@@ -68,6 +70,9 @@ import io.github.xiao232ming.oritechaddonsone.network.FilterNetworking;
 import io.github.xiao232ming.oritechaddonsone.network.ProxyNetworking;
 import io.github.xiao232ming.oritechaddonsone.network.RedstoneNetworking;
 import io.github.xiao232ming.oritechaddonsone.network.TransferNetworking;
+import io.github.xiao232ming.oritechaddonsone.wireless.AddonEnergyGuard;
+import io.github.xiao232ming.oritechaddonsone.wireless.AnchorForceLoad;
+import io.github.xiao232ming.oritechaddonsone.wireless.WirelessLinks;
 
 /**
  * An addon for Oritech (26.1.2) that adds the "Extension Addon" block.
@@ -499,12 +504,21 @@ public class OritechAddonsOne {
                 WIRELESS_EXTENSION_ADDON_1.getId());
     }
 
-    /** Drops the runtime caches that describe machines and their hosts; see the listener in the constructor. */
+    /**
+     * Drops every static cache that describes a world - machines, their hosts, the wireless indexes and the
+     * force-load receipts; see the listener in the constructor. Anything that caches per-world state has to
+     * be cleared here, so that a cache added later cannot silently keep entries of a stopped server.
+     */
     public static void clearServerCaches() {
         MachineFaceConfigs.clear();
         MachineSlotRoles.clear();
         FacePluginStorage.clear();
         ExtenderFaceFluidStorage.clear();
+        WirelessLinks.clear();
+        AddonEnergyGuard.clear();
+        AnchorForceLoad.clear();
+        LaserAimIndex.clear();
+        MachineStorageBonuses.clearCaches();
     }
 
     /**

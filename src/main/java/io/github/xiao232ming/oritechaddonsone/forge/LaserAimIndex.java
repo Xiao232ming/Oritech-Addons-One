@@ -29,6 +29,11 @@ public final class LaserAimIndex {
     private LaserAimIndex() {
     }
 
+    /** Drops the index; called when the server stops (see {@code OritechAddonsOne#clearServerCaches}). */
+    public static void clear() {
+        LASERS.clear();
+    }
+
     /** Records that a laser aims at a forge (idempotent). */
     public static void register(Level level, BlockPos forge, BlockPos laser) {
         if (level == null || level.isClientSide() || forge == null || laser == null) return;
