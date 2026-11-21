@@ -37,10 +37,7 @@ import rearth.oritech.init.BlockContent;
 import rearth.oritech.api.networking.NetworkedBlockEntity;
 import rearth.oritech.api.networking.SyncType;
 import rearth.oritech.block.entity.addons.AddonBlockEntity;
-import rearth.oritech.block.entity.addons.RedstoneAddonBlockEntity;
-import rearth.oritech.block.entity.addons.RedstoneAddonBlockEntity.RedstoneControllable;
 import rearth.oritech.block.entity.addons.RedstoneAddonBlockEntity.RedstoneMode;
-import rearth.oritech.init.BlockContent;
 import rearth.oritech.init.OritechConfig;
 import rearth.oritech.util.Geometry;
 import rearth.oritech.util.MachineAddonController;
@@ -55,13 +52,11 @@ import io.github.xiao232ming.oritechaddonsone.addon.AddonStorageBonus;
 import io.github.xiao232ming.oritechaddonsone.block.AddonDetailProvider;
 import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonType;
-import io.github.xiao232ming.oritechaddonsone.block.entity.WirelessExtensionAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.fluid.FluidAmounts;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonLayout;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonMenu;
 import io.github.xiao232ming.oritechaddonsone.wireless.AnchorForceLoad;
 import io.github.xiao232ming.oritechaddonsone.wireless.ForceLoadedChunks;
-import io.github.xiao232ming.oritechaddonsone.wireless.WirelessLinks;
 
 /**
  * Block entity of the Extension Addons (shared by type I, type II and type III).
@@ -94,12 +89,11 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
     private final ExtensionAddonType type;
 
     /**
-     * Configuration of the stored control unit: the mode and the machine slot the {@code OUTPUT_SLOT} mode
-     * reports. The control unit is an item here and has no block entity, so the addon keeps and saves them.
+     * Redstone state of the stored control unit (mode, monitored slot, current output and the handed-over
+     * machine state). A stored control unit has no block entity of its own, so this addon keeps them; the
+     * behaviour itself lives in {@link AddonRedstoneControl}.
      */
-    private RedstoneMode redstoneMode = RedstoneMode.INPUT_CONTROL;
-    private int monitoredSlot;
-    private int currentOutput;
+    private final AddonRedstoneControl redstone = new AddonRedstoneControl(this);
     /**
      * Index of the reserved single item slot of the wireless page, right behind the plugin storage. The
      * plugin slots keep their indices {@code 0 .. getContainerSize() - 1}, and the reserved item rides
@@ -128,11 +122,6 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
      */
     @Nullable
     private BaseAddonData lastApplied;
-
-    /** Last redstone state we forwarded to the machine. */
-    private boolean lastRedstonePowered;
-    /** True while we forwarded "a control unit is controlling this machine", so it can be released. */
-    private boolean redstoneApplied;
 
     public ExtensionAddonBlockEntity(BlockPos pos, BlockState state) {
         this(OritechAddonsOne.EXTENSION_ADDON_ENTITY.get(), pos, state);
@@ -199,31 +188,22 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
 
     /** Mode the stored control unit works in; {@code INPUT_CONTROL} while none is stored. */
     public RedstoneMode redstoneMode() {
-        return redstoneMode;
+        return redstone.mode();
     }
 
     /** Machine slot the {@code OUTPUT_SLOT} mode reports. */
     public int monitoredSlot() {
-        return monitoredSlot;
+        return redstone.monitoredSlot();
     }
 
     /** Comparator output of this block, i.e. what the stored control unit currently reports. */
     public int redstoneOutput() {
-        return hasRedstonePlugin() ? currentOutput : 0;
+        return hasRedstonePlugin() ? redstone.output() : 0;
     }
 
     /** Writes the configuration the Redstone Control page edits (server side). */
     public void setRedstoneConfig(RedstoneMode mode, int slot) {
-        var previousMode = this.redstoneMode;
-        this.redstoneMode = mode;
-        this.monitoredSlot = Math.max(0, slot);
-
-        if (previousMode == RedstoneMode.INPUT_CONTROL && mode != RedstoneMode.INPUT_CONTROL
-                && redstoneApplied) {
-            applyRedstoneSignal(false);
-        }
-
-        setChanged();
+        redstone.configure(mode, slot);
     }
 
     /** True while the reserved slot of the wireless page holds a chunk anchor plugin. */
@@ -344,8 +324,8 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
     // ------------------------------------------------------------------ redstone input (control unit plugin)
 
     /**
-     * Polled every server tick by {@link ExtensionAddonBlock#getTicker}. Cheap while nothing is to do:
-     * without a stored control unit (and without a state we set earlier) it returns immediately.
+     * Polled every server tick by {@link ExtensionAddonBlock#getTicker}. The redstone work itself is in
+     * {@link AddonRedstoneControl}; this tick additionally keeps the chunk anchor registration alive.
      */
     public void serverTickRedstone() {
         if (level == null || level.isClientSide()) return;
@@ -358,121 +338,12 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
             AnchorForceLoad.register(this);
         }
 
-        var hasPlugin = hasRedstonePlugin();
-        if (!hasPlugin) {
-            currentOutput = 0;
-            if (!redstoneApplied) return;
-
-            lastRedstonePowered = isPoweredByRedstone();
-            applyRedstoneSignal(lastRedstonePowered);
-            return;
-        }
-
-        // Output modes are polled every tick, input control only reacts to a redstone edge - the same split
-        // Oritech's control unit block entity makes.
-        if (redstoneMode != RedstoneMode.INPUT_CONTROL) {
-            updateRedstoneOutput();
-            return;
-        }
-
-        updateRedstoneOutput();
-
-        var powered = isPoweredByRedstone();
-        if (powered == lastRedstonePowered && redstoneApplied) return;
-
-        lastRedstonePowered = powered;
-        applyRedstoneSignal(powered);
+        redstone.tick();
     }
 
-    /** Recomputes {@link #currentOutput} for the configured output mode. */
-    private void updateRedstoneOutput() {
-        var previous = currentOutput;
-
-        if (!hasRedstonePlugin() || redstoneMode == RedstoneMode.INPUT_CONTROL) {
-            currentOutput = 0;
-        } else if (level == null
-                || !(level.getBlockEntity(getControllerPos()) instanceof RedstoneControllable controllable)) {
-            currentOutput = 0;
-        } else {
-            currentOutput = switch (redstoneMode) {
-                case OUTPUT_POWER -> controllable.getComparatorEnergyAmount();
-                case OUTPUT_SLOT -> controllable.getComparatorSlotAmount(monitoredSlot);
-                case OUTPUT_PROGRESS -> controllable.getComparatorProgress();
-                case OUTPUT_ACTIVE -> controllable.getComparatorActiveState();
-                case INPUT_CONTROL -> 0;
-            };
-        }
-
-        if (currentOutput != previous) setChanged();
-    }
-
-    /** Redstone signal that has to be honoured: at this block, or at the machine it is attached to. */
-    private boolean isPoweredByRedstone() {
-        if (level == null) return false;
-        return level.hasNeighborSignal(worldPosition) || level.hasNeighborSignal(getControllerPos());
-    }
-
-    /**
-     * Forwards the redstone signal at this block to the connected machine, exactly like Oritech's own
-     * control unit plugin does from its {@code neighborChanged} hook: the machine implements
-     * {@link RedstoneControllable} and turns itself off while it is powered.
-     * <p>
-     * Only input control is forwarded. The control unit's mode (input control / comparator output) is
-     * stored in its own block entity, which does not exist while it is kept as an item inside this
-     * block, so a stored control unit always behaves like the default mode {@code INPUT_CONTROL}.
-     */
+    /** Forwards the redstone signal of this block to the connected machine (see {@link AddonRedstoneControl}). */
     public void applyRedstoneSignal(boolean powered) {
-        if (level == null || level.isClientSide()) return;
-        if (!(level.getBlockEntity(getControllerPos()) instanceof MachineAddonController controller)) return;
-        if (!(controller instanceof RedstoneControllable controllable)) return;
-
-        if (hasRedstonePlugin() && redstoneMode == RedstoneMode.INPUT_CONTROL) {
-            redstoneApplied = true;
-            controllable.onRedstoneEvent(powered);
-            return;
-        }
-
-        // Without a stored control unit this block never disabled the machine, so it must not hand it
-        // back either: the machine re-scans every addon whenever one is added, removed or changed, and
-        // an addon without a control unit would otherwise cancel the redstone control that another
-        // addon (the one holding the control unit) had set up.
-        if (!redstoneApplied) return;
-
-        releaseRedstoneControl(controller, controllable);
-    }
-
-    /**
-     * Hands the machine back after the stored control unit went away, either because it was taken out of
-     * the inventory or because this block was mined while it was the one disabling the machine.
-     */
-    private void releaseRedstoneControl(MachineAddonController controller, RedstoneControllable controllable) {
-        redstoneApplied = false;
-
-        // Another Extension Addon still holds a control unit: that one owns the redstone state now, so
-        // handing the machine back here would switch it on behind its back.
-        if (hasOtherControlUnit(controller)) return;
-
-        // A control unit that is attached to the machine directly owns the state, so leave it untouched.
-        if (hasAttachedRedstoneAddon(controller)) return;
-        controllable.onRedstoneEvent(false);
-    }
-
-    /** True while another Extension Addon attached to the same machine holds a control unit. */
-    private boolean hasOtherControlUnit(MachineAddonController controller) {
-        for (var pos : controller.getConnectedAddons()) {
-            if (pos.equals(worldPosition)) continue;
-            if (level.getBlockEntity(pos) instanceof ExtensionAddonBlockEntity other && other.hasRedstonePlugin()) {
-                return true;
-            }
-        }
-
-        // Wireless extension addons linked to the same machine count as well.
-        for (var pos : WirelessLinks.docksOf(level, getControllerPos())) {
-            if (level.getBlockEntity(pos) instanceof WirelessExtensionAddonBlockEntity other && other.hasRedstonePlugin()) {
-                return true;
-            }
-        }
-        return false;
+        redstone.apply(powered);
     }
 
     /**
@@ -480,20 +351,7 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
      * machine, the machine has to be released, otherwise it would stay switched off forever.
      */
     public void releaseRedstoneOnRemoval() {
-        if (!redstoneApplied) return;
-        if (level == null || level.isClientSide()) return;
-        if (!(level.getBlockEntity(getControllerPos()) instanceof MachineAddonController controller)) return;
-        if (!(controller instanceof RedstoneControllable controllable)) return;
-
-        releaseRedstoneControl(controller, controllable);
-    }
-
-    /** True while a vanilla control unit plugin block is attached to the machine directly. */
-    private boolean hasAttachedRedstoneAddon(MachineAddonController controller) {
-        for (var pos : controller.getConnectedAddons()) {
-            if (level.getBlockEntity(pos) instanceof RedstoneAddonBlockEntity) return true;
-        }
-        return false;
+        redstone.releaseOnRemoval();
     }
 
     // ------------------------------------------------------------------ inventory proxy (item proxy page)
@@ -1372,8 +1230,7 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         // Keep the synced block state and the machine's redstone state in sync. Doing it here covers
         // placement, world loads and plugin changes, because every addon scan ends up in this method.
         updateControlUnitState();
-        lastRedstonePowered = isPoweredByRedstone();
-        applyRedstoneSignal(lastRedstonePowered);
+        redstone.refreshSignal();
 
         // Plugins whose behaviour Oritech keys on the block type (quarry, silk touch, fluid, crop
         // filter, steam boiler, hunter, ...) are replayed through the machine's own addon hook, so
@@ -1645,8 +1502,7 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         nbt.putIntArray("counts", counts);
 
         // the stored control unit's configuration, the same two values Oritech's control unit block entity saves
-        nbt.putInt("redstoneMode", redstoneMode.ordinal());
-        nbt.putInt("redstoneSlot", monitoredSlot);
+        redstone.save(nbt);
 
         // the per-face inventory proxy bindings of the Item Proxy page, the transfer modes of the
         // Extension Transfer page and the cell-faces of the 传输插件 page
@@ -1667,11 +1523,7 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         proxyFaces.load(nbt);
         transferFaces.load(nbt);
 
-        var modeOrdinal = nbt.contains("redstoneMode")
-                ? nbt.getInt("redstoneMode") : RedstoneMode.INPUT_CONTROL.ordinal();
-        var modes = RedstoneMode.values();
-        redstoneMode = modes[Math.max(0, Math.min(modes.length - 1, modeOrdinal))];
-        monitoredSlot = Math.max(0, nbt.getInt("redstoneSlot"));
+        redstone.load(nbt);
         // the machine's shared cell settings and this block's own six-face settings; the machine's controller
         // offset is read by the superclass above, so servedMachinePos() is available here
         MachineFaceConfigs.load(this, nbt, registries);
