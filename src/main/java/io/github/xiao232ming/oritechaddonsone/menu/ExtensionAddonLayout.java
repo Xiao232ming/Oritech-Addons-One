@@ -1,12 +1,14 @@
 package io.github.xiao232ming.oritechaddonsone.menu;
 
+import io.github.xiao232ming.oritechaddonsone.block.AddonSlots;
 import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonType;
 
 /**
  * Geometry of the Extension Addon GUI, derived from the (configurable) slot count.
  * <p>
  * Slots are laid out in rows of nine, the panel is drawn procedurally, so any slot count between
- * {@value #MIN_SLOTS} and {@value #MAX_SLOTS} can be displayed without a prepared background texture.
+ * {@value AddonSlots#MIN_SLOTS} and {@value AddonSlots#MAX_SLOTS} can be displayed without a prepared
+ * background texture.
  * <p>
  * The panel is sized for every page it can show, not only for the plugin grid: it is
  * {@value #RIGHT_GUTTER} pixels wider than vanilla's 176 columns (a free strip on the right, which the
@@ -29,7 +31,6 @@ public record ExtensionAddonLayout(int slots, int columns, int rows, int firstSl
                                     int playerRowsY, int hotbarY, int imageWidth, int imageHeight,
                                     boolean columnMajor) {
 
-    public static final int MIN_SLOTS = 1;
     public static final int SLOT_SIZE = 18;
 
     /**
@@ -39,14 +40,6 @@ public record ExtensionAddonLayout(int slots, int columns, int rows, int firstSl
      * 161}, inside {@link #WIDTH}.
      */
     public static final int TYPE_3_COLUMNS = ExtensionAddonType.StatCategory.values().length;
-    /**
-     * Internal storage size: the type III grid at its widest and tallest, i.e. {@link #TYPE_3_COLUMNS}
-     * columns of {@link #TYPE_3_MAX_ROWS} tier rows each - Oritech's own tier 1 plus the tiers 2 to 9 that
-     * Oritech Things adds. It is also the upper bound of every slot count in the config.
-     */
-    public static final int MAX_SLOTS = 72;
-    /** Highest number of tier rows the type III grid can show. */
-    public static final int TYPE_3_MAX_ROWS = MAX_SLOTS / TYPE_3_COLUMNS;
 
     /**
      * Extra width of the panel body right of the vanilla 176 columns. The plugin grid, the reserved slot
@@ -125,7 +118,7 @@ public record ExtensionAddonLayout(int slots, int columns, int rows, int firstSl
 
     /** Layout used by types I and II: rows of nine slots. */
     public static ExtensionAddonLayout of(int requestedSlots) {
-        var slots = Math.max(MIN_SLOTS, Math.min(MAX_SLOTS, requestedSlots));
+        var slots = Math.max(AddonSlots.MIN_SLOTS, Math.min(AddonSlots.MAX_SLOTS, requestedSlots));
         var columns = Math.min(9, slots);
         var rows = (slots + 8) / 9;
 
@@ -146,8 +139,8 @@ public record ExtensionAddonLayout(int slots, int columns, int rows, int firstSl
      */
     public static ExtensionAddonLayout ofColumnMajor(int requestedSlots, int columns) {
         var cols = Math.max(1, Math.min(TYPE_3_COLUMNS, columns));
-        var rows = Math.max(1, Math.min(TYPE_3_MAX_ROWS, (requestedSlots + cols - 1) / cols));
-        var slots = Math.min(Math.max(MIN_SLOTS, requestedSlots), cols * rows);
+        var rows = Math.max(1, Math.min(AddonSlots.TYPE_3_MAX_ROWS, (requestedSlots + cols - 1) / cols));
+        var slots = Math.min(Math.max(AddonSlots.MIN_SLOTS, requestedSlots), cols * rows);
 
         var firstSlotX = 8 + (9 - cols) * SLOT_SIZE / 2;
         var firstSlotY = 18;

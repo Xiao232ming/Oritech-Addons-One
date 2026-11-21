@@ -3,7 +3,7 @@ package io.github.xiao232ming.oritechaddonsone;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
 import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonType;
-import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonLayout;
+import io.github.xiao232ming.oritechaddonsone.block.AddonSlots;
 
 /**
  * Common config of the mod. The inventory of the three plugin types can be adjusted here:
@@ -18,12 +18,12 @@ public final class Config {
     public static final ModConfigSpec.IntValue TYPE_1_SLOTS = BUILDER
             .comment("Plugin slots of the Extension Addon I.",
                     "扩展插件Ⅰ型的插件格数。")
-            .defineInRange("type1Slots", 5, ExtensionAddonLayout.MIN_SLOTS, ExtensionAddonLayout.MAX_SLOTS);
+            .defineInRange("type1Slots", 5, AddonSlots.MIN_SLOTS, AddonSlots.MAX_SLOTS);
 
     public static final ModConfigSpec.IntValue TYPE_2_SLOTS = BUILDER
             .comment("Plugin slots of the Extension Addon II.",
                     "扩展插件Ⅱ型的插件格数。")
-            .defineInRange("type2Slots", 5, ExtensionAddonLayout.MIN_SLOTS, ExtensionAddonLayout.MAX_SLOTS);
+            .defineInRange("type2Slots", 5, AddonSlots.MIN_SLOTS, AddonSlots.MAX_SLOTS);
 
     public static final ModConfigSpec.IntValue TYPE_3_SLOT_CAPACITY = BUILDER
             .comment("Capacity of one Extension Addon III slot.",
@@ -72,8 +72,8 @@ public final class Config {
 
         var value = type == ExtensionAddonType.TYPE_1 ? TYPE_1_SLOTS : TYPE_2_SLOTS;
         try {
-            return Math.max(ExtensionAddonLayout.MIN_SLOTS,
-                    Math.min(ExtensionAddonLayout.MAX_SLOTS, value.get()));
+            return Math.max(AddonSlots.MIN_SLOTS,
+                    Math.min(AddonSlots.MAX_SLOTS, value.get()));
         } catch (IllegalStateException notLoadedYet) {
             // Config values are not available in every early loading stage; fall back to the default.
             return type.defaultSlots();

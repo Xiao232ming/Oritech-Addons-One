@@ -60,7 +60,7 @@ import io.github.xiao232ming.oritechaddonsone.addon.StorageBonusHolder;
 import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonType;
 import io.github.xiao232ming.oritechaddonsone.block.WirelessExtensionAddonBlock;
-import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonLayout;
+import io.github.xiao232ming.oritechaddonsone.block.AddonSlots;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonMenu;
 import io.github.xiao232ming.oritechaddonsone.wireless.AnchorForceLoad;
 import io.github.xiao232ming.oritechaddonsone.wireless.ForceLoadedChunks;
@@ -108,12 +108,12 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
      * plugin slots keep their indices {@code 0 .. getContainerSize() - 1}, and the reserved item rides
      * along in the normal container and save format, so nothing about the plugin storage changes.
      */
-    public static final int RESERVED_SLOT = ExtensionAddonLayout.MAX_SLOTS;
+    public static final int RESERVED_SLOT = AddonSlots.MAX_SLOTS;
     /** Size of the backing storage: the plugin storage plus the reserved single item slot. */
     public static final int STORAGE_SIZE = RESERVED_SLOT + 1;
 
     /**
-     * Storage is always {@link ExtensionAddonLayout#MAX_SLOTS} plugin slots (plus
+     * Storage is always {@link AddonSlots#MAX_SLOTS} plugin slots (plus
      * {@linkplain #RESERVED_SLOT one} for the wireless page), the config only decides how many of these
      * slots are usable. That way lowering the configured amount never destroys stored plugins.
      */

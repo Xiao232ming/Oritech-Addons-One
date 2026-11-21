@@ -21,7 +21,6 @@ import rearth.oritech.block.blocks.addons.MachineAddonBlock;
 import rearth.oritech.init.BlockContent;
 
 import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
-import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonLayout;
 
 /**
  * The three known Extension Addon types.
@@ -305,7 +304,7 @@ public enum ExtensionAddonType {
         if (tiers.isEmpty()) tiers.add(1);
 
         var allTiers = List.copyOf(tiers);
-        var rows = allTiers.subList(0, Math.min(allTiers.size(), ExtensionAddonLayout.TYPE_3_MAX_ROWS));
+        var rows = allTiers.subList(0, Math.min(allTiers.size(), AddonSlots.TYPE_3_MAX_ROWS));
 
         var slots = new ArrayList<Type3Slot>(StatCategory.values().length * rows.size());
         for (var category : StatCategory.values()) {
