@@ -13,7 +13,7 @@ import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
 import io.github.xiao232ming.oritechaddonsone.Config;
-import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonLayout;
+import io.github.xiao232ming.oritechaddonsone.block.AddonSlots;
 
 /**
  * Fabric 侧的配置界面（由 Mod Menu 承载）。
@@ -53,9 +53,9 @@ public class AddonsConfigScreen extends Screen {
         int top = Math.max(42, this.height / 2 - 100);
 
         addField(left, top + ROW_HEIGHT * 0, columnWidth, "type1Slots",
-                Config.TYPE_1_SLOTS, ExtensionAddonLayout.MIN_SLOTS, ExtensionAddonLayout.MAX_SLOTS);
+                Config.TYPE_1_SLOTS, AddonSlots.MIN_SLOTS, AddonSlots.MAX_SLOTS);
         addField(left, top + ROW_HEIGHT * 1, columnWidth, "type2Slots",
-                Config.TYPE_2_SLOTS, ExtensionAddonLayout.MIN_SLOTS, ExtensionAddonLayout.MAX_SLOTS);
+                Config.TYPE_2_SLOTS, AddonSlots.MIN_SLOTS, AddonSlots.MAX_SLOTS);
         addField(left, top + ROW_HEIGHT * 2, columnWidth, "type3SlotCapacity",
                 Config.TYPE_3_SLOT_CAPACITY, 1, Integer.MAX_VALUE);
         addField(left, top + ROW_HEIGHT * 3, columnWidth, "warehouseAddonSlots",

@@ -1,5 +1,6 @@
 package io.github.xiao232ming.oritechaddonsone.menu;
 
+import io.github.xiao232ming.oritechaddonsone.block.AddonSlots;
 import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonType;
 
 /**
@@ -8,8 +9,8 @@ import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonType;
  * Types I and II use a row major grid of nine slots per row. Type III uses a
  * {@linkplain #ofColumnMajor(int, int) column major} grid instead: one column per stat category and one
  * row per plugin tier, so a column always holds the same kind of plugin and the tiers increase
- * downwards. The panel is drawn procedurally, so any slot count between {@value #MIN_SLOTS} and
- * {@value #MAX_SLOTS} can be displayed without a prepared background texture.
+ * downwards. The panel is drawn procedurally, so any slot count between {@value AddonSlots#MIN_SLOTS} and
+ * {@value AddonSlots#MAX_SLOTS} can be displayed without a prepared background texture.
  * <p>
  * The panel is sized for every page it can show, not only for the plugin grid: it is
  * {@value #RIGHT_GUTTER} pixels wider than vanilla's 176 columns (a free strip on the right, which the
@@ -33,7 +34,6 @@ public record ExtensionAddonLayout(int slots, int columns, int rows, int firstSl
                                     int playerRowsY, int hotbarY, int imageWidth, int imageHeight,
                                     boolean columnMajor) {
 
-    public static final int MIN_SLOTS = 1;
     public static final int SLOT_SIZE = 18;
 
     /**
@@ -54,19 +54,10 @@ public record ExtensionAddonLayout(int slots, int columns, int rows, int firstSl
      */
     public static final int TYPE_3_COLUMNS = ExtensionAddonType.StatCategory.values().length;
     /**
-     * Largest slot count a player may configure, and therefore the largest grid any addon type can show:
-     * the type III grid at its widest and tallest, i.e. {@link #TYPE_3_COLUMNS} columns of
-     * {@link #TYPE_3_MAX_ROWS} tier rows - Oritech's own tier 1 plus the tiers 2 to 9 that Oritech Things
-     * adds.
-     */
-    public static final int MAX_SLOTS = 72;
-    /** Highest number of tier rows the type III grid can show. */
-    public static final int TYPE_3_MAX_ROWS = MAX_SLOTS / TYPE_3_COLUMNS;
-    /**
      * Size the plugin container of an extension addon is allocated with, and the index of the reserved
      * slot of the wireless page behind it - twelve tier rows plus that one slot.
      * <p>
-     * <b>It is deliberately larger than {@link #MAX_SLOTS}.</b> The container is what a saved block holds,
+     * <b>It is deliberately larger than {@link AddonSlots#MAX_SLOTS}.</b> The container is what a saved block holds,
      * so lowering it together with the config would drop the slots an older world already used - the
      * reserved slot of every existing addon included. Only the container size and that slot index read
      * this value; every grid is sized from the configured slot count.
@@ -205,7 +196,7 @@ public record ExtensionAddonLayout(int slots, int columns, int rows, int firstSl
 
     /** Layout used by types I and II: rows of nine slots. */
     public static ExtensionAddonLayout of(int requestedSlots) {
-        var slots = Math.max(MIN_SLOTS, Math.min(MAX_SLOTS, requestedSlots));
+        var slots = Math.max(AddonSlots.MIN_SLOTS, Math.min(AddonSlots.MAX_SLOTS, requestedSlots));
         var columns = Math.min(9, slots);
         var rows = (slots + 8) / 9;
 
@@ -226,8 +217,8 @@ public record ExtensionAddonLayout(int slots, int columns, int rows, int firstSl
      */
     public static ExtensionAddonLayout ofColumnMajor(int requestedSlots, int columns) {
         var cols = Math.max(1, Math.min(TYPE_3_COLUMNS, columns));
-        var rows = Math.max(1, Math.min(TYPE_3_MAX_ROWS, (requestedSlots + cols - 1) / cols));
-        var slots = Math.min(Math.max(MIN_SLOTS, requestedSlots), cols * rows);
+        var rows = Math.max(1, Math.min(AddonSlots.TYPE_3_MAX_ROWS, (requestedSlots + cols - 1) / cols));
+        var slots = Math.min(Math.max(AddonSlots.MIN_SLOTS, requestedSlots), cols * rows);
 
         var firstSlotX = 8 + (9 - cols) * SLOT_SIZE / 2;
         var firstSlotY = 18;
