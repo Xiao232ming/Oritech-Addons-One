@@ -3,7 +3,7 @@ package io.github.xiao232ming.oritechaddonsone.block.entity;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import net.minecraft.core.BlockPos;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
 import org.jetbrains.annotations.Nullable;
@@ -48,12 +48,14 @@ import rearth.oritech.util.ScreenProvider;
 public final class MachineSlotRoles {
 
     /**
-     * Role list of every machine position a handler ever asked about, mapped to the array itself. A stale entry is
-     * never read because the cache is validated against the block entity and the inventory size before it is used,
-     * and it is cleared when the server stops ({@link #clear()}): an entry holds the machine's block entity (and
-     * through it its level), so keeping the entries past a world would keep the old level alive.
+     * Role list of every machine this handler ever asked about, keyed by dimension and position like the other
+     * machine caches - two dimensions can hold machines at the same coordinates, and their roles are not the
+     * same. A stale entry is never read because the cache is validated against the block entity and the
+     * inventory size before it is used, and it is cleared when the server stops ({@link #clear()}): an entry
+     * holds the machine's block entity (and through it its level), so keeping the entries past a world would
+     * keep the old level alive.
      */
-    private static final Map<BlockPos, CacheEntry> CACHE = new ConcurrentHashMap<>();
+    private static final Map<GlobalPos, CacheEntry> CACHE = new ConcurrentHashMap<>();
 
     private MachineSlotRoles() {
     }
@@ -86,7 +88,8 @@ public final class MachineSlotRoles {
         var machine = level.getBlockEntity(machinePos);
         if (machine == null) return null;
 
-        var cached = CACHE.get(machinePos);
+        var key = GlobalPos.of(level.dimension(), machinePos.immutable());
+        var cached = CACHE.get(key);
         var storage = MachineFaceStorage.machineStorageAt(level, machinePos);
         if (storage == null) return null;
 
@@ -94,7 +97,7 @@ public final class MachineSlotRoles {
         if (cached != null && cached.machine() == machine && cached.size() == size) return cached.roles();
 
         var roles = resolve(machine, size);
-        CACHE.put(machinePos.immutable(), new CacheEntry(machine, size, roles));
+        CACHE.put(key, new CacheEntry(machine, size, roles));
         return roles;
     }
 
