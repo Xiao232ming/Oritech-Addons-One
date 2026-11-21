@@ -15,6 +15,7 @@ import rearth.oritech.api.networking.NetworkManager;
 import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonType;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEntity;
+import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonMenu;
 
 /** The packet of the Redstone Control page: a new mode or monitored slot for the stored control unit. */
 public final class RedstoneNetworking {
@@ -46,6 +47,13 @@ public final class RedstoneNetworking {
 
         public static void handle(Configure packet, Player player, RegistryAccess registryAccess) {
             if (!(player instanceof ServerPlayer serverPlayer)) return;
+
+            // only the menu opened on this addon, and still in reach, may change its redstone settings
+            if (!(serverPlayer.containerMenu instanceof ExtensionAddonMenu menu)
+                    || !menu.position().equals(packet.pos())
+                    || !menu.stillValid(serverPlayer)) {
+                return;
+            }
 
             if (!(serverPlayer.level().getBlockEntity(packet.pos()) instanceof ExtensionAddonBlockEntity addon)) {
                 return;

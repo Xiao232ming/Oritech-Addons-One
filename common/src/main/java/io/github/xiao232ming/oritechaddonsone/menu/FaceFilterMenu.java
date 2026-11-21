@@ -10,6 +10,7 @@ import net.minecraft.core.Vec3i;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.Container;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -291,12 +292,13 @@ public class FaceFilterMenu extends AbstractContainerMenu {
 
     /**
      * The page closes itself once the block it belongs to is gone, exactly like any other container: a filter
-     * that outlived its face would write into nothing.
+     * that outlived its face would write into nothing. Being in reach is part of that - the same eight blocks
+     * every block entity container uses - so a player who walked away cannot write into it either.
      */
     @Override
     public boolean stillValid(Player player) {
-        var level = player.level();
-        return level == null || level.getBlockEntity(pos) instanceof ExtensionAddonBlockEntity;
+        return player.level().getBlockEntity(pos) instanceof ExtensionAddonBlockEntity addon
+                && Container.stillValidBlockEntity(addon, player);
     }
 
     /** The face an ordinal names, or a default one while it names none - which is what a modified client sends. */

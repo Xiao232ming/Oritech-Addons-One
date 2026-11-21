@@ -19,6 +19,7 @@ import rearth.oritech.api.networking.NetworkManager;
 
 import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEntity;
+import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonMenu;
 
 /**
  * The packets of the Item Proxy page.
@@ -75,6 +76,13 @@ public final class ProxyNetworking {
         public static void handle(BindFace packet, Player player, RegistryAccess registryAccess) {
             if (!(player instanceof ServerPlayer serverPlayer)) return;
 
+            // only the menu opened on this addon, and still in reach, may bind one of its faces
+            if (!(serverPlayer.containerMenu instanceof ExtensionAddonMenu menu)
+                    || !menu.position().equals(packet.pos())
+                    || !menu.stillValid(serverPlayer)) {
+                return;
+            }
+
             if (serverPlayer.level().getBlockEntity(packet.pos()) instanceof ExtensionAddonBlockEntity addon) {
                 var face = faceOf(packet.face());
                 if (face == null) return;
@@ -106,6 +114,13 @@ public final class ProxyNetworking {
         public static void handle(RequestPicker packet, Player player, RegistryAccess registryAccess) {
             if (!(player instanceof ServerPlayer serverPlayer)) return;
 
+            // the layout belongs to the open page: a player without this block's menu gets nothing back
+            if (!(serverPlayer.containerMenu instanceof ExtensionAddonMenu menu)
+                    || !menu.position().equals(packet.pos())
+                    || !menu.stillValid(serverPlayer)) {
+                return;
+            }
+
             if (serverPlayer.level().getBlockEntity(packet.pos()) instanceof ExtensionAddonBlockEntity addon) {
                 var face = faceOf(packet.face());
                 if (face == null) return;
@@ -133,6 +148,13 @@ public final class ProxyNetworking {
 
         public static void handle(ClearFace packet, Player player, RegistryAccess registryAccess) {
             if (!(player instanceof ServerPlayer serverPlayer)) return;
+
+            // only the menu opened on this addon, and still in reach, may unbind one of its faces
+            if (!(serverPlayer.containerMenu instanceof ExtensionAddonMenu menu)
+                    || !menu.position().equals(packet.pos())
+                    || !menu.stillValid(serverPlayer)) {
+                return;
+            }
 
             if (serverPlayer.level().getBlockEntity(packet.pos()) instanceof ExtensionAddonBlockEntity addon) {
                 var face = faceOf(packet.face());

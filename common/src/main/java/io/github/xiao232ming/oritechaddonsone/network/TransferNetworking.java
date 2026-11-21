@@ -86,6 +86,14 @@ public final class TransferNetworking {
         public static void handle(SetTransferMode packet, Player player, RegistryAccess registryAccess) {
             if (!(player instanceof ServerPlayer serverPlayer)) return;
 
+            // the page is the only way in: the packet is honoured only while this block's own menu is open and
+            // still in reach, the same guard Oritech's addon packets use
+            if (!(serverPlayer.containerMenu instanceof ExtensionAddonMenu menu)
+                    || !menu.position().equals(packet.pos())
+                    || !menu.stillValid(serverPlayer)) {
+                return;
+            }
+
             if (!(serverPlayer.level().getBlockEntity(packet.pos()) instanceof ExtensionAddonBlockEntity addon)) return;
 
             // never trust the client: the face index and the mode are both ranges the server checks itself
@@ -124,6 +132,13 @@ public final class TransferNetworking {
         public static void handle(SetCellFaceMode packet, Player player, RegistryAccess registryAccess) {
             if (!(player instanceof ServerPlayer serverPlayer)) return;
 
+            // only the menu opened on this addon, and still in reach, may change its cell-face map
+            if (!(serverPlayer.containerMenu instanceof ExtensionAddonMenu menu)
+                    || !menu.position().equals(packet.pos())
+                    || !menu.stillValid(serverPlayer)) {
+                return;
+            }
+
             // The block this setting is written to is the one the page was opened on: the transfer plugin
             // itself while it hangs on an extender, or - the common case - the Extension Addon that holds it in
             // a plugin slot. A stored plugin is an <b>item</b>, so its own block entity does not exist in the
@@ -139,8 +154,10 @@ public final class TransferNetworking {
             if (!owner.setCellFaceConfig(entry.cell(), entry.face(), entry.mode(), entry.automation())) return;
 
             // the page draws the whole map of the machine, so every player whose page shows a plugin of that
-            // machine gets the authoritative copy back - including the entry a clear just removed
-            sendFaceModes(serverPlayer.level(), packet.machine());
+            // machine gets the authoritative copy back - including the entry a clear just removed. The machine
+            // is the one this block serves, never the one the packet named, so a client cannot choose it.
+            var machine = owner.servedMachinePos();
+            if (machine != null) sendFaceModes(serverPlayer.level(), machine);
         }
     }
 
