@@ -3,7 +3,10 @@ package io.github.xiao232ming.oritechaddonsone.block;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.jetbrains.annotations.Nullable;
 
@@ -158,33 +161,48 @@ public enum ExtensionAddonType {
      *     <li>finally the registry path is matched by keyword, so tiered plugins of other addon mods
      *     are recognised as well.</li>
      * </ol>
+     * <p>
+     * The answer is cached per block, because it is asked for every stored plugin on every energy query of a
+     * machine (see {@code ExtensionAddonBlockEntity#hasAcceptorPlugin}) and the tag lookups behind it are not
+     * free. The cache is dropped whenever the block tags change (see {@link #invalidateCategoryCache}).
      */
     public static StatCategory categoryOf(Block block) {
         if (block == null || !(block instanceof MachineAddonBlock)) return null;
+        return CATEGORY_CACHE.computeIfAbsent(block, ExtensionAddonType::resolveCategory).orElse(null);
+    }
 
-        if (block == BlockContent.MACHINE_SPEED_ADDON.get()) return StatCategory.SPEED;
-        if (block == BlockContent.MACHINE_EFFICIENCY_ADDON.get()) return StatCategory.EFFICIENCY;
-        if (block == BlockContent.SYNERGY_MATRIX_ADDON.get()) return StatCategory.EFFICIENT_SPEED;
-        if (block == BlockContent.AUXILIARY_PROCESSING_CHAMBER_ADDON.get()) return StatCategory.PROCESSING;
-        if (block == BlockContent.MACHINE_CAPACITOR_ADDON.get()) return StatCategory.CAPACITOR;
-        if (block == BlockContent.MACHINE_ACCEPTOR_ADDON.get()) return StatCategory.ACCEPTOR;
+    /** Categories already resolved per block, including the "not a stat plugin" answer. */
+    private static final Map<Block, Optional<StatCategory>> CATEGORY_CACHE = new ConcurrentHashMap<>();
+
+    /** Drops the cached categories, so the next lookup sees the reloaded block tags. */
+    public static void invalidateCategoryCache() {
+        CATEGORY_CACHE.clear();
+    }
+
+    private static Optional<StatCategory> resolveCategory(Block block) {
+        if (block == BlockContent.MACHINE_SPEED_ADDON.get()) return Optional.of(StatCategory.SPEED);
+        if (block == BlockContent.MACHINE_EFFICIENCY_ADDON.get()) return Optional.of(StatCategory.EFFICIENCY);
+        if (block == BlockContent.SYNERGY_MATRIX_ADDON.get()) return Optional.of(StatCategory.EFFICIENT_SPEED);
+        if (block == BlockContent.AUXILIARY_PROCESSING_CHAMBER_ADDON.get()) return Optional.of(StatCategory.PROCESSING);
+        if (block == BlockContent.MACHINE_CAPACITOR_ADDON.get()) return Optional.of(StatCategory.CAPACITOR);
+        if (block == BlockContent.MACHINE_ACCEPTOR_ADDON.get()) return Optional.of(StatCategory.ACCEPTOR);
 
         // This mod's own two plugins. They are matched here instead of by name so that no other addon's
         // block (or a translation-like registry path) can be mistaken for them.
-        if (block == OritechAddonsOne.WAREHOUSE_ADDON.get()) return StatCategory.WAREHOUSE;
-        if (block == OritechAddonsOne.TANK_ADDON.get()) return StatCategory.TANK;
+        if (block == OritechAddonsOne.WAREHOUSE_ADDON.get()) return Optional.of(StatCategory.WAREHOUSE);
+        if (block == OritechAddonsOne.TANK_ADDON.get()) return Optional.of(StatCategory.TANK);
 
         var item = block.asItem();
         if (item != Items.AIR) {
-            if (isInAnyTag(item, EFFICIENT_SPEED_TAGS)) return StatCategory.EFFICIENT_SPEED;
-            if (isInAnyTag(item, SPEED_TAGS)) return StatCategory.SPEED;
-            if (isInAnyTag(item, EFFICIENCY_TAGS)) return StatCategory.EFFICIENCY;
-            if (isInAnyTag(item, PROCESSING_TAGS)) return StatCategory.PROCESSING;
-            if (isInAnyTag(item, CAPACITOR_TAGS)) return StatCategory.CAPACITOR;
-            if (isInAnyTag(item, ACCEPTOR_TAGS)) return StatCategory.ACCEPTOR;
+            if (isInAnyTag(item, EFFICIENT_SPEED_TAGS)) return Optional.of(StatCategory.EFFICIENT_SPEED);
+            if (isInAnyTag(item, SPEED_TAGS)) return Optional.of(StatCategory.SPEED);
+            if (isInAnyTag(item, EFFICIENCY_TAGS)) return Optional.of(StatCategory.EFFICIENCY);
+            if (isInAnyTag(item, PROCESSING_TAGS)) return Optional.of(StatCategory.PROCESSING);
+            if (isInAnyTag(item, CAPACITOR_TAGS)) return Optional.of(StatCategory.CAPACITOR);
+            if (isInAnyTag(item, ACCEPTOR_TAGS)) return Optional.of(StatCategory.ACCEPTOR);
         }
 
-        return categoryFromName(BuiltInRegistries.BLOCK.getKey(block).getPath());
+        return Optional.ofNullable(categoryFromName(BuiltInRegistries.BLOCK.getKey(block).getPath()));
     }
 
     /**

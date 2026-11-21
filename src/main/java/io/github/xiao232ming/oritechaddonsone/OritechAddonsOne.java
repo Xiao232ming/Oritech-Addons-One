@@ -27,6 +27,7 @@ import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.common.extensions.IMenuTypeExtension;
+import net.neoforged.neoforge.event.TagsUpdatedEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.neoforge.registries.DeferredHolder;
@@ -499,6 +500,10 @@ public class OritechAddonsOne {
         // levels could never be collected.
         NeoForge.EVENT_BUS.addListener((ServerStoppedEvent event) -> clearServerCaches());
 
+        // The plugin categories are decided by block tags (see ExtensionAddonType#categoryOf), which a datapack
+        // reload or a server's tag packet can change on either side. Cache the answer, but never across an update.
+        NeoForge.EVENT_BUS.addListener((TagsUpdatedEvent event) -> ExtensionAddonType.invalidateCategoryCache());
+
         LOGGER.info("Oritech Addons One loaded: {}, {}, {} and the wireless variants {} registered",
                 EXTENSION_ADDON_1.getId(), EXTENSION_ADDON_2.getId(), EXTENSION_ADDON_3.getId(),
                 WIRELESS_EXTENSION_ADDON_1.getId());
@@ -519,6 +524,7 @@ public class OritechAddonsOne {
         AnchorForceLoad.clear();
         LaserAimIndex.clear();
         MachineStorageBonuses.clearCaches();
+        ExtensionAddonType.invalidateCategoryCache();
     }
 
     /**
