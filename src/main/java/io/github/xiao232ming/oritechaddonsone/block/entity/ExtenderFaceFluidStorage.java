@@ -8,7 +8,6 @@ import net.minecraft.core.GlobalPos;
 
 import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
-import net.neoforged.neoforge.transfer.transaction.TransactionContext;
 
 import org.jetbrains.annotations.Nullable;
 
@@ -20,14 +19,14 @@ import rearth.oritech.block.entity.addons.AddonBlockEntity;
  * <p>
  * Which faces are connections, which machine they belong to and which mode they transfer with is exactly the
  * item side's question ({@link ExtenderFaceStorage#transferMode}), so this class asks the very same helpers.
- * While the face has a mode it answers the machine's fluid handlers, gated by the mode; with no mode - which
- * includes every face of an extender no extension transfer plugin hangs on - it answers {@code null}, so a pipe
- * sees the extender as "nothing here".
+ * While the face has a mode it answers the machine's fluid handlers with the gating described in
+ * {@link AbstractFaceFluidStorage}; with no mode - which includes every face of an extender no extension
+ * transfer plugin hangs on - it answers {@code null}, so a pipe sees the extender as "nothing here".
  * <p>
  * One handler per extender face, kept so NeoForge's capability cache always sees the same object; the plugin,
  * the mode and the machine are resolved on every call, so a change takes effect on the next query.
  */
-public final class ExtenderFaceFluidStorage implements ResourceHandler<FluidResource> {
+public final class ExtenderFaceFluidStorage extends AbstractFaceFluidStorage {
 
     /** One handler per extender dimension/position, indexed by {@link Direction#ordinal()}. */
     private static final Map<GlobalPos, ExtenderFaceFluidStorage[]> HANDLERS = new ConcurrentHashMap<>();
@@ -65,71 +64,15 @@ public final class ExtenderFaceFluidStorage implements ResourceHandler<FluidReso
     }
 
     @Nullable
-    private ResourceHandler<FluidResource> storage() {
-        if (ExtenderFaceStorage.transferMode(extender, face) == TransferMode.NONE) return null;
+    @Override
+    protected ResourceHandler<FluidResource> storage() {
+        if (TransferMode.NONE == mode()) return null;
         return MachineFaceStorage.machineFluidStorageAt(extender.getLevel(),
                 ExtenderFaceStorage.machinePos(extender));
     }
 
-    private TransferMode mode() {
+    @Override
+    protected TransferMode mode() {
         return ExtenderFaceStorage.transferMode(extender, face);
-    }
-
-    @Override
-    public int size() {
-        var storage = storage();
-        return storage == null ? 0 : storage.size();
-    }
-
-    @Override
-    public FluidResource getResource(int index) {
-        var storage = storage();
-        return storage == null ? FluidResource.EMPTY : storage.getResource(index);
-    }
-
-    @Override
-    public long getAmountAsLong(int index) {
-        var storage = storage();
-        return storage == null ? 0 : storage.getAmountAsLong(index);
-    }
-
-    @Override
-    public long getCapacityAsLong(int index, FluidResource resource) {
-        var storage = storage();
-        return storage == null ? 0 : storage.getCapacityAsLong(index, resource);
-    }
-
-    @Override
-    public boolean isValid(int index, FluidResource resource) {
-        var storage = storage();
-        return storage != null && storage.isValid(index, resource);
-    }
-
-    @Override
-    public int insert(int index, FluidResource resource, int amount, TransactionContext transaction) {
-        var storage = storage();
-        if (storage == null || !mode().allowsInsert()) return 0;
-        return storage.insert(index, resource, amount, transaction);
-    }
-
-    @Override
-    public int insert(FluidResource resource, int amount, TransactionContext transaction) {
-        var storage = storage();
-        if (storage == null || !mode().allowsInsert()) return 0;
-        return storage.insert(resource, amount, transaction);
-    }
-
-    @Override
-    public int extract(int index, FluidResource resource, int amount, TransactionContext transaction) {
-        var storage = storage();
-        if (storage == null || !mode().allowsExtract()) return 0;
-        return storage.extract(index, resource, amount, transaction);
-    }
-
-    @Override
-    public int extract(FluidResource resource, int amount, TransactionContext transaction) {
-        var storage = storage();
-        if (storage == null || !mode().allowsExtract()) return 0;
-        return storage.extract(resource, amount, transaction);
     }
 }
