@@ -8,7 +8,6 @@ import net.minecraft.world.level.Level;
 
 import org.jetbrains.annotations.Nullable;
 
-import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 import io.github.xiao232ming.oritechaddonsone.platform.AddonsPlatform;
 
 /**
@@ -56,7 +55,6 @@ public final class ForceLoadedChunks {
         try {
             return isForceLoadedUnchecked(level, pos);
         } catch (Throwable failure) {
-            OritechAddonsOne.LOGGER.debug("[diag] force-load check failed for {} in {}", pos, level, failure);
             return false;
         }
     }

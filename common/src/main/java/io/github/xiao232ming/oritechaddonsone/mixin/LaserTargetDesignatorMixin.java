@@ -21,7 +21,6 @@ import rearth.oritech.item.tools.LaserTargetDesignator;
 import rearth.oritech.util.MachineAddonController;
 import rearth.oritech.util.MachineAddonProvider;
 
-import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 import io.github.xiao232ming.oritechaddonsone.block.WirelessExtensionAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.block.entity.WirelessExtensionAddonBlockEntity;
 
@@ -55,8 +54,6 @@ public class LaserTargetDesignatorMixin {
         var clickedPos = context.getClickedPos();
         var clickedState = level.getBlockState(clickedPos);
 
-        OritechAddonsOne.LOGGER.debug("[diag] designator useOn: clicked={} ({}), stored={}",
-                clickedPos, clickedState.getBlock(), dockPos);
         if (dockPos == null) return;
 
         // keep Oritech's own designator targets working
@@ -67,11 +64,7 @@ public class LaserTargetDesignatorMixin {
         // The machine the clicked block belongs to. Not an addon machine: leave the click to Oritech, which
         // then stores this position.
         var machinePos = oritechaddonsone$machineOf(level, clickedPos);
-        if (machinePos == null) {
-            OritechAddonsOne.LOGGER.debug("[diag] designator: {} is not an addon machine (be={})",
-                    clickedPos, level.getBlockEntity(clickedPos));
-            return;
-        }
+        if (machinePos == null) return;
 
         var player = context.getPlayer();
         if (!level.isLoaded(dockPos)) {
@@ -83,11 +76,7 @@ public class LaserTargetDesignatorMixin {
             return;
         }
 
-        if (!(level.getBlockEntity(dockPos) instanceof WirelessExtensionAddonBlockEntity dock)) {
-            OritechAddonsOne.LOGGER.debug("[diag] designator: stored {} is not a wireless dock (be={})",
-                    dockPos, level.getBlockEntity(dockPos));
-            return;
-        }
+        if (!(level.getBlockEntity(dockPos) instanceof WirelessExtensionAddonBlockEntity dock)) return;
 
         dock.linkTo(machinePos);
 

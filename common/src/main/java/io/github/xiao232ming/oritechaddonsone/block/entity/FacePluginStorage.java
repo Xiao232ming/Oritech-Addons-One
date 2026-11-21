@@ -3,7 +3,6 @@ package io.github.xiao232ming.oritechaddonsone.block.entity;
 import java.lang.ref.WeakReference;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -15,8 +14,6 @@ import org.jetbrains.annotations.Nullable;
 
 import rearth.oritech.api.item.ItemApi;
 import rearth.oritech.api.item.containers.DelegatingInventoryStorage;
-
-import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 
 /**
  * The item inventory one face of a block a <b>placed transfer plugin</b> hangs on offers to the outside world.
@@ -69,21 +66,6 @@ public class FacePluginStorage extends DelegatingInventoryStorage {
      * It is cleared when the server stops ({@link #clear()}).
      */
     private static final Map<GlobalPos, FacePluginStorage[]> HANDLERS = new ConcurrentHashMap<>();
-
-    /**
-     * How many nanoseconds have to pass between two "this face answered nothing" diagnostic lines. A pipe asks its
-     * neighbours again every tick, so without a limit a face that is deliberately not configured would write twenty
-     * lines a second and drown everything else in the log. One line per second and host position is enough to show
-     * the mode lookup is really being asked and what it sees.
-     */
-    private static final long DIAGNOSTIC_INTERVAL_NANOS = 1_000_000_000L;
-
-    /**
-     * Last time the diagnostic line of a host was written. Keyed by dimension and position only - and not by position
-     * and face - so a host cannot flood the log even while a pipe walks all six faces. Entries are cleared with
-     * {@link #HANDLERS}.
-     */
-    private static final Map<GlobalPos, AtomicLong> LAST_DIAGNOSTIC = new ConcurrentHashMap<>();
 
     /**
      * Which plugin configures one face of the host, i.e. the one question a placement has to answer.
@@ -167,12 +149,6 @@ public class FacePluginStorage extends DelegatingInventoryStorage {
      * connection at all - a face with no mode, which includes every face of a host no transfer plugin hangs on.
      * {@code null} is what the capability provider answers with, so a pipe sees the host as "nothing here" until a
      * plugin really offers something on that face.
-     * <p>
-     * A face the mode lookup answers {@code NONE} for gets one diagnostic line, which is what tells a "configured
-     * face does not connect" report apart from "the provider was never asked": the provider itself logs that it was
-     * called, and this one says what the mode lookup answered. It is written at most once a second per host position
-     * (see {@link #DIAGNOSTIC_INTERVAL_NANOS}) and only while debug logging is on, so a pipe that asks every tick
-     * cannot drown the log.
      *
      * @param host    the block entity a placed extension transfer plugin hangs on - Oritech's machine extender
      * @param face    the face of that host the pipe asked for, or {@code null} while it asked without a side
@@ -189,10 +165,7 @@ public class FacePluginStorage extends DelegatingInventoryStorage {
         if (level == null) return null;
 
         var pos = host.getBlockPos();
-        if (lookup.modeOf(host, face) == TransferMode.NONE) {
-            logNothingAnswered(GlobalPos.of(level.dimension(), pos), face);
-            return null;
-        }
+        if (lookup.modeOf(host, face) == TransferMode.NONE) return null;
 
         var key = GlobalPos.of(level.dimension(), pos.immutable());
         var handlers = HANDLERS.computeIfAbsent(key,
@@ -204,28 +177,12 @@ public class FacePluginStorage extends DelegatingInventoryStorage {
 
         var created = create.create(host, face, lookup, machine, filter);
         handlers[face.ordinal()] = created;
-
-        OritechAddonsOne.LOGGER.debug("[transfer] capability: host {} face {} now answers its storage",
-                pos, face);
         return created;
     }
 
-    /** Drops every storage and diagnostic stamp, called when the server stops. */
+    /** Drops every storage, called when the server stops. */
     public static void clear() {
         HANDLERS.clear();
-        LAST_DIAGNOSTIC.clear();
-    }
-
-    /** Writes the "answered nothing" diagnostic line, but at most once a second per host. */
-    private static void logNothingAnswered(GlobalPos key, Direction face) {
-        var last = LAST_DIAGNOSTIC.computeIfAbsent(key, ignored -> new AtomicLong(Long.MIN_VALUE));
-        var now = System.nanoTime();
-        var previous = last.get();
-
-        if (previous != Long.MIN_VALUE && now - previous < DIAGNOSTIC_INTERVAL_NANOS) return;
-        if (!last.compareAndSet(previous, now)) return;
-
-        OritechAddonsOne.LOGGER.debug("[transfer] capability: {} face {} answered nothing", key, face);
     }
 
     /**

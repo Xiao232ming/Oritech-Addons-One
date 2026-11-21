@@ -221,13 +221,10 @@ public final class FilterNetworking {
             var direction = TransferMode.byOrdinal(packet.flow());
             if (direction != TransferMode.INPUT && direction != TransferMode.OUTPUT) return;
 
-            var accepted = target.model() == FaceFilterMenu.MODEL_CELL
-                    ? owner.setCellFilter(target.cell(), target.face(), direction, packet.data())
-                    : owner.setFaceFilter(target.face(), direction, packet.data());
-
-            if (!accepted) {
-                OritechAddonsOne.LOGGER.debug("[transfer] refused a filter for {} model {} face {} ({})",
-                        target.pos(), target.model(), target.face(), direction);
+            if (target.model() == FaceFilterMenu.MODEL_CELL) {
+                owner.setCellFilter(target.cell(), target.face(), direction, packet.data());
+            } else {
+                owner.setFaceFilter(target.face(), direction, packet.data());
             }
 
             // whatever the server holds now is what the page has to show, whether the write went through or not

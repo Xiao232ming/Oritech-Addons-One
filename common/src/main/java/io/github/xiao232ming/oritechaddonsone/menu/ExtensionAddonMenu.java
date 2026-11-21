@@ -849,12 +849,7 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
         // the machine of whichever transfer plugin this menu's block holds or hosts: the settings belong to the
         // machine and a block that serves none has no map to send
         var machine = blockEntity.servedMachinePos();
-        if (machine == null) {
-            // INFO while "the config disappears when the UI closes" is being chased: a menu whose block names no
-            // machine sends no map, so the page comes back empty although the server still has the settings
-            OritechAddonsOne.LOGGER.debug("[transfer] menu {} has no machine to send a map for", position);
-            return;
-        }
+        if (machine == null) return;
         machine = machine.immutable();
 
         // Send whenever what the map holds changed, not only when this menu first names the machine: the merge

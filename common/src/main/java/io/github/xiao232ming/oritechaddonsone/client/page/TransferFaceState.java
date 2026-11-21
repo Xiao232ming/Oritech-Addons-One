@@ -10,7 +10,6 @@ import net.minecraft.core.Vec3i;
 
 import org.jetbrains.annotations.Nullable;
 
-import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 import io.github.xiao232ming.oritechaddonsone.block.entity.CellFaceModes;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferMode;
 
@@ -46,11 +45,6 @@ public final class TransferFaceState {
         var modes = new CellFaceModes();
         modes.setAll(entries);
         MODES.put(machine, modes);
-
-        // INFO while "the config disappears when the UI closes" is being chased: every arrival says under which
-        // key and with how many faces it came, which separates a lost packet from a map stored under another key
-        OritechAddonsOne.LOGGER.debug("[transfer] client received {} face(s) for key {} (holds {})",
-                entries.size(), machine, MODES.keySet());
     }
 
     /** Drops what the client knows about one machine, called when its GUI closes. */
@@ -61,11 +55,6 @@ public final class TransferFaceState {
     /** Drops every map, called when a GUI closes. */
     public static void clear() {
         MODES.clear();
-    }
-
-    /** Every machine the client currently holds a map for, for the diagnostics of a missing one. */
-    public static java.util.Set<GlobalPos> keys() {
-        return java.util.Set.copyOf(MODES.keySet());
     }
 
     /** The map of one machine, or {@code null} while the server has not sent one yet. */

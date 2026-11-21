@@ -56,8 +56,6 @@ public final class RedstoneNetworking {
             if (packet.mode() < 0 || packet.mode() >= modes.length) return;
 
             addon.setRedstoneConfig(modes[packet.mode()], Math.max(0, packet.slot()));
-            OritechAddonsOne.LOGGER.debug("[redstone] {} mode {} slot {}",
-                    packet.pos(), modes[packet.mode()], packet.slot());
         }
     }
 }

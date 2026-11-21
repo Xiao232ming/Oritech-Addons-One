@@ -21,7 +21,6 @@ import rearth.oritech.block.blocks.addons.MachineAddonBlock;
 import rearth.oritech.block.entity.addons.AddonBlockEntity;
 import rearth.oritech.util.MachineAddonController;
 
-import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 import io.github.xiao232ming.oritechaddonsone.block.ChunkAnchorAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ChunkAnchorAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEntity;
@@ -146,7 +145,6 @@ public final class AnchorForceLoad {
         var dropped = remove(level, source);
         if (dropped > 0) {
             markDirty(level);
-            OritechAddonsOne.LOGGER.debug("[diag] anchor: {} receipt(s) dropped for {}", dropped, source);
         }
     }
 
@@ -184,8 +182,6 @@ public final class AnchorForceLoad {
 
                 if (level.getForcedChunks().contains(receipt.chunk)) {
                     level.setChunkForced(ChunkPos.getX(receipt.chunk), ChunkPos.getZ(receipt.chunk), false);
-                    OritechAddonsOne.LOGGER.debug("[diag] anchor: released chunk {} of {}",
-                            new ChunkPos(receipt.chunk), source);
                 }
             }
 
@@ -268,8 +264,6 @@ public final class AnchorForceLoad {
                 if (!wanted) {
                     if (receipt.forcedByUs && level.getForcedChunks().contains(chunk)) {
                         level.setChunkForced(ChunkPos.getX(chunk), ChunkPos.getZ(chunk), false);
-                        OritechAddonsOne.LOGGER.debug("[diag] anchor: released chunk {} of {} ({})",
-                                new ChunkPos(chunk), receipt.source, receipt.placed ? "block" : "reserved slot");
                     }
                     // the stored list is not the snapshot, so this only touches what is still registered
                     var stored = perLevel.get(chunk);
@@ -281,8 +275,6 @@ public final class AnchorForceLoad {
                 if (!level.getForcedChunks().contains(chunk)) {
                     level.setChunkForced(ChunkPos.getX(chunk), ChunkPos.getZ(chunk), true);
                     markDirty(level);
-                    OritechAddonsOne.LOGGER.debug("[diag] anchor: forced chunk {} for {} ({})",
-                            new ChunkPos(chunk), receipt.source, receipt.placed ? "block" : "reserved slot");
                 }
                 receipt.forcedByUs = true;
             }
@@ -332,7 +324,6 @@ public final class AnchorForceLoad {
                 level.setChunkForced(ChunkPos.getX(chunk), ChunkPos.getZ(chunk), true);
                 existing.forcedByUs = true;
                 markDirty(level);
-                OritechAddonsOne.LOGGER.debug("[diag] anchor: re-forced chunk {} for {}", new ChunkPos(chunk), source);
             }
             return;
         }
@@ -348,8 +339,6 @@ public final class AnchorForceLoad {
 
         if (!alreadyForced) {
             level.setChunkForced(ChunkPos.getX(chunk), ChunkPos.getZ(chunk), true);
-            OritechAddonsOne.LOGGER.debug("[diag] anchor: forced chunk {} for {} ({})", new ChunkPos(chunk), source,
-                    receipt.placed ? "block" : "reserved slot");
         }
     }
 
@@ -374,7 +363,6 @@ public final class AnchorForceLoad {
             }
             return null;
         } catch (Throwable failure) {
-            OritechAddonsOne.LOGGER.debug("[diag] anchor: could not resolve the machine of {} in {}", addon, failure);
             return null;
         }
     }
