@@ -70,9 +70,9 @@ import io.github.xiao232ming.oritechaddonsone.wireless.ForceLoadedChunks;
  * their combined stats to the machine this block is connected to. The forwarding works by letting the
  * machine run its normal addon scan (this block reports neutral stats, so it does not change anything
  * by itself) and then merging the combined plugin stats into the machine's addon data.
- * {@link #setControllerPos(BlockPos)} is called by Oritech at the end of every addon scan, which is
- * exactly the point where the machine's own data is already computed and our contribution has to be
- * added on top.
+ * {@code MachineAddonControllerMixin} does the merging at the end of {@code gatherAddonStats} - the one
+ * point where the machine's own data is already computed and where the wireless docks contribute as well.
+ * {@link #setControllerPos(BlockPos)} only records the machine, like Oritech's own addon blocks.
  * <p>
  * Only the plugins accepted by the block's {@link ExtensionAddonType} may be inserted. Plugins whose
  * behaviour Oritech decides by block type (quarry, silk touch, fluid, crop filter, ...) are forwarded
@@ -218,6 +218,19 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
     public boolean holdsAnchor() {
         var stack = items.get(RESERVED_SLOT);
         return !stack.isEmpty() && stack.getItem() == OritechAddonsOne.CHUNK_ANCHOR_ADDON_ITEM.get();
+    }
+
+    /**
+     * True while the server ticker has anything to do: a stored control unit (or a machine state this
+     * addon set earlier), a chunk anchor, or transfer configuration to act on. A freshly placed addon
+     * without plugins answers {@code false}, so its ticker can skip the whole poll.
+     */
+    public boolean needsServerTick() {
+        return holdsAnchor() || redstone.needsTick() || needsTransferTick();
+    }
+
+    private boolean needsTransferTick() {
+        return canTransferItems() || attachedTransferFaces != 0 || mergePending || !savedCellFaces.isEmpty();
     }
 
     // ------------------------------------------------------------------ connected machine (wireless page)
@@ -1230,9 +1243,9 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         // shrinking anything while one of these blocks is connected to it.
         if (level != null && level.getBlockEntity(pos) instanceof AddonSplicerBlockEntity) return;
 
+        // Only records the machine. The plugin stats are merged by MachineAddonControllerMixin at the end
+        // of gatherAddonStats, the same place the wireless docks are applied.
         super.setControllerPos(pos);
-        // Called by Oritech while writing the addon list, i.e. right after the machine recomputed its data.
-        applyCombinedStats();
     }
 
     /**
@@ -1243,11 +1256,15 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         lastApplied = null;
     }
 
-    /** Adds the combined plugin stats on top of the data the machine computed for its other addons. */
-    protected void applyCombinedStats() {
-        // Called exactly once per dock and per addon recomputation of the machine (see
-        // MachineAddonControllerMixin for the wireless docks and setControllerPos for the wired ones), so
-        // several docks of one machine simply accumulate on top of each other like several addons do.
+    /**
+     * Adds the combined plugin stats on top of the data the machine computed for its other addons.
+     * <p>
+     * Called exactly once per addon recomputation of the machine, from {@code MachineAddonControllerMixin}
+     * at the end of {@code gatherAddonStats}: the wired addons are applied there directly, the wireless
+     * docks through {@link WirelessExtensionAddonBlockEntity#applyAllDocks}. Several extension addons of
+     * one machine therefore simply accumulate on top of each other, like several addons do.
+     */
+    public void applyCombinedStats() {
         if (!(level instanceof ServerLevel serverLevel)) return;
         if (!isOwnBlock()) return;
         if (!(serverLevel.getBlockEntity(getControllerPos()) instanceof MachineAddonController controller)) {
@@ -1392,7 +1409,7 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
      * <p>
      * The flag cannot be left to {@link #updateControlUnitState()} alone: Oritech's
      * {@code MachineAddonController#writeAddons} captures the addon's block state when the scan starts and
-     * writes it back <em>after</em> calling {@code setControllerPos} - i.e. after
+     * writes it back <em>after</em> the stats were merged in {@code gatherAddonStats} - i.e. after
      * {@link #applyCombinedStats()} wrote the flag - so that write is thrown away and the state the block
      * had before the scan survives. Re-applying the flag at the end of the scan is therefore the only
      * point where it holds; it also repairs addons whose state was saved by an older version of this mod,

@@ -297,10 +297,14 @@ public class WirelessExtensionAddonBlockEntity extends ExtensionAddonBlockEntity
         // a link saved in another dimension must not resolve to whatever stands at those coordinates here
         validateLinkDimension();
 
-        serverTickRedstone();
-        // faces of the transfer page whose automation is on move their items here, exactly like on a wired
-        // addon: the machine is the linked one, so nothing else is needed
-        serverTickTransfer();
+        // Same gate as the wired addon: nothing to poll while no control unit or transfer plugin is
+        // present, and the link refresh below still runs for the dock itself.
+        if (needsServerTick()) {
+            serverTickRedstone();
+            // faces of the transfer page whose automation is on move their items here, exactly like on a wired
+            // addon: the machine is the linked one, so nothing else is needed
+            serverTickTransfer();
+        }
 
         if (linkedMachine == null) return;
 

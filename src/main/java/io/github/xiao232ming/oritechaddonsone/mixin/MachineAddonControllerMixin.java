@@ -22,18 +22,20 @@ import io.github.xiao232ming.oritechaddonsone.wireless.AddonEnergyGuard;
 import io.github.xiao232ming.oritechaddonsone.wireless.WirelessLinks;
 
 /**
- * Makes the plugins of the wireless extension addons part of every addon recomputation of a machine.
+ * Makes the plugins of the extension addons part of every addon recomputation of a machine.
  * <p>
  * Oritech recomputes a machine's addon data in {@code initAddons}: {@code gatherAddonStats} resets the
- * data to the stats of the machine's own addons, {@code writeAddons} lets those addons merge their own
- * plugins in and {@code updateEnergyContainer} then recalculates the energy container from that data -
- * including {@code energy = min(energy, capacity)}, which throws away everything above the capacity.
+ * data to the stats of the machine's own addons, {@code writeAddons} lets those addons store their
+ * machine position and {@code updateEnergyContainer} then recalculates the energy container from that
+ * data - including {@code energy = min(energy, capacity)}, which throws away everything above the
+ * capacity.
  * <p>
- * A wireless dock is not one of the machine's own addons, so this is where its plugins are added: at the
- * end of {@code gatherAddonStats}, i.e. exactly where a wired addon contributes and before the container
- * is recalculated, so a dock can neither drop stored energy nor see its stats counted twice. Every scan
- * passes through here once, which also makes several docks of one machine accumulate in a defined order
- * (each one merges on top of the previous one).
+ * The plugins of this mod's addons are added at the end of {@code gatherAddonStats}: that is exactly
+ * where the machine's own data is final and before the container is recalculated, so an addon can
+ * neither drop stored energy nor see its stats counted twice. Both variants go through this one place -
+ * a wired addon is in the scan's addon list, a wireless dock is not, so the docks are looked up by
+ * their link. Every scan passes through here once, which also makes several addons of one machine
+ * accumulate in a defined order (each one merges on top of the previous one).
  * <p>
  * {@code initAddons} also rebuilds the machine's addon list ({@code getConnectedAddons}) from the blocks
  * it found around the machine, which drops every wireless dock from that list again. The list is synced
@@ -62,12 +64,23 @@ public interface MachineAddonControllerMixin {
     }
 
     @Inject(method = "gatherAddonStats", at = @At("RETURN"))
-    private void oritechaddonsone$applyWirelessDocks(List<AddonBlock> addons, CallbackInfo callback) {
+    private void oritechaddonsone$applyExtensionAddons(List<AddonBlock> addons, CallbackInfo callback) {
         var controller = (MachineAddonController) (Object) this;
         var level = controller.getWorldForAddon();
         if (level == null || level.isClientSide()) return;
 
-        WirelessExtensionAddonBlockEntity.applyAllDocks(level, controller.getPosForAddon());
+        var machinePos = controller.getPosForAddon();
+        WirelessExtensionAddonBlockEntity.applyAllDocks(level, machinePos);
+
+        // The wired addons apply here as well, so both variants share the one aggregation point. Oritech
+        // stores the machine position only later in writeAddons; handing it over now lets the addon
+        // resolve its machine on the very first scan too.
+        for (var addon : addons) {
+            if (!(addon.addonEntity() instanceof ExtensionAddonBlockEntity extension)) continue;
+
+            extension.setControllerPos(machinePos);
+            extension.applyCombinedStats();
+        }
     }
 
     /**
@@ -75,10 +88,10 @@ public interface MachineAddonControllerMixin {
      * <p>
      * This runs at the end of {@code initAddons} rather than at the end of {@code gatherAddonStats}
      * because the tanks may only be clamped here: {@code gatherAddonStats} is followed by
-     * {@code writeAddons} (which merges this mod's wired addons) and by {@code updateEnergyContainer}, so
-     * a machine whose plugins were just removed would otherwise lose its fluid to the tank limit that is
-     * still in place. At the end of {@code initAddons} the addon list and the addon data are final, so
-     * the clamp is exactly one operation on the final numbers.
+     * {@code writeAddons} and by {@code updateEnergyContainer}, so a machine whose plugins were just
+     * removed would otherwise lose its fluid to the tank limit that is still in place. At the end of
+     * {@code initAddons} the addon list and the addon data are final, so the clamp is exactly one
+     * operation on the final numbers.
      */
     @Inject(method = "initAddons(Lnet/minecraft/core/BlockPos;)V", at = @At("RETURN"))
     private void oritechaddonsone$applyStorageBonuses(CallbackInfo callback) {
@@ -153,10 +166,10 @@ public interface MachineAddonControllerMixin {
      * Re-applies the "a control unit is stored" flag of this mod's addons once the scan is complete.
      * <p>
      * The flag lives in the addon's synced block state (see
-     * {@code ExtensionAddonBlockEntity#refreshControlUnitStates}): {@code writeAddons} writes the state it
-     * captured when the scan started back onto the addon after letting it merge its plugins, so the value
-     * written during that merge does not survive and the flag has to be restored here - the one point
-     * after which nothing overwrites it again.
+     * {@code ExtensionAddonBlockEntity#refreshControlUnitStates}): the stats are merged during
+     * {@code gatherAddonStats}, but {@code writeAddons} captures the block state when the scan starts and
+     * writes that copy back afterwards, so the value written during the merge does not survive and the
+     * flag has to be restored here - the one point after which nothing overwrites it again.
      */
     @Inject(method = "initAddons(Lnet/minecraft/core/BlockPos;)V", at = @At("RETURN"))
     private void oritechaddonsone$refreshControlUnitStates(CallbackInfo callback) {

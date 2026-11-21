@@ -5,7 +5,6 @@ import java.util.function.Consumer;
 import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.component.DataComponentGetter;
@@ -40,8 +39,6 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 
 import rearth.oritech.block.blocks.addons.MachineAddonBlock;
 
-import io.github.xiao232ming.oritechaddonsone.Config;
-import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.WirelessExtensionAddonBlockEntity;
 
 /**
@@ -146,7 +143,7 @@ public class WirelessExtensionAddonBlock extends Block implements EntityBlock, T
 
     @Override
     protected int getAnalogOutputSignal(BlockState state, Level level, BlockPos pos, Direction direction) {
-        return level.getBlockEntity(pos) instanceof WirelessExtensionAddonBlockEntity dock ? dock.redstoneOutput() : 0;
+        return ExtensionAddonBlockSupport.analogOutput(level, pos);
     }
 
     /**
@@ -169,9 +166,7 @@ public class WirelessExtensionAddonBlock extends Block implements EntityBlock, T
     protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, Orientation orientation,
             boolean movedByPiston) {
         super.neighborChanged(state, level, pos, block, orientation, movedByPiston);
-        if (!level.isClientSide() && level.getBlockEntity(pos) instanceof WirelessExtensionAddonBlockEntity dock) {
-            dock.applyRedstoneSignal(level.hasNeighborSignal(pos));
-        }
+        ExtensionAddonBlockSupport.applySignalAt(level, pos);
     }
 
     /**
@@ -213,51 +208,23 @@ public class WirelessExtensionAddonBlock extends Block implements EntityBlock, T
             dock.releaseRedstoneOnRemoval();
             dock.clearLink();
 
-            for (int slot = 0; slot < ExtensionAddonBlockEntity.STORAGE_SIZE; slot++) {
-                var stack = dock.getItem(slot);
-                while (!stack.isEmpty()) {
-                    Block.popResource(level, pos, stack.split(Math.min(stack.getCount(), stack.getMaxStackSize())));
-                }
-            }
-            dock.clearContent();
+            ExtensionAddonBlockSupport.dropStored(level, pos, dock);
         }
         return super.playerWillDestroy(level, pos, state, player);
-    }
-
-    /** True while the player holds Ctrl, like Oritech's own addon items check. */
-    private static boolean isControlDown() {
-        var minecraft = Minecraft.getInstance();
-        return minecraft != null && minecraft.hasControlDown();
     }
 
     @Override
     public void addToTooltip(Item.TooltipContext context, Consumer<Component> consumer, TooltipFlag flag,
             DataComponentGetter components) {
         // Same behaviour as Oritech's own addon items: the description only appears while Ctrl is held.
-        if (!isControlDown()) {
-            consumer.accept(Component.translatable("tooltip.oritech.item_extra_info")
-                    .withStyle(ChatFormatting.GRAY)
-                    .withStyle(ChatFormatting.ITALIC));
-            return;
-        }
-
-        appendDetails(consumer);
+        ExtensionAddonBlockSupport.addTooltip(consumer, () -> appendDetails(consumer));
     }
 
     /** All detail lines of this addon type, shown while Ctrl is held. */
     public void appendDetails(Consumer<Component> consumer) {
         var key = "tooltip.oritechaddonsone.wireless_" + type.id();
 
-        consumer.accept(Component.translatable(key + ".insert").withStyle(ChatFormatting.GOLD));
-
-        if (type == ExtensionAddonType.TYPE_1) {
-            consumer.accept(Component.translatable(key + ".acceptor").withStyle(ChatFormatting.AQUA));
-        } else if (type == ExtensionAddonType.TYPE_2) {
-            consumer.accept(Component.translatable(key + ".special").withStyle(ChatFormatting.AQUA));
-        } else {
-            consumer.accept(Component.translatable(key + ".capacity", Config.slotCapacity(type))
-                    .withStyle(ChatFormatting.AQUA));
-        }
+        ExtensionAddonBlockSupport.appendTypeDetails(consumer, key, type);
 
         consumer.accept(Component.translatable(key + ".link").withStyle(ChatFormatting.LIGHT_PURPLE));
         consumer.accept(Component.translatable(key + ".chunkload").withStyle(ChatFormatting.GRAY));

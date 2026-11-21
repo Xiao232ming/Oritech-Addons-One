@@ -5,7 +5,6 @@ import java.util.function.Consumer;
 import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.component.DataComponentGetter;
@@ -37,8 +36,8 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import rearth.oritech.block.blocks.addons.MachineAddonBlock;
+import rearth.oritech.config.OritechStartupConfig;
 
-import io.github.xiao232ming.oritechaddonsone.Config;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEntity;
 
 /**
@@ -163,12 +162,18 @@ public class ExtensionAddonBlock extends MachineAddonBlock {
 
     @Override
     public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        // Same startup option as Oritech's own addon blocks: with tight hitboxes disabled the full block
+        // is clickable, even though the model is a slab.
+        if (!OritechStartupConfig.tightMachineAddonHitboxes.get()) {
+            return super.getShape(state, level, pos, context);
+        }
+
         return slabShape(state);
     }
 
     @Override
     public VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return slabShape(state);
+        return getShape(state, level, pos, context);
     }
 
     @Override
@@ -193,7 +198,7 @@ public class ExtensionAddonBlock extends MachineAddonBlock {
 
     @Override
     protected int getAnalogOutputSignal(BlockState state, Level level, BlockPos pos, Direction direction) {
-        return level.getBlockEntity(pos) instanceof ExtensionAddonBlockEntity addon ? addon.redstoneOutput() : 0;
+        return ExtensionAddonBlockSupport.analogOutput(level, pos);
     }
 
     /**
@@ -209,7 +214,9 @@ public class ExtensionAddonBlock extends MachineAddonBlock {
             BlockEntityType<T> type) {
         if (level.isClientSide()) return null;
         return (tickLevel, pos, tickState, blockEntity) -> {
-            if (blockEntity instanceof ExtensionAddonBlockEntity pluginEntity) {
+            // Nothing to poll while no control unit, transfer plugin or anchor is present - the common
+            // case for a freshly placed addon, and the ticker runs for every addon every tick.
+            if (blockEntity instanceof ExtensionAddonBlockEntity pluginEntity && pluginEntity.needsServerTick()) {
                 pluginEntity.serverTickRedstone();
                 // faces of the transfer page whose automation is on move their items here
                 pluginEntity.serverTickTransfer();
@@ -226,9 +233,7 @@ public class ExtensionAddonBlock extends MachineAddonBlock {
     protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, Orientation orientation,
             boolean movedByPiston) {
         super.neighborChanged(state, level, pos, block, orientation, movedByPiston);
-        if (!level.isClientSide() && level.getBlockEntity(pos) instanceof ExtensionAddonBlockEntity blockEntity) {
-            blockEntity.applyRedstoneSignal(level.hasNeighborSignal(pos));
-        }
+        ExtensionAddonBlockSupport.applySignalAt(level, pos);
     }
 
     @Override
@@ -253,52 +258,23 @@ public class ExtensionAddonBlock extends MachineAddonBlock {
             // first - the block entity is gone afterwards and nothing else would release it.
             blockEntity.releaseRedstoneOnRemoval();
 
-            for (int slot = 0; slot < ExtensionAddonBlockEntity.STORAGE_SIZE; slot++) {
-                var stack = blockEntity.getItem(slot);
-                // Type III slots can hold far more than one stack, drop it in valid chunks.
-                while (!stack.isEmpty()) {
-                    Block.popResource(level, pos, stack.split(Math.min(stack.getCount(), stack.getMaxStackSize())));
-                }
-            }
-            blockEntity.clearContent();
+            ExtensionAddonBlockSupport.dropStored(level, pos, blockEntity);
         }
         return super.playerWillDestroy(level, pos, state, player);
-    }
-
-    /** True while the player holds Ctrl, like Oritech's own addon items check. */
-    private static boolean isControlDown() {
-        var minecraft = Minecraft.getInstance();
-        return minecraft != null && minecraft.hasControlDown();
     }
 
     @Override
     public void addToTooltip(Item.TooltipContext context, Consumer<Component> consumer, TooltipFlag flag,
             DataComponentGetter components) {
         // Same behaviour as Oritech's own addon items: the description only appears while Ctrl is held.
-        if (!isControlDown()) {
-            consumer.accept(Component.translatable("tooltip.oritech.item_extra_info")
-                    .withStyle(ChatFormatting.GRAY)
-                    .withStyle(ChatFormatting.ITALIC));
-            return;
-        }
-
-        appendDetails(consumer);
+        ExtensionAddonBlockSupport.addTooltip(consumer, () -> appendDetails(consumer));
     }
 
     /** All detail lines of this plugin type, shown while Ctrl is held. */
     public void appendDetails(Consumer<Component> consumer) {
         var key = "tooltip.oritechaddonsone." + type.id();
 
-        consumer.accept(Component.translatable(key + ".insert").withStyle(ChatFormatting.GOLD));
-
-        if (type == ExtensionAddonType.TYPE_1) {
-            consumer.accept(Component.translatable(key + ".acceptor").withStyle(ChatFormatting.AQUA));
-        } else if (type == ExtensionAddonType.TYPE_2) {
-            consumer.accept(Component.translatable(key + ".special").withStyle(ChatFormatting.AQUA));
-        } else {
-            consumer.accept(Component.translatable(key + ".capacity", Config.slotCapacity(type))
-                    .withStyle(ChatFormatting.AQUA));
-        }
+        ExtensionAddonBlockSupport.appendTypeDetails(consumer, key, type);
 
         consumer.accept(Component.translatable(key + ".splicer").withStyle(ChatFormatting.DARK_RED));
     }
