@@ -4,21 +4,16 @@ import java.util.List;
 import java.util.Map;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.item.ItemStack;
 
 import org.jetbrains.annotations.Nullable;
 
 import rearth.oritech.api.networking.NetworkManager;
-import rearth.oritech.api.screen.Insets;
-import rearth.oritech.api.screen.OritechSurface;
-import rearth.oritech.api.screen.widgets.SurfaceWidget;
 
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferFaceModes;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferMode;
@@ -60,16 +55,8 @@ public final class ExtensionTransferAddonPage implements AddonPage {
     public static final String ID = "extension_transfer";
 
     private static final String LABEL_KEY = "gui.oritechaddonsone.page." + ID;
-    // The three texts this page draws are the ones the shared transfer modal uses: it configures a face
-    // through the very same mode plates, so the prompt, the automation label and the occupied-face tooltip
-    // are the same words for both transfer pages and are not duplicated as extension_transfer.* keys.
-    private static final String PROMPT_KEY = "gui.oritechaddonsone.transfer.prompt";
-    private static final String AUTOMATION_KEY = "gui.oritechaddonsone.transfer.automation";
-    private static final String FILTER_KEY = "gui.oritechaddonsone.transfer.filter";
     /** Tooltip of the face the plugin block itself occupies, i.e. the face drawn with the gold border. */
     private static final String OCCUPIED_KEY = "gui.oritechaddonsone.transfer.occupied";
-    /** Colour of the green tick and of the "this face does something" state, as on the other pages. */
-    private static final int GOOD = 0xFF2ECC71;
 
     /**
      * Gold of the border around the face a placed transfer addon hangs on, and the two mode colours - shared with
@@ -93,24 +80,6 @@ public final class ExtensionTransferAddonPage implements AddonPage {
 
     /** The modes the picker offers, in the order its plates are laid out. */
     private static final List<TransferMode> MODES = TransferFaceStyle.MODES;
-
-    // ------------------------------------------------------------------ picker geometry
-
-    private static final int BUTTON_WIDTH = 40;
-    private static final int BUTTON_HEIGHT = 20;
-    private static final int BUTTON_GAP = 14;
-    /** Y of the three mode plates inside the configuration page. */
-    private static final int BUTTON_Y = 30;
-    /** The automation row below them: a checkbox, the gap to its label, and the row's y. */
-    private static final int AUTOMATION_BOX = 10;
-    private static final int AUTOMATION_GAP = 4;
-    private static final int AUTOMATION_Y = 60;
-    /** The 过滤 row under it: the button that opens this face's item filter page, and its y. */
-    private static final int FILTER_WIDTH = 60;
-    private static final int FILTER_HEIGHT = 12;
-    private static final int FILTER_Y = 72;
-    /** Frame drawn around the configuration page, as on the Item Proxy page. */
-    private static final int PANEL_FRAME = 2;
 
     @Override
     public String id() {
@@ -198,169 +167,15 @@ public final class ExtensionTransferAddonPage implements AddonPage {
     }
 
     /**
-     * Draws the mode picker of the open face: the same configuration page the Item Proxy page uses - Oritech's
-     * 176x100 panel with the block's item as its title icon and a prompt line - holding one plate per mode.
-     * The plate of the mode that face has right now is the dark, sunken one.
+     * Draws the mode picker of the open face: the same configuration page the 传输插件 page shows - the one shared
+     * {@link TransferFaceRenderer} draws for both pages - with one plate per mode. The plate of the mode that face has
+     * right now is the dark, sunken one. The occupied face is never opened here (see {@link #mouseClicked}), so the
+     * page is always drawn in its configurable form.
      */
     private void drawPicker(AddonPageContext context, GuiGraphics graphics, ExtensionAddonMenu menu,
             Direction face, double mouseX, double mouseY) {
-        var font = Minecraft.getInstance().font;
-        var placed = AddonPickerPanel.place(context);
-
-        // a dark backdrop over the drawn panel, so the picker reads as a modal step
-        graphics.fill(context.left(), context.top(), context.panelRight(), context.panelBottom(), 0xD0000000);
-
-        graphics.pose().pushPose();
-        graphics.pose().translate(context.screenX(placed.innerX()), context.screenY(placed.innerY()), 0f);
-
-        drawPanel(graphics);
-        drawPlates(graphics, font, menu, face, placed, mouseX, mouseY);
-        drawAutomation(graphics, font, menu, face, placed, mouseX, mouseY);
-        drawFilter(graphics, font, menu, face, placed, mouseX, mouseY);
-        prompt(graphics, font);
-        header(graphics, context, placed);
-
-        graphics.pose().popPose();
-    }
-
-    /** The configuration page itself: Oritech's panel nine patch inside a darker frame. */
-    private static void drawPanel(GuiGraphics graphics) {
-        new SurfaceWidget(-PANEL_FRAME, -PANEL_FRAME, AddonPickerPanel.WIDTH + 2 * PANEL_FRAME,
-                AddonPickerPanel.HEIGHT + 2 * PANEL_FRAME, OritechSurface.PANEL_DARK).render(graphics, 0, 0, 0f);
-        new SurfaceWidget(0, 0, AddonPickerPanel.WIDTH, AddonPickerPanel.HEIGHT, OritechSurface.PANEL)
-                .render(graphics, 0, 0, 0f);
-    }
-
-    /** The three mode plates, Oritech's own button surfaces, with the face's current mode sunken in. */
-    private void drawPlates(GuiGraphics graphics, Font font, ExtensionAddonMenu menu, Direction face,
-            AddonPickerPanel.Placed placed, double mouseX, double mouseY) {
-        var current = modeOf(menu, face);
-
-        for (int index = 0; index < MODES.size(); index++) {
-            var mode = MODES.get(index);
-            int x = plateX(index);
-            int y = BUTTON_Y;
-
-            var surface = mode == current ? OritechSurface.PANEL_DARK
-                    : isOverPlate(placed, index, mouseX, mouseY) ? OritechSurface.PANEL_HOVER : OritechSurface.PANEL;
-            surface.render(graphics, x, y, BUTTON_WIDTH, BUTTON_HEIGHT);
-
-            var text = Component.translatable(modeKey(mode)).getString();
-            graphics.drawString(font, text, x + (BUTTON_WIDTH - font.width(text)) / 2, y + (BUTTON_HEIGHT - 8) / 2,
-                    AddonPanelStyle.PANEL_TEXT, false);
-        }
-    }
-
-    /**
-     * The automation row of the configuration page: Oritech's dark checkbox and its label, centred under the
-     * three mode plates. With automation on the face moves items by itself - towards the container on that
-     * side for "output", from it for "input", both for "input + output" (see
-     * {@code ExtensionAddonBlockEntity#serverTickTransfer}).
-     * <p>
-     * The row is dimmed and refuses clicks while the face has no direction yet: a face that transfers nothing
-     * has nothing to move on its own, so the switch only becomes meaningful together with a mode.
-     */
-    private static void drawAutomation(GuiGraphics graphics, Font font, ExtensionAddonMenu menu,
-            Direction face, AddonPickerPanel.Placed placed, double mouseX, double mouseY) {
-        var enabled = modeOf(menu, face) != TransferMode.NONE;
-        var on = automationOf(menu, face);
-        var label = Component.translatable(AUTOMATION_KEY).getString();
-
-        int boxX = automationBoxX(font, label);
-        int y = AUTOMATION_Y;
-
-        // the box itself: a dark sunken plate, filled green while automation is on - the same "dark means
-        // chosen" language the mode plates use, in the opposite direction
-        var surface = enabled && isOverAutomation(placed, mouseX, mouseY)
-                ? OritechSurface.PANEL_DARK_HOVER : OritechSurface.PANEL_DARK;
-        surface.render(graphics, boxX, y, AUTOMATION_BOX, AUTOMATION_BOX);
-        if (on) {
-            graphics.fill(boxX + 2, y + 2, boxX + AUTOMATION_BOX - 2, y + AUTOMATION_BOX - 2, GOOD);
-        }
-
-        graphics.drawString(font, label, boxX + AUTOMATION_BOX + AUTOMATION_GAP, y + 1,
-                enabled ? AddonPanelStyle.PANEL_TEXT : AddonPanelStyle.PANEL_TEXT_DIM, false);
-    }
-
-    /** Left edge of the automation checkbox, centring the box and its label in the configuration page. */
-    private static int automationBoxX(Font font, String label) {
-        int row = AUTOMATION_BOX + AUTOMATION_GAP + font.width(label);
-        return (AddonPickerPanel.WIDTH - row) / 2;
-    }
-
-    /**
-     * True while the given panel relative mouse position is on the automation row. The whole row is the hit
-     * area, so a click on the label toggles the switch as well.
-     */
-    private static boolean isOverAutomation(AddonPickerPanel.Placed placed, double mouseX, double mouseY) {
-        var font = Minecraft.getInstance().font;
-        var label = Component.translatable(AUTOMATION_KEY).getString();
-        var row = AUTOMATION_BOX + AUTOMATION_GAP + font.width(label);
-
-        double x = placed.innerX() + automationBoxX(font, label);
-        double y = placed.innerY() + AUTOMATION_Y;
-        return mouseX >= x && mouseX < x + row && mouseY >= y && mouseY < y + AUTOMATION_BOX;
-    }
-
-    /**
-     * The 过滤 row: the one button that opens the item filter page of this face, centred between the automation
-     * row and the prompt line - the only strip of the panel that is free, and the same place the 传输插件 page
-     * puts its own ({@code TransferFaceModal}).
-     * <p>
-     * <b>It is dimmed while the face has no direction yet</b>, for the same reason the automation switch is: a
-     * face that transfers nothing has nothing to filter.
-     * <p>
-     * <b>It does not show whether this face is already filtered.</b> The client is not told the filters - they
-     * live in the machine's shared map and are read from the server when the page opens - and a marker here
-     * could only be a guess. What the button does instead is open the page, and the page shows the real contents.
-     */
-    private static void drawFilter(GuiGraphics graphics, Font font, ExtensionAddonMenu menu, Direction face,
-            AddonPickerPanel.Placed placed, double mouseX, double mouseY) {
-        var enabled = currentMode(menu, face) != TransferMode.NONE;
-        var label = Component.translatable(FILTER_KEY).getString();
-
-        int x = (AddonPickerPanel.WIDTH - FILTER_WIDTH) / 2;
-        int y = FILTER_Y;
-
-        // the light bedrock panel, not the dark one the mode plates and the automation switch use: this button
-        // is the page's one way onward to a second page, and a dark plate in the middle of the dark panel did not
-        // read as a button - nor did Oritech's dark grey text read on top of it. PANEL/PANEL_HOVER is the light
-        // pair, and PANEL_TEXT is the dark text that goes with it
-        var surface = enabled && isOverFilter(placed, mouseX, mouseY) ? OritechSurface.PANEL_HOVER
-                : OritechSurface.PANEL;
-        surface.render(graphics, x, y, FILTER_WIDTH, FILTER_HEIGHT);
-        graphics.drawString(font, label, x + (FILTER_WIDTH - font.width(label)) / 2, y + (FILTER_HEIGHT - 8) / 2,
-                enabled ? AddonPanelStyle.PANEL_TEXT : AddonPanelStyle.PANEL_TEXT_DIM, false);
-    }
-
-    /** True while the given panel relative mouse position is on the 过滤 button. */
-    private static boolean isOverFilter(AddonPickerPanel.Placed placed, double mouseX, double mouseY) {
-        double x = placed.innerX() + (AddonPickerPanel.WIDTH - FILTER_WIDTH) / 2;
-        double y = placed.innerY() + FILTER_Y;
-        return mouseX >= x && mouseX < x + FILTER_WIDTH && mouseY >= y && mouseY < y + FILTER_HEIGHT;
-    }
-
-    /** The prompt line of the configuration page, centred in Oritech's panel at its own y. */
-    private static void prompt(GuiGraphics graphics, Font font) {
-        var text = Component.translatable(PROMPT_KEY).getString();
-        graphics.drawString(font, text, (AddonPickerPanel.WIDTH - font.width(text)) / 2, AddonPickerPanel.PROMPT_Y,
-                AddonPanelStyle.PANEL_TEXT, false);
-    }
-
-    /**
-     * The header of the configuration page: the addon's own item as an icon, exactly like the Item Proxy
-     * page's header - Oritech's 28x28 title icon widget with three pixels of padding.
-     */
-    private static void header(GuiGraphics graphics, AddonPageContext context, AddonPickerPanel.Placed placed) {
-        int left = placed.iconX() - placed.innerX();
-        int top = placed.iconY() - placed.innerY();
-
-        new SurfaceWidget(left, top, AddonPickerPanel.ICON_SIZE, AddonPickerPanel.ICON_SIZE, OritechSurface.PANEL)
-                .withPadding(Insets.of(0, AddonPickerPanel.ICON_PADDING, AddonPickerPanel.ICON_PADDING,
-                        AddonPickerPanel.ICON_PADDING))
-                .render(graphics, 0, 0, 0f);
-
-        graphics.renderItem(icon(context.menu()), left + AddonPickerPanel.ICON_PADDING, top + AddonPickerPanel.ICON_PADDING);
+        TransferFaceRenderer.render(context, graphics, modeOf(menu, face), automationOf(menu, face), false,
+                mouseX, mouseY);
     }
 
     // ------------------------------------------------------------------ clicks
@@ -408,7 +223,7 @@ public final class ExtensionTransferAddonPage implements AddonPage {
 
         var placed = AddonPickerPanel.place(context);
         for (int index = 0; index < MODES.size(); index++) {
-            if (!isOverPlate(placed, index, mouseX, mouseY)) continue;
+            if (!TransferFaceRenderer.isOverPlate(placed, index, mouseX, mouseY)) continue;
 
             var mode = MODES.get(index);
             // the plate of the mode this face already has is disabled: clicking it again does nothing, so the
@@ -424,7 +239,7 @@ public final class ExtensionTransferAddonPage implements AddonPage {
 
         // The automation switch: it only toggles, the direction is kept, so a face can be switched between
         // "offers its inventory to pipes" and "moves the items by itself" without picking the mode again.
-        if (isOverAutomation(placed, mouseX, mouseY)) {
+        if (TransferFaceRenderer.isOverAutomation(placed, mouseX, mouseY)) {
             var mode = currentMode(menu, face);
             if (mode == TransferMode.NONE) return true;
 
@@ -437,7 +252,7 @@ public final class ExtensionTransferAddonPage implements AddonPage {
         // The 过滤 row: it opens a page of its own, so the click is taken and the picker stays where it is - the
         // server replaces this screen with the filter page, and a click that misses the row closes the picker
         // like any other click outside a control.
-        if (isOverFilter(placed, mouseX, mouseY)) {
+        if (TransferFaceRenderer.isOverFilter(placed, mouseX, mouseY)) {
             if (currentMode(menu, face) == TransferMode.NONE) return true;
 
             FilterNetworking.sendOpenFilter(menu.position(), FaceFilterMenu.MODEL_FACE, face, Vec3i.ZERO);
@@ -524,31 +339,9 @@ public final class ExtensionTransferAddonPage implements AddonPage {
         return AddonFaceNet.cells(FaceTextures.of(menu.addonBlock(), menu.addonBlockState()));
     }
 
-    /** Panel relative X of the mode plate with the given index, all three centred in the panel. */
-    private static int plateX(int index) {
-        int total = MODES.size() * BUTTON_WIDTH + (MODES.size() - 1) * BUTTON_GAP;
-        return (AddonPickerPanel.WIDTH - total) / 2 + index * (BUTTON_WIDTH + BUTTON_GAP);
-    }
-
-    /**
-     * True while the given panel relative mouse position is on the plate with the given index. The whole plate
-     * is the hit area, so a click anywhere on it sets that mode.
-     */
-    private static boolean isOverPlate(AddonPickerPanel.Placed placed, int index, double mouseX, double mouseY) {
-        double x = placed.innerX() + plateX(index);
-        double y = placed.innerY() + BUTTON_Y;
-        return mouseX >= x && mouseX < x + BUTTON_WIDTH && mouseY >= y && mouseY < y + BUTTON_HEIGHT;
-    }
-
     /** Language key of a mode name, e.g. {@code gui.oritechaddonsone.transfer.mode.input}. */
     private static String modeKey(TransferMode mode) {
         return TransferFaceStyle.modeKey(mode);
-    }
-
-    /** The item drawn as the configuration page's icon: the block this menu belongs to. */
-    private static ItemStack icon(ExtensionAddonMenu menu) {
-        var block = menu.addonBlock();
-        return block == null ? ItemStack.EMPTY : new ItemStack(block);
     }
 
     /**

@@ -207,7 +207,7 @@ public final class TransferAddonPage implements AddonPage {
             // every cell-face of this model is configurable - the plugin's own host face included - so the modal is
             // never opened in its "occupied" form here; only the cube net page still uses that form
             TransferFaceModal.render(context, graphics, openFace, current(context, openCell, openFace),
-                    false, mouseX, mouseY, openFilter(context));
+                    false, mouseX, mouseY);
         }
     }
 
