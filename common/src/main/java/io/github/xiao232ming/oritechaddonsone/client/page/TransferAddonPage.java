@@ -588,12 +588,12 @@ public final class TransferAddonPage implements AddonPage {
 
     /** X of a panel relative coordinate, converted to the absolute space the model lives in. */
     private static int screenX(AddonPageContext context, double panelX) {
-        return (int) Math.round(panelX) + context.left();
+        return context.screenX((int) Math.round(panelX));
     }
 
     /** Y of a panel relative coordinate, converted to the absolute space the model lives in. */
     private static int screenY(AddonPageContext context, double panelY) {
-        return (int) Math.round(panelY) + context.top();
+        return context.screenY((int) Math.round(panelY));
     }
 
     /** Left edge of the model's panel in panel space: centred in the page body. */

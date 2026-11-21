@@ -65,13 +65,8 @@ public final class Config {
         if (type == ExtensionAddonType.TYPE_3) return ExtensionAddonType.type3Slots().size();
 
         var value = type == ExtensionAddonType.TYPE_1 ? TYPE_1_SLOTS : TYPE_2_SLOTS;
-        try {
-            return Math.max(AddonSlots.MIN_SLOTS,
-                    Math.min(AddonSlots.MAX_SLOTS, value.get()));
-        } catch (IllegalStateException notLoadedYet) {
-            // Config values are not available in every early loading stage; fall back to the default.
-            return type.defaultSlots();
-        }
+        return Math.max(AddonSlots.MIN_SLOTS,
+                Math.min(AddonSlots.MAX_SLOTS, intOr(value, type.defaultSlots())));
     }
 
     /**
@@ -80,12 +75,7 @@ public final class Config {
      * nothing at all, and clamped like the other accessors for the stages the values are not readable in.
      */
     public static int transferItemsPerTick() {
-        try {
-            return Math.max(1, TRANSFER_ITEMS_PER_TICK.get());
-        } catch (IllegalStateException notLoadedYet) {
-            // Config values are not available in every early loading stage; fall back to the default.
-            return 64;
-        }
+        return Math.max(1, intOr(TRANSFER_ITEMS_PER_TICK));
     }
 
     /**
@@ -94,23 +84,13 @@ public final class Config {
      * readable in.
      */
     public static int transferFluidPerTick() {
-        try {
-            return Math.max(1, TRANSFER_FLUID_PER_TICK.get());
-        } catch (IllegalStateException notLoadedYet) {
-            // Config values are not available in every early loading stage; fall back to the default.
-            return 1000;
-        }
+        return Math.max(1, intOr(TRANSFER_FLUID_PER_TICK));
     }
 
     /** Configured capacity of one slot of the given type (only type III supports more than 64). */
     public static int slotCapacity(ExtensionAddonType type) {
         if (type != ExtensionAddonType.TYPE_3) return 64;
-
-        try {
-            return Math.max(1, TYPE_3_SLOT_CAPACITY.get());
-        } catch (IllegalStateException notLoadedYet) {
-            return 1024;
-        }
+        return Math.max(1, intOr(TYPE_3_SLOT_CAPACITY));
     }
 
     /**
@@ -119,12 +99,7 @@ public final class Config {
      * applies to the next scan rather than to already modified stacks.
      */
     public static int warehouseAddonSlots() {
-        try {
-            return Math.max(1, Math.min(64, WAREHOUSE_ADDON_SLOTS.get()));
-        } catch (IllegalStateException notLoadedYet) {
-            // Config values are not available in every early loading stage; fall back to the default.
-            return 16;
-        }
+        return Math.max(1, Math.min(64, intOr(WAREHOUSE_ADDON_SLOTS)));
     }
 
     /**
@@ -132,12 +107,7 @@ public final class Config {
      * ({@link #TANK_ADDON_CAPACITY}, default 8000, range 1000-32000).
      */
     public static long tankAddonCapacity() {
-        try {
-            return Math.max(1000L, Math.min(32000L, TANK_ADDON_CAPACITY.get()));
-        } catch (IllegalStateException notLoadedYet) {
-            // Config values are not available in every early loading stage; fall back to the default.
-            return 8000L;
-        }
+        return Math.max(1000L, Math.min(32000L, intOr(TANK_ADDON_CAPACITY)));
     }
 
     /**
@@ -149,8 +119,23 @@ public final class Config {
         try {
             return SHOW_WIRELESS_DOCKS_IN_ADDON_PAGE.get();
         } catch (IllegalStateException notLoadedYet) {
-            // Config values are not available in every early loading stage; fall back to the default.
-            return true;
+            return SHOW_WIRELESS_DOCKS_IN_ADDON_PAGE.getDefault();
+        }
+    }
+
+    /**
+     * Reads a config integer, falling back to the default declared in the file definition while the config is
+     * not bound yet - some early loading stages ask for these values before the config file has been loaded.
+     */
+    private static int intOr(ModConfigSpec.IntValue value) {
+        return intOr(value, value.getDefault());
+    }
+
+    private static int intOr(ModConfigSpec.IntValue value, int fallback) {
+        try {
+            return value.get();
+        } catch (IllegalStateException notLoadedYet) {
+            return fallback;
         }
     }
 }

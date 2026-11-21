@@ -8,7 +8,6 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
@@ -18,7 +17,6 @@ import org.jetbrains.annotations.Nullable;
 import dev.architectury.registry.menu.MenuRegistry;
 import rearth.oritech.api.networking.NetworkManager;
 
-import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 import io.github.xiao232ming.oritechaddonsone.block.entity.CellFaceModes;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ItemFilterData;
@@ -61,10 +59,6 @@ public final class FilterNetworking {
         NetworkManager.registerToServer(OpenFilter.TYPE, OpenFilter.CODEC, OpenFilter::handle);
         NetworkManager.registerToServer(SetFilter.TYPE, SetFilter.CODEC, SetFilter::handle);
         NetworkManager.registerToClient(FilterState.TYPE, FilterState.CODEC, FilterState::handle);
-    }
-
-    private static ResourceLocation id(String path) {
-        return ResourceLocation.fromNamespaceAndPath(OritechAddonsOne.MODID, path);
     }
 
     /**
@@ -145,7 +139,7 @@ public final class FilterNetworking {
      */
     public record OpenFilter(Target target) implements CustomPacketPayload {
 
-        public static final Type<OpenFilter> TYPE = new Type<>(id("transfer_open_filter"));
+        public static final Type<OpenFilter> TYPE = new Type<>(PayloadIds.id("transfer_open_filter"));
         public static final StreamCodec<RegistryFriendlyByteBuf, OpenFilter> CODEC = StreamCodec.composite(
                 TARGET_CODEC, OpenFilter::target,
                 OpenFilter::new);
@@ -206,7 +200,7 @@ public final class FilterNetworking {
      */
     public record SetFilter(Target target, int flow, ItemFilterData data) implements CustomPacketPayload {
 
-        public static final Type<SetFilter> TYPE = new Type<>(id("transfer_set_filter"));
+        public static final Type<SetFilter> TYPE = new Type<>(PayloadIds.id("transfer_set_filter"));
         public static final StreamCodec<RegistryFriendlyByteBuf, SetFilter> CODEC = StreamCodec.composite(
                 TARGET_CODEC, SetFilter::target,
                 ByteBufCodecs.VAR_INT, SetFilter::flow,
@@ -260,7 +254,7 @@ public final class FilterNetworking {
      */
     public record FilterState(Target target, int flow, ItemFilterData data) implements CustomPacketPayload {
 
-        public static final Type<FilterState> TYPE = new Type<>(id("transfer_filter_state"));
+        public static final Type<FilterState> TYPE = new Type<>(PayloadIds.id("transfer_filter_state"));
         public static final StreamCodec<RegistryFriendlyByteBuf, FilterState> CODEC = StreamCodec.composite(
                 TARGET_CODEC, FilterState::target,
                 ByteBufCodecs.VAR_INT, FilterState::flow,
