@@ -24,12 +24,13 @@ Version 1.2.2 also adds a Redstone Control page for Extension Addon II, fluid tr
 | **Warehouse Addon** | Adds configurable item slot capacity to every machine slot (default `+16`, range `1–64`) |
 | **Tank Addon** | Adds configurable fluid capacity to every machine tank (default `+8000 mB`, range `1000–32000 mB`) |
 | **Chunk Anchor Addon** | Force-loads the chunk it stands in, or the chunk of the addon or dock holding it |
-| **Transfer Extension Addon** | Makes the six faces of its host block feed and empty the machine; each block keeps its own face settings, and the faces handle both items and fluids |
-| **Transfer Addon** | Configures feed/empty faces on a 3D model of the machine; handles items and fluids and works on energy-storage extenders |
+| **Extension Transfer Addon** | Placed on Oritech's machine extender, unfolds its six faces into a cube net: each face feeds or empties the machine behind the extender, keeps its own setting, and handles items and fluids |
+| **Transfer Addon** | Placed on a machine or on Oritech's machine extender, configures its faces on a rotatable 3D model of the machine; handles items and fluids and works with energy-storage extenders |
 
 Additional features:
 
 - **Redstone Control page** for Extension Addon II: five redstone modes, a monitored slot and comparator output;
+- **Transfer pages**: click a face to set it to input, output or both; the **Automation** switch lets the face move items and fluids by itself, and **Filter** opens that face's filter page (blue = input, orange = output);
 - install addons on your **Refinery** through a wireless extension addon;
 - show the processing speed of the **Atomic Forge**;
 - let the **Atomic Forge** process in parallel by installing an **Auxiliary Processing Chamber Addon** on the **Enderic Lasers** that charge it;
