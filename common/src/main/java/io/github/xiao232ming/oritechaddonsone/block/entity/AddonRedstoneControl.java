@@ -55,6 +55,14 @@ final class AddonRedstoneControl {
     }
 
     /**
+     * True while the ticker has redstone work to do: a stored control unit, or a machine this addon
+     * switched off earlier and still has to hand back.
+     */
+    boolean needsTick() {
+        return applied || owner.hasRedstonePlugin();
+    }
+
+    /**
      * Writes the configuration the Redstone Control page edits. The page calls this through
      * {@code RedstoneNetworking}, so the server is what stores it; the values are saved with the block.
      */

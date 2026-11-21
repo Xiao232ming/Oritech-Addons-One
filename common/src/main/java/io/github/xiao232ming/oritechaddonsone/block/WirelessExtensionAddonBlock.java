@@ -35,8 +35,6 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 
 import rearth.oritech.block.blocks.addons.MachineAddonBlock;
 
-import io.github.xiao232ming.oritechaddonsone.Config;
-import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.WirelessExtensionAddonBlockEntity;
 
 /**
@@ -137,7 +135,7 @@ public class WirelessExtensionAddonBlock extends Block implements EntityBlock, A
 
     @Override
     protected int getAnalogOutputSignal(BlockState state, Level level, BlockPos pos) {
-        return level.getBlockEntity(pos) instanceof WirelessExtensionAddonBlockEntity dock ? dock.redstoneOutput() : 0;
+        return ExtensionAddonBlockSupport.analogOutput(level, pos);
     }
 
     /**
@@ -160,9 +158,7 @@ public class WirelessExtensionAddonBlock extends Block implements EntityBlock, A
     protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos fromPos,
             boolean isMoving) {
         super.neighborChanged(state, level, pos, block, fromPos, isMoving);
-        if (!level.isClientSide() && level.getBlockEntity(pos) instanceof WirelessExtensionAddonBlockEntity dock) {
-            dock.applyRedstoneSignal(level.hasNeighborSignal(pos));
-        }
+        ExtensionAddonBlockSupport.applySignalAt(level, pos);
     }
 
     /**
@@ -207,13 +203,7 @@ public class WirelessExtensionAddonBlock extends Block implements EntityBlock, A
             dock.releaseRedstoneOnRemoval();
             dock.clearLink();
 
-            for (int slot = 0; slot < ExtensionAddonBlockEntity.STORAGE_SIZE; slot++) {
-                var stack = dock.getItem(slot);
-                while (!stack.isEmpty()) {
-                    Block.popResource(level, pos, stack.split(Math.min(stack.getCount(), stack.getMaxStackSize())));
-                }
-            }
-            dock.clearContent();
+            ExtensionAddonBlockSupport.dropStored(level, pos, dock);
         }
         return super.playerWillDestroy(level, pos, state, player);
     }
@@ -223,16 +213,7 @@ public class WirelessExtensionAddonBlock extends Block implements EntityBlock, A
     public void appendDetails(Consumer<Component> consumer) {
         var key = "tooltip.oritechaddonsone.wireless_" + type.id();
 
-        consumer.accept(Component.translatable(key + ".insert").withStyle(ChatFormatting.GOLD));
-
-        if (type == ExtensionAddonType.TYPE_1) {
-            consumer.accept(Component.translatable(key + ".acceptor").withStyle(ChatFormatting.AQUA));
-        } else if (type == ExtensionAddonType.TYPE_2) {
-            consumer.accept(Component.translatable(key + ".special").withStyle(ChatFormatting.AQUA));
-        } else {
-            consumer.accept(Component.translatable(key + ".capacity", Config.slotCapacity(type))
-                    .withStyle(ChatFormatting.AQUA));
-        }
+        ExtensionAddonBlockSupport.appendTypeDetails(consumer, key, type);
 
         consumer.accept(Component.translatable(key + ".link").withStyle(ChatFormatting.LIGHT_PURPLE));
         consumer.accept(Component.translatable(key + ".chunkload").withStyle(ChatFormatting.GRAY));

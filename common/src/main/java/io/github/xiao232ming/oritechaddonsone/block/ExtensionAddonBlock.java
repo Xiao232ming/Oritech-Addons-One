@@ -33,8 +33,8 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import rearth.oritech.block.blocks.addons.MachineAddonBlock;
+import rearth.oritech.init.OritechStartupConfig;
 
-import io.github.xiao232ming.oritechaddonsone.Config;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEntity;
 
 /**
@@ -164,12 +164,18 @@ public class ExtensionAddonBlock extends MachineAddonBlock implements AddonDetai
 
     @Override
     public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        // Same startup option as Oritech's own addon blocks: with tight hitboxes disabled the full block
+        // is clickable, even though the model is a slab.
+        if (!OritechStartupConfig.tightMachineAddonHitboxes.get()) {
+            return super.getShape(state, level, pos, context);
+        }
+
         return slabShape(state);
     }
 
     @Override
     public VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return slabShape(state);
+        return getShape(state, level, pos, context);
     }
 
     @Override
@@ -190,7 +196,7 @@ public class ExtensionAddonBlock extends MachineAddonBlock implements AddonDetai
 
     @Override
     protected int getAnalogOutputSignal(BlockState state, Level level, BlockPos pos) {
-        return level.getBlockEntity(pos) instanceof ExtensionAddonBlockEntity addon ? addon.redstoneOutput() : 0;
+        return ExtensionAddonBlockSupport.analogOutput(level, pos);
     }
 
     /**
@@ -206,7 +212,9 @@ public class ExtensionAddonBlock extends MachineAddonBlock implements AddonDetai
             BlockEntityType<T> type) {
         if (level.isClientSide()) return null;
         return (tickLevel, pos, tickState, blockEntity) -> {
-            if (blockEntity instanceof ExtensionAddonBlockEntity pluginEntity) {
+            // Nothing to poll while no control unit, transfer plugin or anchor is present - the common
+            // case for a freshly placed addon, and the ticker runs for every addon every tick.
+            if (blockEntity instanceof ExtensionAddonBlockEntity pluginEntity && pluginEntity.needsServerTick()) {
                 pluginEntity.serverTickRedstone();
                 // faces of the transfer page whose automation is on move their items here
                 pluginEntity.serverTickTransfer();
@@ -223,9 +231,7 @@ public class ExtensionAddonBlock extends MachineAddonBlock implements AddonDetai
     protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos fromPos,
             boolean isMoving) {
         super.neighborChanged(state, level, pos, block, fromPos, isMoving);
-        if (!level.isClientSide() && level.getBlockEntity(pos) instanceof ExtensionAddonBlockEntity blockEntity) {
-            blockEntity.applyRedstoneSignal(level.hasNeighborSignal(pos));
-        }
+        ExtensionAddonBlockSupport.applySignalAt(level, pos);
     }
 
     /**
@@ -258,17 +264,7 @@ public class ExtensionAddonBlock extends MachineAddonBlock implements AddonDetai
             // first - the block entity is gone afterwards and nothing else would release it.
             blockEntity.releaseRedstoneOnRemoval();
 
-            // Drop everything stored inside (including slots that are currently disabled by the config,
-            // and the reserved single item slot of the wireless page), so nothing is lost when the block
-            // is mined.
-            for (int slot = 0; slot < ExtensionAddonBlockEntity.STORAGE_SIZE; slot++) {
-                var stack = blockEntity.getItem(slot);
-                // Type III slots can hold far more than one stack, drop it in valid chunks.
-                while (!stack.isEmpty()) {
-                    Block.popResource(level, pos, stack.split(Math.min(stack.getCount(), stack.getMaxStackSize())));
-                }
-            }
-            blockEntity.clearContent();
+            ExtensionAddonBlockSupport.dropStored(level, pos, blockEntity);
         }
         return super.playerWillDestroy(level, pos, state, player);
     }
@@ -278,16 +274,7 @@ public class ExtensionAddonBlock extends MachineAddonBlock implements AddonDetai
     public void appendDetails(Consumer<Component> consumer) {
         var key = "tooltip.oritechaddonsone." + type.id();
 
-        consumer.accept(Component.translatable(key + ".insert").withStyle(ChatFormatting.GOLD));
-
-        if (type == ExtensionAddonType.TYPE_1) {
-            consumer.accept(Component.translatable(key + ".acceptor").withStyle(ChatFormatting.AQUA));
-        } else if (type == ExtensionAddonType.TYPE_2) {
-            consumer.accept(Component.translatable(key + ".special").withStyle(ChatFormatting.AQUA));
-        } else {
-            consumer.accept(Component.translatable(key + ".capacity", Config.slotCapacity(type))
-                    .withStyle(ChatFormatting.AQUA));
-        }
+        ExtensionAddonBlockSupport.appendTypeDetails(consumer, key, type);
 
         consumer.accept(Component.translatable(key + ".splicer").withStyle(ChatFormatting.DARK_RED));
     }

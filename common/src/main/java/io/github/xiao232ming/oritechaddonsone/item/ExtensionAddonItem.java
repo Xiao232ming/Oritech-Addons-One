@@ -2,9 +2,6 @@ package io.github.xiao232ming.oritechaddonsone.item;
 
 import java.util.List;
 
-import dev.architectury.platform.Platform;
-import dev.architectury.utils.Env;
-
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.BlockItem;
@@ -38,7 +35,7 @@ public class ExtensionAddonItem extends BlockItem {
 
         if (!(getBlock() instanceof AddonDetailProvider provider)) return;
 
-        if (!isControlDown()) {
+        if (!AddonTooltips.isControlDown()) {
             tooltipComponents.add(Component.translatable("tooltip.oritech.item_extra_info")
                     .withStyle(ChatFormatting.GRAY)
                     .withStyle(ChatFormatting.ITALIC));
@@ -46,13 +43,5 @@ public class ExtensionAddonItem extends BlockItem {
         }
 
         provider.appendDetails(tooltipComponents::add);
-    }
-
-    /** True while the player holds Ctrl, like Oritech's own addon items check. */
-    private static boolean isControlDown() {
-        // Tooltips are only built on the client; the guard keeps dedicated servers from touching
-        // client only classes.
-        if (Platform.getEnvironment() != Env.CLIENT) return false;
-        return net.minecraft.client.gui.screens.Screen.hasControlDown();
     }
 }

@@ -3,9 +3,6 @@ package io.github.xiao232ming.oritechaddonsone.item;
 import java.util.List;
 import java.util.function.Supplier;
 
-import dev.architectury.platform.Platform;
-import dev.architectury.utils.Env;
-
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
@@ -75,7 +72,7 @@ public class PluginAddonItem extends BlockItem {
         // otherwise. The hint is not repeated here, the block already prints it.
         super.appendHoverText(stack, context, tooltipComponents, tooltipFlag);
 
-        if (!isControlDown()) return;
+        if (!AddonTooltips.isControlDown()) return;
 
         var key = "tooltip.oritechaddonsone." + BuiltInRegistries.BLOCK.getKey(getBlock()).getPath();
         var value = bonus == null ? null : bonus.get();
@@ -90,13 +87,5 @@ public class PluginAddonItem extends BlockItem {
         // colour over the grey of the surrounding line, exactly like Oritech's own coloured numbers.
         tooltipComponents.add(Component.translatable(key + ".desc",
                 Component.literal(value).withStyle(ChatFormatting.GREEN)).withStyle(ChatFormatting.GRAY));
-    }
-
-    /** True while the player holds Ctrl, like Oritech's own addon items check. */
-    private static boolean isControlDown() {
-        // Tooltips are only built on the client; the guard keeps dedicated servers from touching
-        // client only classes.
-        if (Platform.getEnvironment() != Env.CLIENT) return false;
-        return net.minecraft.client.gui.screens.Screen.hasControlDown();
     }
 }
