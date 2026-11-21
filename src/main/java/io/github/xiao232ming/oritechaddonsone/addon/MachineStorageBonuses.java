@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -73,6 +74,13 @@ public final class MachineStorageBonuses {
      * {@code nodeA} / {@code nodeB} for example - and there is no interface that lists them.
      */
     private static final Map<Class<?>, List<Field>> FLUID_FIELDS = new WeakHashMap<>();
+
+    /**
+     * Machine classes already warned about carrying a tank bonus but having no fluid storage this mod can
+     * enlarge. A warning per class and process is enough to diagnose a broken reflection path without
+     * filling the log on every addon scan of every machine.
+     */
+    private static final Set<Class<?>> WARNED_NO_TANK = ConcurrentHashMap.newKeySet();
 
     /**
      * Tanks this mod has enlarged, per machine. Needed because a tank that was enlarged by the previous
@@ -315,6 +323,16 @@ public final class MachineStorageBonuses {
         // A tank of the previous pass that is still there was just given the new total above; only the
         // ones the machine does not report any more have to be reset (and clamped) here.
         var previous = KNOWN_TANKS.put(entity, touched);
+
+        // A tank bonus is configured but not a single tank could be found: that is what an Oritech refactor
+        // of its tank classes looks like from here (the scan is reflective and silently finds nothing), so
+        // say it once per class instead of letting the bonus disappear without a trace.
+        if (capacity > 0L && touched.isEmpty() && WARNED_NO_TANK.add(entity.getClass())) {
+            OritechAddonsOne.LOGGER.warn(
+                    "No fluid storage found on {}; the tank addon's capacity bonus is not applied",
+                    entity.getClass().getName());
+        }
+
         if (previous == null) return;
 
         for (var holder : previous) {
@@ -366,7 +384,10 @@ public final class MachineStorageBonuses {
                 try {
                     field.setAccessible(true);
                 } catch (RuntimeException notAccessible) {
-                    // A module or a security manager can refuse this; skip the field instead of failing.
+                    // A module or a security manager can refuse this; skip the field, but say so: a silently
+                    // skipped field means a tank the tank addon can never enlarge.
+                    OritechAddonsOne.LOGGER.warn("Cannot access fluid storage field {} of {}; the tank addon "
+                            + "will not enlarge it", field.getName(), current.getName(), notAccessible);
                     continue;
                 }
                 fields.add(field);
@@ -374,6 +395,7 @@ public final class MachineStorageBonuses {
         }
 
         var result = List.copyOf(fields);
+        OritechAddonsOne.LOGGER.debug("Found {} fluid storage field(s) on {}", result.size(), type.getName());
         FLUID_FIELDS.put(type, result);
         return result;
     }
