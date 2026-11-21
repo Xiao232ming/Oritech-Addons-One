@@ -197,6 +197,48 @@ public final class MachineFaceStorage extends DelegatingInventoryStorage {
     }
 
     /**
+     * Does one face's share of the automation: both item directions and both fluid directions, each gated by
+     * the mode and the configured per-tick budget.
+     * <p>
+     * The three callers - the block's own six-face map, the cell-face map of the machine and a plugin hanging
+     * on an extender - differ only in where their containers sit and in which filter applies, so the rules of
+     * a direction live here once instead of three times: OUTPUT takes from the machine, INPUT puts into it, and
+     * each direction is gated by its own filter. No neighbour means nothing to do.
+     *
+     * @param source        the block whose face is traded through
+     * @param machine       the machine side of the item trade, or {@code null} while it has no inventory
+     * @param machineEntity the machine's block entity, so its slot roles are respected, or {@code null}
+     * @param machineFluid  the machine side of the fluid trade, or {@code null} while it has no tank
+     * @param outFilter     what may leave the machine through this face, or {@code null} while unfiltered
+     * @param inFilter      what may enter the machine through this face, or {@code null} while unfiltered
+     */
+    public static void moveThroughFace(Level level, BlockPos source, Direction face,
+            @Nullable ItemApi.InventoryStorage machine, @Nullable BlockEntity machineEntity,
+            @Nullable FluidApi.FluidStorage machineFluid, TransferMode mode,
+            @Nullable ItemFilterData outFilter, @Nullable ItemFilterData inFilter) {
+        var neighbour = storageAt(level, source, face);
+        var neighbourFluid = fluidStorageAt(level, source, face);
+        if (neighbour == null && neighbourFluid == null) return;
+
+        if (neighbour != null && machine != null) {
+            if (mode.allowsExtract()) {
+                move(machine, machineEntity, neighbour, null, itemsPerTick(), outFilter);
+            }
+            if (mode.allowsInsert()) {
+                move(neighbour, null, machine, machineEntity, itemsPerTick(), inFilter);
+            }
+        }
+
+        // Fluids use the same two directions and the same per-tick budget, without slot roles or item filters.
+        if (mode.allowsExtract()) {
+            moveFluid(machineFluid, neighbourFluid, fluidsPerTick());
+        }
+        if (mode.allowsInsert()) {
+            moveFluid(neighbourFluid, machineFluid, fluidsPerTick());
+        }
+    }
+
+    /**
      * one place the machine position is derived from the addon, so the inventory
      * ({@link #machineStorage(BlockEntity)}) and the slot roles of that inventory
      * ({@link MachineSlotRoles}) can never be looked up for two different machines.
