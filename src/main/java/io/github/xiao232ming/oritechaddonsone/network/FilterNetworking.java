@@ -22,6 +22,7 @@ import io.github.xiao232ming.oritechaddonsone.block.entity.CellFaceModes;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ItemFilterData;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferMode;
+import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonMenu;
 import io.github.xiao232ming.oritechaddonsone.menu.FaceFilterMenu;
 
 /**
@@ -156,6 +157,14 @@ public final class FilterNetworking {
             if (!(context.player() instanceof ServerPlayer player)) return;
 
             var target = packet.target();
+
+            // the 过滤 button lives on the addon page, so only the menu opened on this very block may open a filter
+            if (!(player.containerMenu instanceof ExtensionAddonMenu menu)
+                    || !menu.position().equals(target.pos())
+                    || !menu.stillValid(player)) {
+                return;
+            }
+
             var owner = owner(player.level(), target);
             if (owner == null) return;
 
@@ -207,6 +216,14 @@ public final class FilterNetworking {
             if (!(context.player() instanceof ServerPlayer player)) return;
 
             var target = packet.target();
+
+            // only the filter page that was opened for this very block, and is still in reach, may write back
+            if (!(player.containerMenu instanceof FaceFilterMenu menu)
+                    || !menu.pos().equals(target.pos())
+                    || !menu.stillValid(player)) {
+                return;
+            }
+
             var owner = owner(player.level(), target);
             if (owner == null) return;
 

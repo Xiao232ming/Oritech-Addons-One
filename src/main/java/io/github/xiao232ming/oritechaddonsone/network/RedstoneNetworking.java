@@ -13,6 +13,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEntity;
+import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonMenu;
 
 /**
  * The packet of the Redstone Control page: the player picked another mode or another monitored slot for the
@@ -51,6 +52,13 @@ public final class RedstoneNetworking {
 
         public static void handle(Configure packet, IPayloadContext context) {
             if (!(context.player() instanceof ServerPlayer player)) return;
+
+            // only the menu opened on this addon, and still in reach, may change its redstone settings
+            if (!(player.containerMenu instanceof ExtensionAddonMenu menu)
+                    || !menu.position().equals(packet.pos())
+                    || !menu.stillValid(player)) {
+                return;
+            }
 
             if (!(player.level().getBlockEntity(packet.pos()) instanceof ExtensionAddonBlockEntity addon)) {
                 return;
