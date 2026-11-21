@@ -230,7 +230,6 @@ public final class AnchorForceLoad {
     }
 
     /** Releases everything of a level that stopped being wanted, then reports the rest. */
-    /** Releases everything of a level that stopped being wanted, then reports the rest. */
     @SuppressWarnings("deprecation")
     private static void reconcile(ServerLevel level) {
         var perLevel = RECEIPTS.get(level);

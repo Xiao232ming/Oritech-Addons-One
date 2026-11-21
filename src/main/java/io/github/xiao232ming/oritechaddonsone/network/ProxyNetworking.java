@@ -9,13 +9,11 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonMenu;
 
@@ -49,16 +47,12 @@ public final class ProxyNetworking {
         registrar.playToClient(PickerSlots.TYPE, PickerSlots.CODEC, PickerSlots::handle);
     }
 
-    private static Identifier id(String path) {
-        return Identifier.fromNamespaceAndPath(OritechAddonsOne.MODID, path);
-    }
-
     // ------------------------------------------------------------------ client -> server
 
     /** Binds one face of the addon at {@code pos} to one slot of the machine inventory. */
     public record BindFace(BlockPos pos, int face, int slot) implements CustomPacketPayload {
 
-        public static final Type<BindFace> TYPE = new Type<>(id("proxy_bind_face"));
+        public static final Type<BindFace> TYPE = new Type<>(PayloadIds.id("proxy_bind_face"));
         public static final StreamCodec<RegistryFriendlyByteBuf, BindFace> CODEC = StreamCodec.composite(
                 BlockPos.STREAM_CODEC, BindFace::pos,
                 ByteBufCodecs.VAR_INT, BindFace::face,
@@ -97,7 +91,7 @@ public final class ProxyNetworking {
     /** Asks the server for the slot layout of the machine one face of the addon works on. */
     public record RequestPicker(BlockPos pos, int face) implements CustomPacketPayload {
 
-        public static final Type<RequestPicker> TYPE = new Type<>(id("proxy_picker_request"));
+        public static final Type<RequestPicker> TYPE = new Type<>(PayloadIds.id("proxy_picker_request"));
         public static final StreamCodec<RegistryFriendlyByteBuf, RequestPicker> CODEC = StreamCodec.composite(
                 BlockPos.STREAM_CODEC, RequestPicker::pos,
                 ByteBufCodecs.VAR_INT, RequestPicker::face,
@@ -131,7 +125,7 @@ public final class ProxyNetworking {
     /** Removes the binding of one face (right click on the net). */
     public record ClearFace(BlockPos pos, int face) implements CustomPacketPayload {
 
-        public static final Type<ClearFace> TYPE = new Type<>(id("proxy_clear_face"));
+        public static final Type<ClearFace> TYPE = new Type<>(PayloadIds.id("proxy_clear_face"));
         public static final StreamCodec<RegistryFriendlyByteBuf, ClearFace> CODEC = StreamCodec.composite(
                 BlockPos.STREAM_CODEC, ClearFace::pos,
                 ByteBufCodecs.VAR_INT, ClearFace::face,
@@ -169,7 +163,7 @@ public final class ProxyNetworking {
      */
     public record PickerSlots(BlockPos pos, int face, List<Integer> slots) implements CustomPacketPayload {
 
-        public static final Type<PickerSlots> TYPE = new Type<>(id("proxy_picker_slots"));
+        public static final Type<PickerSlots> TYPE = new Type<>(PayloadIds.id("proxy_picker_slots"));
         public static final StreamCodec<RegistryFriendlyByteBuf, PickerSlots> CODEC = StreamCodec.composite(
                 BlockPos.STREAM_CODEC, PickerSlots::pos,
                 ByteBufCodecs.VAR_INT, PickerSlots::face,

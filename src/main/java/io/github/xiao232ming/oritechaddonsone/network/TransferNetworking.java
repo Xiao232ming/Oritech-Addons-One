@@ -19,7 +19,6 @@ import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 import io.github.xiao232ming.oritechaddonsone.block.entity.CellFaceModes;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.MachineFaceConfigs;
@@ -57,10 +56,6 @@ public final class TransferNetworking {
         registrar.playToClient(FaceModes.TYPE, FaceModes.CODEC, FaceModes::handle);
     }
 
-    private static Identifier id(String path) {
-        return Identifier.fromNamespaceAndPath(OritechAddonsOne.MODID, path);
-    }
-
     // ------------------------------------------------------------------ client -> server
 
     /**
@@ -69,7 +64,7 @@ public final class TransferNetworking {
      */
     public record SetTransferMode(BlockPos pos, int face, int value) implements CustomPacketPayload {
 
-        public static final Type<SetTransferMode> TYPE = new Type<>(id("transfer_set_mode"));
+        public static final Type<SetTransferMode> TYPE = new Type<>(PayloadIds.id("transfer_set_mode"));
         public static final StreamCodec<RegistryFriendlyByteBuf, SetTransferMode> CODEC = StreamCodec.composite(
                 BlockPos.STREAM_CODEC, SetTransferMode::pos,
                 ByteBufCodecs.VAR_INT, SetTransferMode::face,
@@ -115,7 +110,7 @@ public final class TransferNetworking {
      */
     public record SetCellFaceMode(BlockPos pos, BlockPos machine, int entry) implements CustomPacketPayload {
 
-        public static final Type<SetCellFaceMode> TYPE = new Type<>(id("transfer_cell_face_mode"));
+        public static final Type<SetCellFaceMode> TYPE = new Type<>(PayloadIds.id("transfer_cell_face_mode"));
         public static final StreamCodec<RegistryFriendlyByteBuf, SetCellFaceMode> CODEC = StreamCodec.composite(
                 BlockPos.STREAM_CODEC, SetCellFaceMode::pos,
                 BlockPos.STREAM_CODEC, SetCellFaceMode::machine,
@@ -181,7 +176,7 @@ public final class TransferNetworking {
      */
     public record FaceModes(BlockPos pos, String dimension, List<Integer> entries) implements CustomPacketPayload {
 
-        public static final Type<FaceModes> TYPE = new Type<>(id("transfer_cell_face_modes"));
+        public static final Type<FaceModes> TYPE = new Type<>(PayloadIds.id("transfer_cell_face_modes"));
         public static final StreamCodec<RegistryFriendlyByteBuf, FaceModes> CODEC = StreamCodec.composite(
                 BlockPos.STREAM_CODEC, FaceModes::pos,
                 ByteBufCodecs.STRING_UTF8, FaceModes::dimension,

@@ -5,13 +5,14 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
+import rearth.oritech.block.entity.addons.RedstoneAddonBlockEntity.RedstoneMode;
+
+import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonType;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonMenu;
 
@@ -32,13 +33,9 @@ public final class RedstoneNetworking {
         event.registrar("1").playToServer(Configure.TYPE, Configure.CODEC, Configure::handle);
     }
 
-    private static Identifier id(String path) {
-        return Identifier.fromNamespaceAndPath(OritechAddonsOne.MODID, path);
-    }
-
     public record Configure(BlockPos pos, int mode, int slot) implements CustomPacketPayload {
 
-        public static final Type<Configure> TYPE = new Type<>(id("redstone_configure"));
+        public static final Type<Configure> TYPE = new Type<>(PayloadIds.id("redstone_configure"));
         public static final StreamCodec<RegistryFriendlyByteBuf, Configure> CODEC = StreamCodec.composite(
                 BlockPos.STREAM_CODEC, Configure::pos,
                 ByteBufCodecs.VAR_INT, Configure::mode,
@@ -63,12 +60,11 @@ public final class RedstoneNetworking {
             if (!(player.level().getBlockEntity(packet.pos()) instanceof ExtensionAddonBlockEntity addon)) {
                 return;
             }
-            if (addon.pluginType() != io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonType.TYPE_2
-                    || !addon.hasRedstonePlugin()) {
+            if (addon.pluginType() != ExtensionAddonType.TYPE_2 || !addon.hasRedstonePlugin()) {
                 return;
             }
 
-            var modes = rearth.oritech.block.entity.addons.RedstoneAddonBlockEntity.RedstoneMode.values();
+            var modes = RedstoneMode.values();
             if (packet.mode() < 0 || packet.mode() >= modes.length) return;
 
             addon.setRedstoneConfig(modes[packet.mode()], Math.max(0, packet.slot()));
