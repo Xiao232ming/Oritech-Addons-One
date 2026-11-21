@@ -6,10 +6,12 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.TagsUpdatedEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 
 import io.github.xiao232ming.oritechaddonsone.Config;
 import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
+import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonType;
 
 /**
  * NeoForge 入口点。与 Fabric 入口点一一对应：注册配置 spec，挂上必须在事件里执行的注册
@@ -36,5 +38,8 @@ public final class OritechAddonsOneNeoForge {
 
         // 服务器停止时丢掉按维度+坐标缓存的机器数据，否则同一进程里的下一个世界会读到上一个世界的设置
         NeoForge.EVENT_BUS.addListener((ServerStoppedEvent event) -> OritechAddonsOne.clearServerCaches());
+
+        // 插件分类由方块标签决定，数据包重载或服务端标签包都会改变它；缓存可以留，但不能跨过一次更新
+        NeoForge.EVENT_BUS.addListener((TagsUpdatedEvent event) -> ExtensionAddonType.invalidateCategoryCache());
     }
 }

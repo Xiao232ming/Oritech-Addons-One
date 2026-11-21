@@ -8,6 +8,7 @@ import net.neoforged.fml.config.ModConfig;
 
 import io.github.xiao232ming.oritechaddonsone.Config;
 import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
+import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonType;
 
 /**
  * Fabric 入口点。照抄 Oritech 的 {@code OritechFabricMod}：先注册配置 spec（common 里的
@@ -29,5 +30,9 @@ public class OritechAddonsOneFabric implements ModInitializer {
 
         // 服务器停止时丢掉按维度+坐标缓存的机器数据，否则同一进程里的下一个世界会读到上一个世界的设置
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> OritechAddonsOne.clearServerCaches());
+
+        // 插件分类由方块标签决定，数据包重载会改变它；缓存可以留，但不能跨过一次重载
+        ServerLifecycleEvents.END_DATA_PACK_RELOAD.register(
+                (server, resourceManager, success) -> ExtensionAddonType.invalidateCategoryCache());
     }
 }

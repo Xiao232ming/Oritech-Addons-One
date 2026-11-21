@@ -490,6 +490,7 @@ public class OritechAddonsOne {
         AnchorForceLoad.clear();
         LaserAimIndex.clear();
         MachineStorageBonuses.clearCaches();
+        ExtensionAddonType.invalidateCategoryCache();
     }
 
     /**
