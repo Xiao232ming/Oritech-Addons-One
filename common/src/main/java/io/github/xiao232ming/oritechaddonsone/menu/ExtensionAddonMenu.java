@@ -1,9 +1,5 @@
 package io.github.xiao232ming.oritechaddonsone.menu;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.FriendlyByteBuf;
@@ -25,7 +21,6 @@ import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonType;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.ExtensionTransferAddonBlockEntity;
-import io.github.xiao232ming.oritechaddonsone.block.entity.CellFaceModes;
 import io.github.xiao232ming.oritechaddonsone.block.entity.MachineFaceConfigs;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferFaceModes;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferMode;
@@ -801,14 +796,14 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
      * Machine whose cell-face map this menu last sent to its player, or {@code null} while none was sent yet.
      * <p>
      * Server side only - {@link #broadcastChanges()} returns on the client before it is read - and per menu,
-     * i.e. per player, paired with {@link #sentTransferEntries} so one unchanged map costs one packet and not
+     * i.e. per player, paired with {@link #sentTransferRevision} so one unchanged map costs one packet and not
      * one per tick.
      */
     @Nullable
     private BlockPos sentTransferMap;
 
-    /** Packed cell-faces of the map last sent to this player, sorted - see {@link #broadcastChanges}. */
-    private List<Integer> sentTransferEntries = List.of();
+    /** Revision of the map last sent to this player - see {@link MachineFaceConfigs#cellFaceRevision}. */
+    private int sentTransferRevision = Integer.MIN_VALUE;
 
     /**
      * Sends this menu's cell-face map to its player whenever the map changed - including the very first time.
@@ -854,16 +849,14 @@ public class ExtensionAddonMenu extends AbstractContainerMenu {
 
         // Send whenever what the map holds changed, not only when this menu first names the machine: the merge
         // above, a change made through another plugin of the same machine and a face configured a moment ago all
-        // change it, and a page that was sent an empty map with the menu has to see the filled one.
-        var settings = MachineFaceConfigs.cellFaces(level, machine);
-        var entries = new ArrayList<Integer>(settings.configuredFaces());
-        for (var entry : settings.packedEntries()) entries.add(CellFaceModes.pack(entry));
-        Collections.sort(entries);
+        // change it, and a page that was sent an empty map with the menu has to see the filled one. The revision
+        // answers that without packing and sorting the whole map on every tick.
+        var revision = MachineFaceConfigs.cellFaceRevision(level, machine);
 
-        if (machine.equals(sentTransferMap) && entries.equals(sentTransferEntries)) return;
+        if (machine.equals(sentTransferMap) && revision == sentTransferRevision) return;
 
         sentTransferMap = machine;
-        sentTransferEntries = entries;
+        sentTransferRevision = revision;
         TransferNetworking.sendFaceModes(level, machine);
     }
 
