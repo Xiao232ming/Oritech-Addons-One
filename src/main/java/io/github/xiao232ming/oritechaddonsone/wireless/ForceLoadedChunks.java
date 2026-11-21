@@ -13,8 +13,6 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.TicketStorage;
 import org.jetbrains.annotations.Nullable;
 
-import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
-
 /**
  * Answers whether a chunk is <em>kept</em> loaded, i.e. whether something loads it on purpose instead of it
  * merely being loaded at the moment.
@@ -57,7 +55,6 @@ public final class ForceLoadedChunks {
         try {
             return isForceLoadedUnchecked(level, pos);
         } catch (Throwable failure) {
-            OritechAddonsOne.LOGGER.debug("[diag] force-load check failed for {} in {}", pos, level, failure);
             return false;
         }
     }

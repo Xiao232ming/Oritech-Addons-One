@@ -12,8 +12,6 @@ import rearth.oritech.block.base.entity.MachineBlockEntity;
 import rearth.oritech.util.ContainerSlotAssignment;
 import rearth.oritech.util.ScreenProvider;
 
-import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
-
 /**
  * The <b>role</b> of every slot of a machine inventory, i.e. whether Oritech itself considers a slot an
  * input, an output or neither. The transfer modes of this mod only make sense with that knowledge:
@@ -142,25 +140,7 @@ public final class MachineSlotRoles {
         for (var index = 0; index < roles.length; index++) {
             if (roles[index] == null) roles[index] = TransferMode.BOTH;
         }
-
-        // DEBUG on purpose, and the one diagnostic kept for the open report about a machine that does not empty
-        // its output slots: which slot of a machine counts as an input and which as an output decides every
-        // transfer this mod makes, and the two sources it is read from are not always in agreement - a machine
-        // whose roles come out wrong would move items into its product slots and empty its input slots, which
-        // is impossible to tell apart from a bug in the movement itself without this line
-        OritechAddonsOne.LOGGER.debug("[transfer] slot roles of {} ({} slots): {}",
-                machine.getBlockPos(), size, describe(roles));
         return roles;
-    }
-
-    /** The roles of a machine as one short string per slot, for the log line above. */
-    private static String describe(TransferMode[] roles) {
-        var text = new StringBuilder();
-        for (var index = 0; index < roles.length; index++) {
-            if (index > 0) text.append(' ');
-            text.append(index).append(':').append(roles[index]);
-        }
-        return text.toString();
     }
 
     /**

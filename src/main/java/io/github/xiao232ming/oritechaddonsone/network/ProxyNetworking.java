@@ -79,15 +79,9 @@ public final class ProxyNetworking {
                 // The client only sends a slot the server told it about, and the server re-checks that the
                 // slot really exists on the machine, so a stale client can never bind a slot that is not
                 // there.
-                if (packet.slot() < 0 || packet.slot() >= addon.proxySlotCount()) {
-                    OritechAddonsOne.LOGGER.debug("[proxy] refused binding {} face {} to slot {}",
-                            packet.pos(), face, packet.slot());
-                    return;
-                }
+                if (packet.slot() < 0 || packet.slot() >= addon.proxySlotCount()) return;
 
                 addon.bindProxyFace(face, packet.slot());
-                OritechAddonsOne.LOGGER.debug("[proxy] {} face {} -> machine slot {} ({} face(s) configured)",
-                        packet.pos(), face, packet.slot(), addon.proxyFaces().configuredFaces());
             }
         }
     }
@@ -114,8 +108,6 @@ public final class ProxyNetworking {
                 if (face == null) return;
 
                 var slots = addon.proxyPickerSlots();
-                OritechAddonsOne.LOGGER.debug("[proxy] picker for {} face {}: {} slot(s)",
-                        packet.pos(), face, slots.size());
                 context.reply(new PickerSlots(packet.pos(), packet.face(), flattenSlots(slots)));
             }
         }
@@ -143,8 +135,6 @@ public final class ProxyNetworking {
                 if (face == null) return;
 
                 addon.unbindProxyFace(face);
-                OritechAddonsOne.LOGGER.debug("[proxy] {} face {} unbound ({} face(s) configured)",
-                        packet.pos(), face, addon.proxyFaces().configuredFaces());
             }
         }
     }

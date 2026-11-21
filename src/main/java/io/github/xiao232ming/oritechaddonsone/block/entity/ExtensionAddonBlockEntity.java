@@ -435,13 +435,7 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
     public void applyRedstoneSignal(boolean powered) {
         if (level == null || level.isClientSide()) return;
         if (!(level.getBlockEntity(getControllerPos()) instanceof MachineAddonController controller)) return;
-        if (!(controller instanceof RedstoneControllable controllable)) {
-            OritechAddonsOne.LOGGER.debug("[diag] redstone: {} machine {} is not controllable",
-                    worldPosition, getControllerPos());
-            return;
-        }
-        OritechAddonsOne.LOGGER.debug("[diag] redstone: {} powered={} plugin={} applied={} -> {}",
-                worldPosition, powered, hasRedstonePlugin(), redstoneApplied, getControllerPos());
+        if (!(controller instanceof RedstoneControllable controllable)) return;
 
         if (hasRedstonePlugin() && redstoneMode == RedstoneMode.INPUT_CONTROL) {
             redstoneApplied = true;
@@ -747,20 +741,9 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         if (level == null || level.isClientSide() || face == null || mode == null) return false;
         if (mode != TransferMode.NONE && !canTransferItems()) return false;
 
-        var machinePos = servedMachinePos();
         var settings = transferFaces;
-        var before = settings.modeOf(face);
-        var beforeAutomation = settings.automationOf(face);
         settings.set(face, mode, automation);
         setChanged();
-
-        // INFO on purpose: this is the one place a face is configured, so it names what was asked for, what the
-        // block holds afterwards, and whether the machine position the automation reads with - the three things
-        // that have to agree for a face to move items by itself.
-        OritechAddonsOne.LOGGER.info(
-                "[transfer] set {} face {} of {} (machine {}): was {} / auto {}, now {} / auto {}, {} configured",
-                mode, face, worldPosition, machinePos, before, beforeAutomation, settings.modeOf(face),
-                settings.automationOf(face), settings.configuredFaces());
         return true;
     }
 
@@ -800,14 +783,9 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         if (!data.isEmpty() && !canTransferItems()) return false;
 
         var settings = savedFaceFilters;
-        var before = settings.of(face, flow);
         if (!settings.set(face, flow, data)) return true;
 
         setChanged();
-        OritechAddonsOne.LOGGER.info(
-                "[transfer] set the {} filter of {} face {} (machine {}): was {}, now {} ({} listed)",
-                flow, worldPosition, face, servedMachinePos(), describe(before), describe(settings.of(face, flow)),
-                data.items().size());
         return true;
     }
 
@@ -828,28 +806,15 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         if (!data.isEmpty() && !machineCellOffsets().contains(cell)) return false;
 
         var settings = MachineFaceConfigs.cellFilters(level, servedMachinePos());
-        var before = settings.of(cell, face, flow);
         if (!settings.set(cell, face, flow, data)) return true;
 
         setChanged();
-        OritechAddonsOne.LOGGER.info(
-                "[transfer] set the {} filter of {} cell {} face {} (machine {}): was {}, now {} ({} listed)",
-                flow, worldPosition, cell, face, servedMachinePos(), describe(before),
-                describe(settings.of(cell, face, flow)), data.items().size());
         return true;
     }
 
     /** True while a filter exists for that direction of the movement; {@link TransferMode#NONE} and BOTH do not. */
     private static boolean isAFilterFlow(@Nullable TransferMode flow) {
         return flow == TransferMode.INPUT || flow == TransferMode.OUTPUT;
-    }
-
-    /** What a filter answers, for the diagnostics above - a filter that lists nothing says so. */
-    private static String describe(@Nullable ItemFilterData filter) {
-        if (filter == null) return "none";
-        return (filter.useWhitelist() ? "whitelist" : "blacklist")
-                + (filter.useNbt() ? " +nbt" : "")
-                + (filter.useComponents() ? " +components" : "");
     }
 
     // ------------------------------------------------------------------ automation of the transfer faces
@@ -868,32 +833,6 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
      * and a face whose automation is off simply keeps offering its inventory to pipes instead of moving items
      * itself.
      */
-    /**
-     * When this block last printed its throttled transfer diagnosis. Server side only, and only ever read by the
-     * two branches that explain why a configured face does nothing: a line per tick buries the rest of the log.
-     */
-    private long lastDiagnosis;
-
-    /** True at most once per second, so a stuck face reports its state without flooding the log. */
-    private boolean diagnosticsDue() {
-        var now = System.nanoTime();
-        if (now - lastDiagnosis < 1_000_000_000L) return false;
-        lastDiagnosis = now;
-        return true;
-    }
-
-    /** What every configured face of a map does, for the throttled diagnosis above. */
-    private static String describeFaces(TransferFaceModes faces) {
-        var text = new StringBuilder();
-        for (var face : Direction.values()) {
-            var mode = faces.modeOf(face);
-            if (mode == TransferMode.NONE) continue;
-            if (text.length() > 0) text.append(", ");
-            text.append(face).append(' ').append(mode).append(faces.automationOf(face) ? " auto" : " manual");
-        }
-        return text.length() == 0 ? "none" : text.toString();
-    }
-
     public void serverTickTransfer() {
         if (level == null || level.isClientSide()) return;
 
@@ -907,36 +846,14 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         // and needs no such merge; it is loaded directly from the block's save data.
         if (mergePending) {
             var machinePos = servedMachinePos();
-            if (machinePos == null) {
-                // the machine cannot be named yet: this is the normal state for a moment while a world loads
-            } else {
+            if (machinePos != null) {
                 syncCellFaces();
                 mergePending = false;
-                OritechAddonsOne.LOGGER.debug(
-                        "[transfer] merged the saved cell settings of {} into machine {}: shared now {} face(s)",
-                        worldPosition, machinePos, MachineFaceConfigs.cellFaces(level, machinePos).configuredFaces());
             }
         }
 
         var faces = transferModes();
         if (faces.isEmpty() || !canTransferItems()) {
-            if (canTransferItems()) {
-                // INFO while the settings of a loaded block are being chased, throttled to once a second per
-                // block: the two machine positions are printed next to each other on purpose, because the map
-                // the settings are merged into and the map the automation reads have to be the same one - and
-                // they are derived from two different resolutions (connectedMachinePos, servedMachinePos).
-                if (diagnosticsDue()) {
-                    OritechAddonsOne.LOGGER.debug(
-                            "[transfer] {} holds a plugin but has no automated face: connected {}, served {}, "
-                                    + "map here {} face(s) {}, map there {} face(s) {}, own copy {} face(s): {}",
-                            worldPosition, connectedMachinePos(), servedMachinePos(),
-                            faces.configuredFaces(), describeFaces(faces),
-                            servedMachinePos() == null ? -1
-                                    : MachineFaceConfigs.cellFaces(level, servedMachinePos()).configuredFaces(),
-                            savedCellFaces.configuredFaces(), describeFaces(savedTransferFaces()));
-                }
-            }
-
             // The 3D transfer plugin stores its automation in cell-face settings rather than in this
             // block's six-face map. Do not skip that path just because the ordinary map is empty.
             tickCellFaces();
@@ -958,14 +875,7 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
 
             var neighbour = MachineFaceStorage.storageAt(level, worldPosition, face);
             var neighbourFluid = MachineFaceStorage.fluidStorageAt(level, worldPosition, face);
-            if (neighbour == null && neighbourFluid == null) {
-                if (diagnosticsDue()) {
-                    OritechAddonsOne.LOGGER.debug(
-                            "[transfer] face {} of {} is {} and automated, but {} holds no item or fluid handler",
-                            face, worldPosition, mode, worldPosition.relative(face));
-                }
-                continue;
-            }
+            if (neighbour == null && neighbourFluid == null) continue;
 
             // The machine's own block entity, exactly as the cell-face loop resolves it: the roles of the
             // machine's slots - which of them are inputs and which are outputs - are read from the block entity
@@ -973,21 +883,16 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
             var machineEntity = machinePos != null && level.isLoaded(machinePos)
                     ? level.getBlockEntity(machinePos) : null;
 
-            var out = 0;
-            var in = 0;
-            var fluidOut = 0;
-            var fluidIn = 0;
-
             if (neighbour != null && machine != null) {
                 // The mode names the direction as seen from the machine; the machine itself is passed along as
                 // the owner of the machine side, so both directions respect which of its slots are inputs and
                 // which are outputs (see MachineSlotRoles).
                 if (mode.allowsExtract()) {
-                    out = MachineFaceStorage.move(machine, machineEntity, neighbour, null,
+                    MachineFaceStorage.move(machine, machineEntity, neighbour, null,
                             MachineFaceStorage.itemsPerTick(), faceFilter(face, TransferMode.OUTPUT));
                 }
                 if (mode.allowsInsert()) {
-                    in = MachineFaceStorage.move(neighbour, null, machine, machineEntity,
+                    MachineFaceStorage.move(neighbour, null, machine, machineEntity,
                             MachineFaceStorage.itemsPerTick(), faceFilter(face, TransferMode.INPUT));
                 }
             }
@@ -995,22 +900,12 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
             // The same two directions for fluids: no slot roles and no filters, a face moves whatever its two
             // handlers hold up to the configured amount per tick.
             if (mode.allowsExtract()) {
-                fluidOut = MachineFaceStorage.moveFluid(machineFluid, neighbourFluid,
+                MachineFaceStorage.moveFluid(machineFluid, neighbourFluid,
                         MachineFaceStorage.fluidsPerTick());
             }
             if (mode.allowsInsert()) {
-                fluidIn = MachineFaceStorage.moveFluid(neighbourFluid, machineFluid,
+                MachineFaceStorage.moveFluid(neighbourFluid, machineFluid,
                         MachineFaceStorage.fluidsPerTick());
-            }
-
-            if (out + in + fluidOut + fluidIn <= 0 && diagnosticsDue()) {
-                // DEBUG on purpose, and only while a configured, automated face has moved nothing at all: this is
-                // the case that looks exactly like "the automation is dead", and the line names the two handlers
-                // and both counts, so the dead end can be found instead of guessed at.
-                OritechAddonsOne.LOGGER.debug(
-                        "[transfer] face {} mode {} of {} moved nothing: neighbour {}, out {}, in {}, fluid out {}, in {}",
-                        face, mode, worldPosition, neighbour == null ? neighbourFluid : neighbour,
-                        out, in, fluidOut, fluidIn);
             }
         }
 
@@ -1054,8 +949,7 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         var machineFluid = MachineFaceStorage.machineFluidStorageAt(level, machinePos);
         if (machine == null && machineFluid == null) return;
 
-        // Nothing automated means nothing to tick, and - just as important - nothing that could report the
-        // "moved nothing" diagnosis below, so the loop is skipped before it can do either.
+        // Nothing automated means nothing to tick, so the loop is skipped before it starts.
         if (!hasAutomatedFace(settings)) return;
 
         // The machine's own block entity, so that its slot roles can be respected - an INPUT face fills the
@@ -1075,19 +969,14 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
             var neighbourFluid = MachineFaceStorage.fluidStorageAt(level, neighbourPos, entry.face());
             if (neighbour == null && neighbourFluid == null) continue;
 
-            var out = 0;
-            var in = 0;
-            var fluidOut = 0;
-            var fluidIn = 0;
-
             if (neighbour != null && machine != null) {
                 if (mode.allowsExtract()) {
-                    out = MachineFaceStorage.move(machine, machineEntity, neighbour, null,
+                    MachineFaceStorage.move(machine, machineEntity, neighbour, null,
                             MachineFaceStorage.itemsPerTick(),
                             cellFilter(entry.cell(), entry.face(), TransferMode.OUTPUT));
                 }
                 if (mode.allowsInsert()) {
-                    in = MachineFaceStorage.move(neighbour, null, machine, machineEntity,
+                    MachineFaceStorage.move(neighbour, null, machine, machineEntity,
                             MachineFaceStorage.itemsPerTick(),
                             cellFilter(entry.cell(), entry.face(), TransferMode.INPUT));
                 }
@@ -1095,25 +984,12 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
 
             // Fluids use the same directions and the same per-tick budget, without slot roles or item filters.
             if (mode.allowsExtract()) {
-                fluidOut = MachineFaceStorage.moveFluid(machineFluid, neighbourFluid,
+                MachineFaceStorage.moveFluid(machineFluid, neighbourFluid,
                         MachineFaceStorage.fluidsPerTick());
             }
             if (mode.allowsInsert()) {
-                fluidIn = MachineFaceStorage.moveFluid(neighbourFluid, machineFluid,
+                MachineFaceStorage.moveFluid(neighbourFluid, machineFluid,
                         MachineFaceStorage.fluidsPerTick());
-            }
-
-            if (out + in + fluidOut + fluidIn <= 0 && diagnosticsDue()) {
-                // DEBUG on purpose, and only while a configured, automated cell-face has moved nothing at all:
-                // this is the case that looks exactly like "the automation is dead", and the line names the
-                // cell, the face, both handlers and both counts, so the dead end can be found instead of
-                // guessed at. A face that does its job logs nothing - otherwise every working automation
-                // would write one line per second per face for as long as the server runs (see the same
-                // "moved nothing" gate on the six-face loop in #serverTickTransfer).
-                OritechAddonsOne.LOGGER.debug(
-                        "[transfer] cell {} face {} mode {} of {} moved nothing: neighbour {}, out {}, in {}, fluid out {}, in {}",
-                        entry.cell(), entry.face(), mode, worldPosition,
-                        neighbour == null ? neighbourFluid : neighbour, out, in, fluidOut, fluidIn);
             }
         }
     }
@@ -1238,16 +1114,7 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
 
     void syncCellFaces() {
         var machinePos = servedMachinePos();
-        if (level == null || level.isClientSide() || machinePos == null) {
-            // INFO while "the config disappears when the UI closes" is being chased: a block that cannot name
-            // its machine keeps what it has and never contributes, which is what makes a configuration look
-            // lost - and this early return is the only place that state is visible
-            OritechAddonsOne.LOGGER.debug(
-                    "[transfer] syncCellFaces skipped on {} (level {}, client {}, machine {}, saved {} face(s))",
-                    worldPosition, level, level != null && level.isClientSide(), machinePos,
-                    savedCellFaces.configuredFaces());
-            return;
-        }
+        if (level == null || level.isClientSide() || machinePos == null) return;
 
         // Only the 3D transfer plugin's cell-faces (and their filters) belong to the machine and are merged
         // here. The six-face model of the extension transfer plugin is per block and never goes through this
@@ -1269,11 +1136,6 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         }
 
         setChanged();
-
-        OritechAddonsOne.LOGGER.debug("[transfer] syncCellFaces on {} -> machine {}, shared now {} cell face(s), "
-                        + "{} cell filter(s)",
-                worldPosition, machinePos, shared.configuredFaces(),
-                savedCellFilters.configured());
     }
 
 
@@ -1345,9 +1207,6 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         transferFaces.clear();
         savedFaceFilters.clear();
         setChanged();
-
-        OritechAddonsOne.LOGGER.debug("[transfer] reconcileTransferModes cleared the settings of {} (no extension transfer plugin)",
-                worldPosition);
     }
 
     /**
@@ -1385,11 +1244,7 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
     public boolean bindProxyFace(Direction face, int slot) {
         if (level == null || level.isClientSide() || face == null || slot < 0) return false;
         if (!canProxyItems()) return false;
-        if (!proxyFaces.isConfigured(face) && proxyFaces.configuredFaces() >= maxProxyFaces()) {
-            OritechAddonsOne.LOGGER.debug("[proxy] {} refused face {}: all {} slot(s) configured",
-                    worldPosition, face, maxProxyFaces());
-            return false;
-        }
+        if (!proxyFaces.isConfigured(face) && proxyFaces.configuredFaces() >= maxProxyFaces()) return false;
 
         proxyFaces.bind(face, slot);
         setChanged();
@@ -1637,11 +1492,6 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         if (!merged.equals(previous) && controller instanceof NetworkedBlockEntity networked) {
             networked.sendUpdate(SyncType.GUI_OPEN);
         }
-
-        OritechAddonsOne.LOGGER.debug(
-                "Extension addon at {} merged {} plugin(s) into {} (additive={}): speed {} -> {}, efficiency {} -> {}",
-                worldPosition, stats.count(), getControllerPos(), additive,
-                base.speed(), merged.speed(), base.efficiency(), merged.efficiency());
     }
 
     /**
@@ -1701,7 +1551,6 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
     }
 
     private void contentsChanged() {
-        OritechAddonsOne.LOGGER.debug("[diag] contents changed on {} (slot 0 = {})", worldPosition, items.get(0));
         setChanged();
         // a block that lost its last inventory proxy addon must not keep any face configured
         reconcileProxyBindings();

@@ -9,7 +9,6 @@ import net.minecraft.world.entity.player.Inventory;
 
 import io.github.xiao232ming.oritechaddonsone.client.page.AddonPage;
 import io.github.xiao232ming.oritechaddonsone.client.page.AddonPageContext;
-import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 import io.github.xiao232ming.oritechaddonsone.client.page.AddonPageRegistry;
 import io.github.xiao232ming.oritechaddonsone.client.page.AddonTabStrip;
 import io.github.xiao232ming.oritechaddonsone.client.page.ProxyPickerState;
@@ -189,8 +188,6 @@ public class ExtensionAddonScreen extends AbstractContainerScreen<ExtensionAddon
         // then sees is a page whose settings are gone although the server still has them, and the only cure is a
         // round trip that may not happen again: the server sends its map when a menu opens and after every change,
         // and a stale cache entry for a machine that is no longer served costs one small map and nothing else.
-        OritechAddonsOne.LOGGER.debug("[transfer] screen closed for menu {} (machine {}) - the map stays",
-                this.menu.position(), this.menu.transferMachinePos());
     }
 
     /**

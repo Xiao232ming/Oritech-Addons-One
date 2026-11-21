@@ -92,14 +92,7 @@ public final class TransferNetworking {
 
             var mode = TransferFaceModes.modeOf(packet.value());
             var automation = TransferFaceModes.automationOf(packet.value());
-            if (!addon.setTransferConfig(face, mode, automation)) {
-                OritechAddonsOne.LOGGER.debug("[transfer] refused {} for {} face {} (no transfer addon?)",
-                        packet.value(), packet.pos(), face);
-                return;
-            }
-
-            OritechAddonsOne.LOGGER.debug("[transfer] {} face {} -> {} (automation {}, {} face(s) configured)",
-                    packet.pos(), face, mode, automation, addon.transferModes().configuredFaces());
+            if (!addon.setTransferConfig(face, mode, automation)) return;
         }
     }
 
@@ -134,44 +127,18 @@ public final class TransferNetworking {
             // a plugin slot. A stored plugin is an <b>item</b>, so its own block entity does not exist in the
             // world and the addon is the block that has to carry the setting.
             if (!(player.level().getBlockEntity(packet.pos())
-                    instanceof ExtensionAddonBlockEntity owner)) {
-                // INFO on purpose: this is the one branch that makes a configuration look like it was never
-                // stored, and it is invisible in the default log otherwise - the position the client addressed
-                // did not hold a block of this mod at all
-                var found = player.level().getBlockEntity(packet.pos());
-                OritechAddonsOne.LOGGER.debug(
-                        "[transfer] dropped a cell-face setting for {}: no transfer-capable block there (block {}, entity {})",
-                        packet.pos(), player.level().getBlockState(packet.pos()).getBlock(),
-                        found == null ? "none" : found.getClass().getSimpleName());
-                return;
-            }
+                    instanceof ExtensionAddonBlockEntity owner)) return;
 
             // never trust the client: the entry names the cell, the face and the mode, and every one of the three is
             // re-checked here - the ranges by unpack, the cell against this machine's own cells by the block entity
             var entry = CellFaceModes.unpack(packet.entry());
-            if (entry == null) {
-                OritechAddonsOne.LOGGER.debug("[transfer] dropped a cell-face setting for {}: unreadable entry {}",
-                        packet.pos(), packet.entry());
-                return;
-            }
+            if (entry == null) return;
 
-            if (!owner.setCellFaceConfig(entry.cell(), entry.face(), entry.mode(), entry.automation())) {
-                OritechAddonsOne.LOGGER.debug(
-                        "[transfer] refused {} for {} cell {} face {} (machine {} - cell in range {} / part of it {})",
-                        entry.mode(), packet.pos(), entry.cell(), entry.face(), owner.servedMachinePos(),
-                        CellFaceModes.isCellOffsetInRange(entry.cell()),
-                        owner.machineCellOffsets().contains(entry.cell()));
-                return;
-            }
+            if (!owner.setCellFaceConfig(entry.cell(), entry.face(), entry.mode(), entry.automation())) return;
 
             // the page draws the whole map of the machine, so every player whose page shows a plugin of that
             // machine gets the authoritative copy back - including the entry a clear just removed
             sendFaceModes(player.level(), packet.machine());
-
-            OritechAddonsOne.LOGGER.debug(
-                    "[transfer] stored {} on {} cell {} face {} (machine {}, automation {}, {} face(s) now)",
-                    entry.mode(), packet.pos(), entry.cell(), entry.face(), packet.machine(), entry.automation(),
-                    owner.cellFaceModes().configuredFaces());
         }
     }
 
@@ -211,20 +178,11 @@ public final class TransferNetworking {
 
         public static void handle(FaceModes packet, IPayloadContext context) {
             var entries = new ArrayList<CellFaceModes.Entry>(packet.entries().size());
-            var unreadable = 0;
             for (var packed : packet.entries()) {
                 var entry = CellFaceModes.unpack(packed);
-                if (entry == null) {
-                    unreadable++;
-                    continue;
-                }
+                if (entry == null) continue;
                 entries.add(entry);
             }
-
-            // INFO while "the config disappears" is being chased: an arrival with entries that none of them
-            // survived the decode is a different bug from an arrival with no entries at all
-            OritechAddonsOne.LOGGER.debug("[transfer] map packet for {} in {} carried {} entry(ies), {} unreadable",
-                    packet.pos(), packet.dimension(), packet.entries().size(), unreadable);
 
             // Client side hook, behind a no-op holder so a dedicated server never touches a client class
             var machine = GlobalPos.of(
@@ -275,10 +233,6 @@ public final class TransferNetworking {
             if (!machine.equals(menu.transferMachinePos())) continue;
 
             sendFaceModes(player, machine, settings);
-            // INFO so that "the page stayed empty" can be told apart from "the map never went out": an empty
-            // page after this line means the client had the data and did not draw it
-            OritechAddonsOne.LOGGER.debug("[transfer] sent {} configured face(s) of machine {} to {}",
-                    settings.configuredFaces(), machine, player.getName().getString());
         }
     }
 

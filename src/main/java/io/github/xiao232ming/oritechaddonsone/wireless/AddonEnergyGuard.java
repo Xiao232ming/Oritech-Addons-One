@@ -14,7 +14,6 @@ import net.minecraft.world.level.Level;
 
 import rearth.oritech.util.MachineAddonController;
 
-import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 import io.github.xiao232ming.oritechaddonsone.block.entity.WirelessExtensionAddonBlockEntity;
 
 /**
@@ -234,9 +233,6 @@ public final class AddonEnergyGuard {
         if (storage == null) return;
 
         if (storage.energy < capture.energy()) {
-            OritechAddonsOne.LOGGER.debug(
-                    "[diag] keeping {} energy at {} that the addon scan would have clamped to {}",
-                    capture.energy(), controller.getPosForAddon(), storage.energy);
             storage.energy = capture.energy();
         }
     }

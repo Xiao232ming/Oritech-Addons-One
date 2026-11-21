@@ -80,13 +80,6 @@ public class ExtensionTransferAddonBlockEntity extends ExtensionAddonBlockEntity
     private int publishedHostMask = -1;
 
     /**
-     * Number of times this plugin told NeoForge's capability caches that the extender may answer
-     * differently. Only a diagnostic counter, so that the log can say whether an invalidation happened at
-     * all without printing a line for every one of them.
-     */
-    private int hostInvalidations;
-
-    /**
      * The empty inventory every face of a placed plugin answers with. One instance for all six faces,
      * because NeoForge caches what a face answers with and the answer never changes: the plugin owns no
      * items of its own (see {@link #getItemLookup(Direction)}).
@@ -333,9 +326,6 @@ public class ExtensionTransferAddonBlockEntity extends ExtensionAddonBlockEntity
         // nothing about an extender and every face has to stay configurable.
         if (mode != TransferMode.NONE && hangsOnExtender()
                 && face == ExtensionTransferAddonBlock.attachedFace(getBlockState())) {
-            OritechAddonsOne.LOGGER.debug(
-                    "[transfer] refused {} on {} face {}: the plugin itself stands on that face of the extender",
-                    mode, worldPosition, face);
             return false;
         }
 
@@ -407,7 +397,6 @@ public class ExtensionTransferAddonBlockEntity extends ExtensionAddonBlockEntity
         if (!(level instanceof ServerLevel serverLevel)) return;
         if (!hangsOnExtender()) return;
 
-        hostInvalidations++;
         serverLevel.invalidateCapabilities(hostPos());
     }
 
@@ -471,10 +460,6 @@ public class ExtensionTransferAddonBlockEntity extends ExtensionAddonBlockEntity
         if (mask == publishedHostMask) return;
 
         publishedHostMask = mask;
-        OritechAddonsOne.LOGGER.debug(
-                "[transfer] extender capability mask of {} is now {} ({} invalidation(s), {})",
-                worldPosition, Integer.toBinaryString(mask), hostInvalidations + 1,
-                mask == 0 ? "no face offers an inventory" : "a pipe asking may now connect");
 
         invalidateHostCapabilities();
     }

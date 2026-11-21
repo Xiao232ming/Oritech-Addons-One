@@ -21,7 +21,6 @@ import org.jetbrains.annotations.Nullable;
 
 import rearth.oritech.api.screen.OritechSurface;
 
-import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 import io.github.xiao232ming.oritechaddonsone.block.entity.CellFaceModes;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferFaceModes;
@@ -321,25 +320,15 @@ public final class TransferAddonPage implements AddonPage {
         var openFace = TransferPickerState.openFace();
         if (openFace != null) {
             var openCell = TransferPickerState.openCell();
-            // INFO on purpose: it separates "the click never reached the page" from "it reached the page and
-            // missed every control", which is the difference between a hit test and a packet problem
-            OritechAddonsOne.LOGGER.debug("[transfer] click {} on the open modal of cell {} face {} (at {}/{})",
-                    button, openCell, openFace, (int) mouseX, (int) mouseY);
             return TransferFaceModal.mouseClicked(context, openFace, current(context, openCell, openFace),
                     send(context), false, mouseX, mouseY, button, openFilter(context));
         }
 
         var preview = currentPreview(context);
-        if (preview == null) {
-            OritechAddonsOne.LOGGER.debug("[transfer] click on the page, but there is no model (machine {})",
-                    machinePos(menu));
-            return false;
-        }
+        if (preview == null) return false;
 
         // a click on the model picks a cell-face; the widget remembers the pick, the page remembers the selection
         var picked = preview.widget().pickFace(screenX(context, mouseX), screenY(context, mouseY));
-        OritechAddonsOne.LOGGER.debug("[transfer] click {} on the model picked {} of cell {} (at {}/{})",
-                button, picked, preview.widget().pickedOffset(), (int) mouseX, (int) mouseY);
         if (picked == null) return false;
 
         var cell = preview.widget().pickedOffset();
@@ -484,9 +473,6 @@ public final class TransferAddonPage implements AddonPage {
         return level == null || machine == null ? null : GlobalPos.of(level.dimension(), machine);
     }
 
-    /** Machines whose missing map was already reported, so the diagnostics cannot flood the log. */
-    private static final java.util.Set<GlobalPos> reportedMissing = java.util.concurrent.ConcurrentHashMap.newKeySet();
-
     /** The preview currently built for this menu, or {@code null} while there is none to draw. */
     @Nullable
     private static TransferAddonState.Preview currentPreview(AddonPageContext context) {
@@ -529,14 +515,6 @@ public final class TransferAddonPage implements AddonPage {
         // the map is keyed by the machine, not by the block the page was opened on: one machine can be served
         // by several transfer plugins, and all of them draw the same settings
         var key = sharedKey(context.menu());
-        var known = TransferFaceState.modes(key);
-        if (known == null && key != null && reportedMissing.add(key)) {
-            // INFO while "the config disappears when the UI closes" is being chased, and only once per key: it
-            // names the key the page looks under and every key the client holds, which is what tells a map that
-            // never arrived from one that arrived under another key
-            OritechAddonsOne.LOGGER.debug("[transfer] page looks up machine {} (client holds {}) - menu {}",
-                    key, TransferFaceState.keys(), context.menu().position());
-        }
         return TransferFaceState.modeOf(key, cell, face);
     }
 
