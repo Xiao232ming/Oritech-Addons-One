@@ -120,6 +120,16 @@ public final class AnchorForceLoad {
     private AnchorForceLoad() {
     }
 
+    /**
+     * Drops the receipts and the bookkeeping sets; called after the server saved and stopped, when nothing
+     * reads them any more. The saved copy in {@link AnchorReceiptsData} is what the next load starts from.
+     */
+    public static void clear() {
+        RECEIPTS.clear();
+        RESTORED.clear();
+        DIRTY.clear();
+    }
+
     // ------------------------------------------------------------------ sources announce themselves
 
     /**

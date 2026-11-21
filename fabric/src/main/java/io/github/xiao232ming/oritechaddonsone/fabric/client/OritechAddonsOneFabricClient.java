@@ -7,7 +7,6 @@ import net.minecraft.client.renderer.RenderType;
 
 import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 import io.github.xiao232ming.oritechaddonsone.client.OritechAddonsOneClient;
-import io.github.xiao232ming.oritechaddonsone.client.page.TransferFaceState;
 
 /**
  * Fabric 客户端入口点。屏幕注册是加载器中立的（Architectury {@code MenuRegistry}），所以这里只调用共用入口。
@@ -27,8 +26,8 @@ public class OritechAddonsOneFabricClient implements ClientModInitializer {
         BlockRenderLayerMap.INSTANCE.putBlock(OritechAddonsOne.CHUNK_ANCHOR_ADDON.get(), RenderType.cutout());
         BlockRenderLayerMap.INSTANCE.putBlock(OritechAddonsOne.TRANSFER_ADDON.get(), RenderType.cutout());
 
-        // the cell-face maps are kept across screens; when the client disconnects they have to go, or the next
+        // every client cache belongs to one world; when the client disconnects they have to go, or the next
         // world would read the previous one's maps under the same keys
-        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> TransferFaceState.clear());
+        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> OritechAddonsOneClient.clearClientCaches());
     }
 }

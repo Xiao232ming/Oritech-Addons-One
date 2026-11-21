@@ -10,7 +10,6 @@ import net.neoforged.neoforge.common.NeoForge;
 
 import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 import io.github.xiao232ming.oritechaddonsone.client.OritechAddonsOneClient;
-import io.github.xiao232ming.oritechaddonsone.client.page.TransferFaceState;
 
 /**
  * NeoForge 客户端入口点：屏幕注册是共用的，这里额外把 NeoForge 自带的配置界面挂上
@@ -25,8 +24,8 @@ public final class OritechAddonsOneNeoForgeClient {
 
         OritechAddonsOneClient.init();
 
-        // the cell-face maps are kept across screens; when the client disconnects they have to go, or the next
+        // every client cache belongs to one world; when the client disconnects they have to go, or the next
         // world would read the previous one's maps under the same keys
-        NeoForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingOut event) -> TransferFaceState.clear());
+        NeoForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingOut event) -> OritechAddonsOneClient.clearClientCaches());
     }
 }

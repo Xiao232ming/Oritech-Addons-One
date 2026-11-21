@@ -33,6 +33,11 @@ public final class WirelessLinks {
     private WirelessLinks() {
     }
 
+    /** Drops the index; called when the server stops (see {@code OritechAddonsOne#clearServerCaches}). */
+    public static void clear() {
+        LINKS.clear();
+    }
+
     /** Registers a dock for a machine (idempotent). */
     public static void register(Level level, BlockPos machine, BlockPos dock) {
         if (level == null || level.isClientSide() || machine == null || dock == null) return;

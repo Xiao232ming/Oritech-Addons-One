@@ -7,8 +7,11 @@ import dev.architectury.registry.menu.MenuRegistry;
 
 import io.github.xiao232ming.oritechaddonsone.OritechAddonsOne;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferMode;
+import io.github.xiao232ming.oritechaddonsone.client.page.ExtensionTransferPickerState;
 import io.github.xiao232ming.oritechaddonsone.client.page.ProxyPickerState;
+import io.github.xiao232ming.oritechaddonsone.client.page.TransferAddonState;
 import io.github.xiao232ming.oritechaddonsone.client.page.TransferFaceState;
+import io.github.xiao232ming.oritechaddonsone.client.page.TransferPickerState;
 import io.github.xiao232ming.oritechaddonsone.network.FilterNetworking;
 import io.github.xiao232ming.oritechaddonsone.network.ProxyNetworking;
 import io.github.xiao232ming.oritechaddonsone.network.TransferNetworking;
@@ -49,6 +52,20 @@ public final class OritechAddonsOneClient {
         FilterNetworking.setClientHandler(OritechAddonsOneClient::putFilterState);
 
         OritechAddonsOne.LOGGER.debug("Client screens registered for {}", OritechAddonsOne.MODID);
+    }
+
+    /**
+     * Drops every static client cache that describes a world or a machine: the cell-face maps, the model
+     * previews, and the slot layouts and pickers the item pages asked for. Called by both loaders when the
+     * client disconnects, so a cache added later cannot silently keep entries of a world that is gone; the
+     * screen also calls the GUI-scoped parts when it closes, which is only about memory in that session.
+     */
+    public static void clearClientCaches() {
+        TransferFaceState.clear();
+        TransferAddonState.clear();
+        ProxyPickerState.clear();
+        ExtensionTransferPickerState.clear();
+        TransferPickerState.clear();
     }
 
     /**

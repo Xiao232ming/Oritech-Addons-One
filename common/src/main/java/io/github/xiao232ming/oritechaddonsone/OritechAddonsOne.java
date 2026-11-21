@@ -32,6 +32,7 @@ import rearth.oritech.block.entity.addons.AddonBlockEntity;
 import rearth.oritech.init.BlockEntitiesContent;
 
 import io.github.xiao232ming.oritechaddonsone.addon.AddonStorageBonus;
+import io.github.xiao232ming.oritechaddonsone.addon.MachineStorageBonuses;
 import io.github.xiao232ming.oritechaddonsone.block.ChunkAnchorAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonBlock;
 import io.github.xiao232ming.oritechaddonsone.block.ExtensionAddonType;
@@ -49,6 +50,7 @@ import io.github.xiao232ming.oritechaddonsone.block.entity.MachineFaceConfigs;
 import io.github.xiao232ming.oritechaddonsone.block.entity.MachineSlotRoles;
 import io.github.xiao232ming.oritechaddonsone.block.entity.TransferAddonBlockEntity;
 import io.github.xiao232ming.oritechaddonsone.block.entity.WirelessExtensionAddonBlockEntity;
+import io.github.xiao232ming.oritechaddonsone.forge.LaserAimIndex;
 import io.github.xiao232ming.oritechaddonsone.item.ExtensionAddonItem;
 import io.github.xiao232ming.oritechaddonsone.item.PluginAddonItem;
 import io.github.xiao232ming.oritechaddonsone.menu.ExtensionAddonLayout;
@@ -59,7 +61,9 @@ import io.github.xiao232ming.oritechaddonsone.network.ProxyNetworking;
 import io.github.xiao232ming.oritechaddonsone.network.RedstoneNetworking;
 import io.github.xiao232ming.oritechaddonsone.network.TransferNetworking;
 import io.github.xiao232ming.oritechaddonsone.platform.AddonsPlatform;
+import io.github.xiao232ming.oritechaddonsone.wireless.AddonEnergyGuard;
 import io.github.xiao232ming.oritechaddonsone.wireless.AnchorForceLoad;
+import io.github.xiao232ming.oritechaddonsone.wireless.WirelessLinks;
 
 /**
  * An addon for Oritech (1.21.1) that adds the "Extension Addon" block.
@@ -473,14 +477,19 @@ public class OritechAddonsOne {
     }
 
     /**
-     * Drops the runtime caches that describe machines and their hosts, called from each loader's server-stopped
-     * hook. They are static and keyed by dimension and position, so without this a second world in the same
-     * process would read the first one's settings, and the cached block entities would keep the old levels alive.
+     * Drops every static cache that describes a world - machines, their hosts, the wireless indexes and the
+     * force-load receipts - called from each loader's server-stopped hook. Anything that caches per-world state
+     * has to be cleared here, so that a cache added later cannot silently keep entries of a stopped server.
      */
     public static void clearServerCaches() {
         MachineFaceConfigs.clear();
         MachineSlotRoles.clear();
         FacePluginStorage.clear();
+        WirelessLinks.clear();
+        AddonEnergyGuard.clear();
+        AnchorForceLoad.clear();
+        LaserAimIndex.clear();
+        MachineStorageBonuses.clearCaches();
     }
 
     /**

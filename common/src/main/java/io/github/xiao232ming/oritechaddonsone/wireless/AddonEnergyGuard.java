@@ -73,6 +73,13 @@ public final class AddonEnergyGuard {
     private AddonEnergyGuard() {
     }
 
+    /** Drops the indexes and the per-thread capture; called when the server stops. */
+    public static void clear() {
+        UNRESOLVED.clear();
+        MERGING_DOCKS.clear();
+        CAPTURED_ENERGY.remove();
+    }
+
     /**
      * Marks that the docks of a machine are being merged into its addon data. Has to bracket the whole
      * merge, because everything in between sees an addon data set without those docks.

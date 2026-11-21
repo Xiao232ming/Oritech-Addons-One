@@ -92,6 +92,15 @@ public final class MachineStorageBonuses {
     private MachineStorageBonuses() {
     }
 
+    /**
+     * Drops the per-machine caches; called when the server stops. The field cache is kept: it describes
+     * classes, not a world, and is needed again on the next load.
+     */
+    public static void clearCaches() {
+        CACHED.clear();
+        KNOWN_TANKS.clear();
+    }
+
     // ------------------------------------------------------------------ applying
 
     /**
