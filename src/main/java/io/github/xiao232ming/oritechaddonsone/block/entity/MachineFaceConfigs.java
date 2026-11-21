@@ -38,6 +38,21 @@ public final class MachineFaceConfigs {
     private static final class Shared {
         private final CellFaceModes cells = new CellFaceModes();
         private final CellFilters cellFilters = new CellFilters();
+
+        /**
+         * Bumped whenever the cell-face map really changes, so a menu can tell whether the map it sent is still
+         * the current one without packing and sorting it on every tick (see {@code ExtensionAddonMenu#broadcastChanges}).
+         */
+        private int cellFaceRevision;
+    }
+
+    /**
+     * Monotonic revision of the machine's cell-face map: it changes only when a face really changes, so an
+     * unchanged revision means an unchanged map. Every machine starts at zero.
+     */
+    public static int cellFaceRevision(@Nullable Level level, @Nullable BlockPos machine) {
+        var shared = get(level, machine);
+        return shared == null ? 0 : shared.cellFaceRevision;
     }
 
     @Nullable
@@ -82,7 +97,9 @@ public final class MachineFaceConfigs {
         for (var entry : own.packedEntries()) {
             // the block's own copy is what the player configured for this entry, so it wins over whatever the
             // machine's map holds - the map is a runtime cache, the block's data is the save file
-            shared.cells.set(entry.cell(), entry.face(), entry.mode(), entry.automation());
+            if (shared.cells.set(entry.cell(), entry.face(), entry.mode(), entry.automation())) {
+                shared.cellFaceRevision++;
+            }
         }
     }
 
