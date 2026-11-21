@@ -276,32 +276,12 @@ public class ExtensionTransferAddonBlockEntity extends ExtensionAddonBlockEntity
             // the face the machine sits on has no container of its own to trade with
             if (hostPos.relative(face).equals(machinePos)) continue;
 
-            var neighbour = MachineFaceStorage.storageAt(level, hostPos, face);
-            var neighbourFluid = MachineFaceStorage.fluidStorageAt(level, hostPos, face);
-            if (neighbour == null && neighbourFluid == null) continue;
-
             // each direction is gated by its own item filter, exactly as on the addon's own faces: the OUTPUT
             // one decides what may leave the machine through this face, the INPUT one what may enter it. The
             // filters live in the same per-machine map the page edited them in, so a filter configured anywhere
             // on this machine - on this plugin, on another one, or on a wired addon around it - applies here.
-            if (neighbour != null && machine != null) {
-                if (mode.allowsExtract()) {
-                    MachineFaceStorage.move(machine, machineEntity, neighbour, null, MachineFaceStorage.itemsPerTick(),
-                            faceFilter(face, TransferMode.OUTPUT));
-                }
-                if (mode.allowsInsert()) {
-                    MachineFaceStorage.move(neighbour, null, machine, machineEntity, MachineFaceStorage.itemsPerTick(),
-                            faceFilter(face, TransferMode.INPUT));
-                }
-            }
-
-            // Fluids use the same two directions and the same per-tick budget, without item filters.
-            if (mode.allowsExtract()) {
-                MachineFaceStorage.moveFluid(machineFluid, neighbourFluid, MachineFaceStorage.fluidsPerTick());
-            }
-            if (mode.allowsInsert()) {
-                MachineFaceStorage.moveFluid(neighbourFluid, machineFluid, MachineFaceStorage.fluidsPerTick());
-            }
+            MachineFaceStorage.moveThroughFace(level, hostPos, face, machine, machineEntity, machineFluid,
+                    mode, faceFilter(face, TransferMode.OUTPUT), faceFilter(face, TransferMode.INPUT));
         }
     }
 

@@ -864,6 +864,12 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
         var machine = MachineFaceStorage.machineStorage(this);
         var machineFluid = MachineFaceStorage.machineFluidStorage(this);
 
+        // The machine's own block entity is resolved once for the whole tick, not per face: the roles of its
+        // slots - which of them are inputs and which are outputs - are read from the block entity the
+        // inventory belongs to, and the plugin block is not that entity.
+        var machineEntity = machinePos != null && level.isLoaded(machinePos)
+                ? level.getBlockEntity(machinePos) : null;
+
         for (var face : Direction.values()) {
             var mode = faces.modeOf(face);
             if (mode == TransferMode.NONE || !faces.automationOf(face)) continue;
@@ -873,40 +879,8 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
             // skipped. All the other faces are free.
             if (machinePos != null && worldPosition.relative(face).equals(machinePos)) continue;
 
-            var neighbour = MachineFaceStorage.storageAt(level, worldPosition, face);
-            var neighbourFluid = MachineFaceStorage.fluidStorageAt(level, worldPosition, face);
-            if (neighbour == null && neighbourFluid == null) continue;
-
-            // The machine's own block entity, exactly as the cell-face loop resolves it: the roles of the
-            // machine's slots - which of them are inputs and which are outputs - are read from the block entity
-            // the inventory belongs to, and the plugin block is not that entity.
-            var machineEntity = machinePos != null && level.isLoaded(machinePos)
-                    ? level.getBlockEntity(machinePos) : null;
-
-            if (neighbour != null && machine != null) {
-                // The mode names the direction as seen from the machine; the machine itself is passed along as
-                // the owner of the machine side, so both directions respect which of its slots are inputs and
-                // which are outputs (see MachineSlotRoles).
-                if (mode.allowsExtract()) {
-                    MachineFaceStorage.move(machine, machineEntity, neighbour, null,
-                            MachineFaceStorage.itemsPerTick(), faceFilter(face, TransferMode.OUTPUT));
-                }
-                if (mode.allowsInsert()) {
-                    MachineFaceStorage.move(neighbour, null, machine, machineEntity,
-                            MachineFaceStorage.itemsPerTick(), faceFilter(face, TransferMode.INPUT));
-                }
-            }
-
-            // The same two directions for fluids: no slot roles and no filters, a face moves whatever its two
-            // handlers hold up to the configured amount per tick.
-            if (mode.allowsExtract()) {
-                MachineFaceStorage.moveFluid(machineFluid, neighbourFluid,
-                        MachineFaceStorage.fluidsPerTick());
-            }
-            if (mode.allowsInsert()) {
-                MachineFaceStorage.moveFluid(neighbourFluid, machineFluid,
-                        MachineFaceStorage.fluidsPerTick());
-            }
+            MachineFaceStorage.moveThroughFace(level, worldPosition, face, machine, machineEntity, machineFluid,
+                    mode, faceFilter(face, TransferMode.OUTPUT), faceFilter(face, TransferMode.INPUT));
         }
 
         // and the same for the cell-faces of the 传输插件 page, which this block carries while it holds or
@@ -965,32 +939,10 @@ public class ExtensionAddonBlockEntity extends AddonBlockEntity
             if (entry.cell().equals(Vec3i.ZERO) && entry.face() == hostFace) continue;
 
             var neighbourPos = machinePos.offset(entry.cell());
-            var neighbour = MachineFaceStorage.storageAt(level, neighbourPos, entry.face());
-            var neighbourFluid = MachineFaceStorage.fluidStorageAt(level, neighbourPos, entry.face());
-            if (neighbour == null && neighbourFluid == null) continue;
-
-            if (neighbour != null && machine != null) {
-                if (mode.allowsExtract()) {
-                    MachineFaceStorage.move(machine, machineEntity, neighbour, null,
-                            MachineFaceStorage.itemsPerTick(),
-                            cellFilter(entry.cell(), entry.face(), TransferMode.OUTPUT));
-                }
-                if (mode.allowsInsert()) {
-                    MachineFaceStorage.move(neighbour, null, machine, machineEntity,
-                            MachineFaceStorage.itemsPerTick(),
-                            cellFilter(entry.cell(), entry.face(), TransferMode.INPUT));
-                }
-            }
-
-            // Fluids use the same directions and the same per-tick budget, without slot roles or item filters.
-            if (mode.allowsExtract()) {
-                MachineFaceStorage.moveFluid(machineFluid, neighbourFluid,
-                        MachineFaceStorage.fluidsPerTick());
-            }
-            if (mode.allowsInsert()) {
-                MachineFaceStorage.moveFluid(neighbourFluid, machineFluid,
-                        MachineFaceStorage.fluidsPerTick());
-            }
+            MachineFaceStorage.moveThroughFace(level, neighbourPos, entry.face(), machine, machineEntity,
+                    machineFluid, mode,
+                    cellFilter(entry.cell(), entry.face(), TransferMode.OUTPUT),
+                    cellFilter(entry.cell(), entry.face(), TransferMode.INPUT));
         }
     }
 
